@@ -1,0 +1,11 @@
+*.o
+*.tar.*
+*.tar
+*.exe
+*.res
+/*.conf
+TODO
+dist/
+.vscode/
+.trash/
+.DS_Store
