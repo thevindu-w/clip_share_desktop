@@ -1,6 +1,7 @@
 *.o
 *.tar.*
 *.tar
+clip-share-client
 *.exe
 *.res
 /*.conf
