@@ -1,3 +1,4 @@
+#include <globals.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +14,17 @@
 #define COMMAND_HELP 127
 #define COMMAND_GET_TEXT 1
 #define COMMAND_SEND_TEXT 2
+
+// tcp and udp
+#define APP_PORT 4337
+
+// maximum transfer sizes
+#define MAX_TEXT_LENGTH 4194304     // 4 MiB
+#define MAX_FILE_SIZE 68719476736l  // 64 GiB
+
+#define CONFIG_FILE "clipshare-desktop.conf"
+
+config configuration;
 
 static inline void print_usage(const char *prog_name) { fprintf(stderr, "Usage: %s COMMAND [ARGS]\n", prog_name); }
 
@@ -46,6 +58,15 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p) {
 }
 
 /*
+ * Apply default values to the configuration options that are not specified in conf file.
+ */
+static inline void _apply_default_conf(void) {
+    if (configuration.app_port <= 0) configuration.app_port = APP_PORT;
+    if (configuration.max_text_length <= 0) configuration.max_text_length = MAX_TEXT_LENGTH;
+    if (configuration.max_file_size <= 0) configuration.max_file_size = MAX_FILE_SIZE;
+}
+
+/*
  * The main entrypoint of the application
  */
 int main(int argc, char **argv) {
@@ -62,6 +83,11 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    char *conf_path = strdup(CONFIG_FILE);
+    parse_conf(&configuration, conf_path);
+    free(conf_path);
+    _apply_default_conf();
+    
     int8_t command;
     _parse_args(argc, argv, &command);
 

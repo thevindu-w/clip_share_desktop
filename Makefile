@@ -6,7 +6,7 @@ CC=gcc
 CFLAGS=-c -pipe -I. --std=gnu11
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
-OBJS=main.o utils/net_utils.o
+OBJS=main.o utils/net_utils.o utils/config.o
 
 LINK_FLAGS_BUILD=
 
