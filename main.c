@@ -4,12 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#if defined(__linux__) || defined(__APPLE__)
-#define PATH_SEP '/'
-#elif defined(_WIN32)
-#define PATH_SEP '\\'
-#endif
+#include <utils/utils.h>
 
 #define COMMAND_HELP 127
 #define COMMAND_GET_TEXT 1
@@ -22,9 +17,13 @@
 #define MAX_TEXT_LENGTH 4194304     // 4 MiB
 #define MAX_FILE_SIZE 68719476736l  // 64 GiB
 
+#define ERROR_LOG_FILE "client_err.log"
 #define CONFIG_FILE "clipshare-desktop.conf"
 
 config configuration;
+char *error_log_file;
+char *cwd;
+size_t cwd_len;
 
 static inline void print_usage(const char *prog_name) { fprintf(stderr, "Usage: %s COMMAND [ARGS]\n", prog_name); }
 
@@ -58,6 +57,35 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p) {
 }
 
 /*
+ * Set the error_log_file absolute path
+ */
+static inline void _set_error_log_file(const char *path) {
+    char *working_dir = getcwd_wrapper(2050);
+    if (!working_dir) exit_wrapper(EXIT_FAILURE);
+    working_dir[2049] = 0;
+    size_t working_dir_len = strnlen(working_dir, 2048);
+    if (working_dir_len == 0 || working_dir_len >= 2048) {
+        free(working_dir);
+        exit_wrapper(EXIT_FAILURE);
+    }
+    size_t buf_sz = working_dir_len + strlen(path) + 1;  // +1 for terminating \0
+    if (working_dir[working_dir_len - 1] != PATH_SEP) {
+        buf_sz++;  // 1 more char for PATH_SEP
+    }
+    error_log_file = malloc(buf_sz);
+    if (!error_log_file) {
+        free(working_dir);
+        exit_wrapper(EXIT_FAILURE);
+    }
+    if (working_dir[working_dir_len - 1] == PATH_SEP) {
+        snprintf_check(error_log_file, buf_sz, "%s%s", working_dir, ERROR_LOG_FILE);
+    } else {
+        snprintf_check(error_log_file, buf_sz, "%s/%s", working_dir, ERROR_LOG_FILE);
+    }
+    free(working_dir);
+}
+
+/*
  * Apply default values to the configuration options that are not specified in conf file.
  */
 static inline void _apply_default_conf(void) {
@@ -83,13 +111,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    _set_error_log_file(ERROR_LOG_FILE);
+
     char *conf_path = strdup(CONFIG_FILE);
     parse_conf(&configuration, conf_path);
     free(conf_path);
     _apply_default_conf();
-    
+
     int8_t command;
     _parse_args(argc, argv, &command);
+
+    cwd = getcwd_wrapper(0);
+    cwd_len = strnlen(cwd, 2048);
 
     switch (command) {
         case COMMAND_HELP: {
