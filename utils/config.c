@@ -154,6 +154,10 @@ static void parse_line(char *line, config *cfg) {
         set_uint32(value, &(cfg->max_text_length));
     } else if (!strcmp("max_file_size", key)) {
         set_int64(value, &(cfg->max_file_size));
+    } else if (!strcmp("min_proto_version", key)) {
+        set_ushort(value, &(cfg->min_proto_version));
+    } else if (!strcmp("max_proto_version", key)) {
+        set_ushort(value, &(cfg->max_proto_version));
 #ifdef DEBUG_MODE
     } else {
         printf("Unknown key \"%s\"\n", key);
@@ -165,6 +169,8 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->app_port = 0;
     cfg->max_text_length = 0;
     cfg->max_file_size = 0;
+    cfg->min_proto_version = 0;
+    cfg->max_proto_version = 0;
 
     if (!file_name) {
 #ifdef DEBUG_MODE

@@ -2,11 +2,14 @@ MAKEFLAGS += -j4
 
 PROGRAM_NAME=clip-share-client
 
+MIN_PROTO=1
+MAX_PROTO=3
+
 CC=gcc
 CFLAGS=-c -pipe -I. --std=gnu11
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
-OBJS=main.o utils/utils.o utils/net_utils.o utils/config.o xclip/xclip.o xclip/xclib.o
+OBJS=main.o utils/utils.o utils/net_utils.o utils/config.o xclip/xclip.o xclip/xclib.o proto/selector.o proto/versions.o proto/methods.o
 
 LINK_FLAGS_BUILD=
 
@@ -34,6 +37,7 @@ export LIBRARY_PATH=$(shell brew --prefix)/lib
 else
 $(error ClipShare is not supported on this platform!)
 endif
+CFLAGS+= -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
 CFLAGS_OPTIM+= -Werror
 
 # append '_debug' to objects for debug executable to prevent overwriting objects for main build

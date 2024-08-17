@@ -92,6 +92,11 @@ static inline void _apply_default_conf(void) {
     if (configuration.app_port <= 0) configuration.app_port = APP_PORT;
     if (configuration.max_text_length <= 0) configuration.max_text_length = MAX_TEXT_LENGTH;
     if (configuration.max_file_size <= 0) configuration.max_file_size = MAX_FILE_SIZE;
+    if (configuration.min_proto_version < PROTOCOL_MIN) configuration.min_proto_version = PROTOCOL_MIN;
+    if (configuration.min_proto_version > PROTOCOL_MAX) configuration.min_proto_version = PROTOCOL_MAX;
+    if (configuration.max_proto_version < configuration.min_proto_version ||
+        configuration.max_proto_version > PROTOCOL_MAX)
+        configuration.max_proto_version = PROTOCOL_MAX;
 }
 
 /*
