@@ -19,6 +19,10 @@ extern int read_sock(sock_t sock, char *buf, uint64_t size);
 
 extern int write_sock(sock_t sock, const char *buf, uint64_t size);
 
+extern int read_size(sock_t sock, int64_t *size_ptr);
+
+extern int send_size(sock_t sock, int64_t num);
+
 extern void close_socket(sock_t sock);
 
 #endif  // UTILS_NET_UTILS_H_

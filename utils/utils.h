@@ -56,6 +56,16 @@ extern int get_clipboard_text(char **bufptr, size_t *lenptr);
  */
 extern int put_clipboard_text(char *data, size_t len);
 
+/*
+ * Converts line endings to LF or CRLF based on the platform.
+ * param str_p is a valid pointer to malloced, null-terminated char * which may be realloced and returned.
+ * If force_lf is non-zero, convert EOL to LF regardless of the platform
+ * Else, convert EOL of str to LF
+ * Returns the length of the new string without the terminating '\0'.
+ * If an error occured, this will free() the *str_p and return -1.
+ */
+extern int64_t convert_eol(char **str_p, int force_lf);
+
 #if defined(__linux__) || defined(__APPLE__)
 
 #define open_file(filename, mode) fopen(filename, mode)

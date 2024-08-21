@@ -72,6 +72,34 @@ int write_sock(sock_t sock, const char *buf, uint64_t size) {
     return EXIT_SUCCESS;
 }
 
+
+int send_size(sock_t socket, int64_t size) {
+    char sz_buf[8];
+    int64_t sz = size;
+    for (int i = sizeof(sz_buf) - 1; i >= 0; i--) {
+        sz_buf[i] = (char)(sz & 0xff);
+        sz >>= 8;
+    }
+    return write_sock(socket, sz_buf, sizeof(sz_buf));
+}
+
+int read_size(sock_t socket, int64_t *size_ptr) {
+    unsigned char sz_buf[8];
+    if (read_sock(socket, (char *)sz_buf, sizeof(sz_buf)) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fputs("Read size failed\n", stderr);
+#endif
+        return EXIT_FAILURE;
+    }
+    int64_t size = 0;
+    for (unsigned i = 0; i < sizeof(sz_buf); i++) {
+        size = (size << 8) | sz_buf[i];
+    }
+    *size_ptr = size;
+    return EXIT_SUCCESS;
+}
+
+
 void close_socket(sock_t sock) {
 #if defined(__linux__) || defined(__APPLE__)
     close(sock);
