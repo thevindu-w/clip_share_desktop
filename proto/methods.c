@@ -16,7 +16,38 @@
 #include <unistr.h>
 
 int get_text_v1(sock_t socket) {
-    // TODO (thevindu-w): implement
+    int64_t length;
+    if (read_size(socket, &length) != EXIT_SUCCESS) return EXIT_FAILURE;
+#ifdef DEBUG_MODE
+    printf("Len = %zi\n", (ssize_t)length);
+#endif
+    // limit maximum length to max_text_length
+    if (length <= 0 || length > configuration.max_text_length) return EXIT_FAILURE;
+
+    char *data = malloc((uint64_t)length + 1);
+    if (read_sock(socket, data, (uint64_t)length) == EXIT_FAILURE) {
+#ifdef DEBUG_MODE
+        fputs("Read data failed\n", stderr);
+#endif
+        free(data);
+        return EXIT_FAILURE;
+    }
+    data[length] = 0;
+    if (u8_check((uint8_t *)data, (size_t)length)) {
+#ifdef DEBUG_MODE
+        fputs("Invalid UTF-8\n", stderr);
+#endif
+        free(data);
+        return EXIT_FAILURE;
+    }
+#ifdef DEBUG_MODE
+    if (length < 1024) puts(data);
+#endif
+    length = convert_eol(&data, 0);
+    if (length < 0) return EXIT_FAILURE;
+    close_socket(socket);
+    put_clipboard_text(data, (size_t)length);
+    free(data);
     return EXIT_SUCCESS;
 }
 

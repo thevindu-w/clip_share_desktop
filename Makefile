@@ -21,7 +21,7 @@ endif
 
 ifeq ($(detected_OS),Linux)
 	CFLAGS_OPTIM=-Os
-	LDLIBS=-lX11 -lXmu -lXt
+	LDLIBS=-lunistring -lX11 -lXmu -lXt
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
 	CFLAGS+= -D__USE_MINGW_ANSI_STDIO
