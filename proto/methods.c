@@ -52,7 +52,27 @@ int get_text_v1(sock_t socket) {
 }
 
 int send_text_v1(sock_t socket) {
-    // TODO (thevindu-w): implement
+    size_t length = 0;
+    char *buf = NULL;
+    if (get_clipboard_text(&buf, &length) != EXIT_SUCCESS || length <= 0 ||
+        length > configuration.max_text_length) {  // do not change the order
+#ifdef DEBUG_MODE
+        printf("clipboard read text failed. len = %zu\n", length);
+#endif
+        if (buf) free(buf);
+        return EXIT_SUCCESS;
+    }
+    int64_t new_len = convert_eol(&buf, 1);
+    if (new_len <= 0) return EXIT_FAILURE;
+    if (send_size(socket, new_len) != EXIT_SUCCESS) {
+        free(buf);
+        return EXIT_FAILURE;
+    }
+    if (write_sock(socket, buf, (uint64_t)new_len) != EXIT_SUCCESS) {
+        free(buf);
+        return EXIT_FAILURE;
+    }
+    free(buf);
     return EXIT_SUCCESS;
 }
 
@@ -78,7 +98,6 @@ int info_v1(sock_t socket) {
     // TODO (thevindu-w): implement
     return EXIT_SUCCESS;
 }
-
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
 int get_files_v2(sock_t socket) {

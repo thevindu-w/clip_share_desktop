@@ -121,7 +121,7 @@ static inline void _convert_to_crlf(char *str, uint64_t new_len) {
     for (size_t cur_ind = strnlen(str, new_len + 1) - 1;; cur_ind--) {
         char c = str[cur_ind];
         str[new_ind--] = c;
-        if (c == '\n' && (cur_ind == 0 || str[cur_ind - 1] != '\n')) {
+        if (c == '\n' && (cur_ind == 0 || str[cur_ind - 1] != '\r')) {
             // add the missing \r before \n
             str[new_ind--] = '\r';
         }
