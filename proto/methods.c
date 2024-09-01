@@ -15,6 +15,13 @@
 #endif
 #include <unistr.h>
 
+#define FILE_BUF_SZ 65536  // 64 KiB
+
+/*
+ * Common function to save files in get_files and get_image methods.
+ */
+static int _save_file_common(int version, sock_t socket, const char *file_name);
+
 int get_text_v1(sock_t socket) {
     int64_t length;
     if (read_size(socket, &length) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -76,6 +83,60 @@ int send_text_v1(sock_t socket) {
     return EXIT_SUCCESS;
 }
 
+static int _save_file_common(int version, sock_t socket, const char *file_name) {
+    int64_t file_size;
+    if (read_size(socket, &file_size) != EXIT_SUCCESS) return EXIT_FAILURE;
+#ifdef DEBUG_MODE
+    printf("data len = %lli\n", (long long)file_size);
+#endif
+    if (file_size > configuration.max_file_size) {
+        return EXIT_FAILURE;
+    }
+
+#if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
+    if (file_size == -1 && version == 3) {
+        return mkdirs(file_name);
+    }
+#else
+    (void)version;
+#endif
+    if (file_size < 0) {
+        return EXIT_FAILURE;
+    }
+
+    FILE *file = open_file(file_name, "wb");
+    if (!file) {
+        error("Couldn't create some files");
+        return EXIT_FAILURE;
+    }
+
+    char data[FILE_BUF_SZ];
+    while (file_size) {
+        size_t read_len = file_size < FILE_BUF_SZ ? (size_t)file_size : FILE_BUF_SZ;
+        if (read_sock(socket, data, read_len) == EXIT_FAILURE) {
+#ifdef DEBUG_MODE
+            puts("recieve error");
+#endif
+            fclose(file);
+            remove_file(file_name);
+            return EXIT_FAILURE;
+        }
+        if (fwrite(data, 1, read_len, file) < read_len) {
+            fclose(file);
+            remove_file(file_name);
+            return EXIT_FAILURE;
+        }
+        file_size -= (int64_t)read_len;
+    }
+
+    fclose(file);
+
+#ifdef DEBUG_MODE
+    printf("file saved : %s\n", file_name);
+#endif
+    return EXIT_SUCCESS;
+}
+
 #if PROTOCOL_MIN <= 1
 
 int get_files_v1(sock_t socket) {
@@ -90,8 +151,13 @@ int send_file_v1(sock_t socket) {
 
 #endif
 
-int get_image_v1(sock_t socket) {  // TODO (thevindu-w): implement
-    return EXIT_SUCCESS;
+int get_image_v1(sock_t socket) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    unsigned long long t = (unsigned long long)(ts.tv_sec + ts.tv_nsec / 1000000);
+    char file_name[40];
+    snprintf(file_name, 35, "%llx.png", t);
+    return _save_file_common(1, socket, file_name);
 }
 
 int info_v1(sock_t socket) {

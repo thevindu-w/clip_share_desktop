@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 #include <utils/utils.h>
 #ifdef __linux__
 #include <X11/Xmu/Atoms.h>
@@ -79,6 +80,47 @@ void exit_wrapper(int code) {
     freeAtomPtr(_XA_UTF8_STRING);
 #endif
     exit(code);
+}
+
+int file_exists(const char *file_name) {
+    if (file_name[0] == 0) return 0;  // empty path
+    int f_ok;
+#if defined(__linux__) || defined(__APPLE__)
+    f_ok = access(file_name, F_OK);
+#elif defined(_WIN32)
+    wchar_t *wfname;
+    if (utf8_to_wchar_str(file_name, &wfname, NULL) != EXIT_SUCCESS) return -1;
+    f_ok = _waccess(wfname, F_OK);
+    free(wfname);
+#endif
+    return f_ok == 0;
+}
+
+int is_directory(const char *path, int follow_symlinks) {
+    if (path[0] == 0) return 0;  // empty path
+    struct stat sb;
+    int stat_result;
+#if defined(__linux__) || defined(__APPLE__)
+    if (follow_symlinks) {
+        stat_result = stat(path, &sb);
+    } else {
+        stat_result = lstat(path, &sb);
+    }
+#elif defined(_WIN32)
+    (void)follow_symlinks;
+    wchar_t *wpath;
+    if (utf8_to_wchar_str(path, &wpath, NULL) != EXIT_SUCCESS) return -1;
+    stat_result = wstat(wpath, &sb);
+    free(wpath);
+#endif
+    if (stat_result == 0) {
+        if (S_ISDIR(sb.st_mode)) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+    return 0;
 }
 
 /*
@@ -164,6 +206,76 @@ int64_t convert_eol(char **str_p, int force_lf) {
     }
     return _convert_to_lf(*str_p);
 }
+
+#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
+
+/*
+ * Try to create the directory at path.
+ * If the path points to an existing directory or a new directory was created successfuly, returns EXIT_SUCCESS.
+ * If the path points to an existing file which is not a directory or creating a directory failed, returns
+ * EXIT_FAILURE.
+ */
+static int _mkdir_check(const char *path);
+
+static int _mkdir_check(const char *path) {
+    if (file_exists(path)) {
+        if (!is_directory(path, 0)) return EXIT_FAILURE;
+    } else {
+        int status;  // success=0 and failure=non-zero
+#if defined(__linux__) || defined(__APPLE__)
+        status = mkdir(path, S_IRWXU | S_IRWXG);
+#elif defined(_WIN32)
+        wchar_t *wpath;
+        if (utf8_to_wchar_str(path, &wpath, NULL) == EXIT_SUCCESS) {
+            status = CreateDirectoryW(wpath, NULL) != TRUE;
+            free(wpath);
+        } else {
+            status = 1;
+        }
+#endif
+        if (status) {
+#ifdef DEBUG_MODE
+            printf("Error creating directory %s\n", path);
+#endif
+            return EXIT_FAILURE;
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
+int mkdirs(const char *dir_path) {
+    if (dir_path[0] != '.') return EXIT_FAILURE;  // path must be relative and start with .
+
+    if (file_exists(dir_path)) {
+        if (is_directory(dir_path, 0))
+            return EXIT_SUCCESS;
+        else
+            return EXIT_FAILURE;
+    }
+
+    size_t len = strnlen(dir_path, 2050);
+    if (len > 2048) {
+        error("Too long file name.");
+        return EXIT_FAILURE;
+    }
+    char path[len + 1];
+    strncpy(path, dir_path, sizeof(path));
+    if (path[sizeof(path) - 1] != 0) {
+        return EXIT_FAILURE;
+    }
+
+    for (size_t i = 0; i <= len; i++) {
+        if (path[i] != PATH_SEP && path[i] != 0) continue;
+        path[i] = 0;
+        if (_mkdir_check(path) != EXIT_SUCCESS) {
+            return EXIT_FAILURE;
+        }
+        if (i < len) path[i] = PATH_SEP;
+    }
+    return EXIT_SUCCESS;
+}
+
+#endif  // (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 
 #ifdef __linux__
 
