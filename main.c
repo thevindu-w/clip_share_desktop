@@ -86,6 +86,40 @@ static inline void _set_error_log_file(const char *path) {
 }
 
 /*
+ * Change working directory to the directory specified in the configuration
+ */
+static inline void _change_working_dir(void) {
+    if (!is_directory(configuration.working_dir, 1)) {
+        char err[3072];
+        snprintf_check(err, 3072, "Not existing working directory \'%s\'", configuration.working_dir);
+        fprintf(stderr, "%s\n", err);
+        error_exit(err);
+    }
+    char *old_work_dir = getcwd_wrapper(0);
+    if (chdir_wrapper(configuration.working_dir)) {
+        char err[3072];
+        snprintf_check(err, 3072, "Failed changing working directory to \'%s\'", configuration.working_dir);
+        fprintf(stderr, "%s\n", err);
+        if (old_work_dir) free(old_work_dir);
+        error_exit(err);
+    }
+    char *new_work_dir = getcwd_wrapper(0);
+    if (old_work_dir == NULL || new_work_dir == NULL) {
+        const char *err = "Error occured during changing working directory.";
+        fprintf(stderr, "%s\n", err);
+        if (old_work_dir) free(old_work_dir);
+        if (new_work_dir) free(new_work_dir);
+        error_exit(err);
+    }
+    // if the working directory did not change, set configuration.working_dir to NULL
+    if (!strcmp(old_work_dir, new_work_dir)) {
+        configuration.working_dir = NULL;
+    }
+    free(old_work_dir);
+    free(new_work_dir);
+}
+
+/*
  * Apply default values to the configuration options that are not specified in conf file.
  */
 static inline void _apply_default_conf(void) {
@@ -126,6 +160,7 @@ int main(int argc, char **argv) {
     int8_t command;
     _parse_args(argc, argv, &command);
 
+    if (configuration.working_dir) _change_working_dir();
     cwd = getcwd_wrapper(0);
     cwd_len = strnlen(cwd, 2048);
 

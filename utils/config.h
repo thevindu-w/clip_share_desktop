@@ -6,6 +6,7 @@
 
 typedef struct _config {
     unsigned short app_port;
+    char *working_dir;
     uint32_t max_text_length;
     int64_t max_file_size;
     unsigned short min_proto_version;

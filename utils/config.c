@@ -150,6 +150,9 @@ static void parse_line(char *line, config *cfg) {
 
     if (!strcmp("app_port", key)) {
         set_ushort(value, &(cfg->app_port));
+    } else if (!strcmp("working_dir", key)) {
+        if (cfg->working_dir) free(cfg->working_dir);
+        cfg->working_dir = strdup(value);
     } else if (!strcmp("max_text_length", key)) {
         set_uint32(value, &(cfg->max_text_length));
     } else if (!strcmp("max_file_size", key)) {
@@ -167,6 +170,7 @@ static void parse_line(char *line, config *cfg) {
 
 void parse_conf(config *cfg, const char *file_name) {
     cfg->app_port = 0;
+    cfg->working_dir = NULL;
     cfg->max_text_length = 0;
     cfg->max_file_size = 0;
     cfg->min_proto_version = 0;
@@ -197,5 +201,7 @@ void parse_conf(config *cfg, const char *file_name) {
 }
 
 void clear_config(config *cfg) {
-    // TODO (thevindu-w): implement for heap allocated config items
+    if (cfg->working_dir) {
+        free(cfg->working_dir);
+    }
 }
