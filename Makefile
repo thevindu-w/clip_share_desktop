@@ -3,7 +3,7 @@ MAKEFLAGS += -j4
 PROGRAM_NAME=clip-share-client
 
 MIN_PROTO=1
-MAX_PROTO=3
+MAX_PROTO=1
 
 CC=gcc
 CFLAGS=-c -pipe -I. --std=gnu11

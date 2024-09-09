@@ -82,9 +82,16 @@ extern int64_t convert_eol(char **str_p, int force_lf);
 
 #define open_file(filename, mode) fopen(filename, mode)
 #define remove_file(filename) remove(filename)
+#define chdir_wrapper(path) chdir(path)
 #define getcwd_wrapper(len) getcwd(NULL, len)
 
 #elif defined(_WIN32)
+
+/*
+ * A wrapper for chdir() to be platform independent.
+ * Internally converts the filename to wide char on Windows.
+ */
+extern int chdir_wrapper(const char *path);
 
 /**
  * Get the pathname of the current working directory. If successful, returns an array which is allocated with malloc;

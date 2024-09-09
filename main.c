@@ -9,6 +9,7 @@
 #define COMMAND_HELP 127
 #define COMMAND_GET_TEXT 1
 #define COMMAND_SEND_TEXT 2
+#define COMMAND_GET_FILES 3
 
 // tcp and udp
 #define APP_PORT 4337
@@ -37,6 +38,11 @@ static inline void send_text() {
     puts("Send text done");
 }
 
+static inline void get_files() {
+    // TODO: Implement
+    puts("Get files done");
+}
+
 /*
  * Parse command line arguments and set corresponding variables
  */
@@ -50,6 +56,8 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p) {
         *command_p = COMMAND_GET_TEXT;
     } else if (strncmp(cmd, "s", 2) == 0) {
         *command_p = COMMAND_SEND_TEXT;
+    } else if (strncmp(cmd, "fg", 2) == 0) {
+        *command_p = COMMAND_GET_FILES;
     } else {
         fprintf(stderr, "Invalid command %s\n", argv[1]);
         *command_p = 0;
@@ -175,6 +183,10 @@ int main(int argc, char **argv) {
         }
         case COMMAND_SEND_TEXT: {
             send_text();
+            break;
+        }
+        case COMMAND_GET_FILES: {
+            get_files();
             break;
         }
         default: {

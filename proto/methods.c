@@ -16,11 +16,20 @@
 #include <unistr.h>
 
 #define FILE_BUF_SZ 65536  // 64 KiB
+#define MAX_FILE_NAME_LENGTH 2048
 
 /*
  * Common function to save files in get_files and get_image methods.
  */
 static int _save_file_common(int version, sock_t socket, const char *file_name);
+
+/*
+ * Check if the file name is valid.
+ * A file name is valid only if it's a valid UTF-8 non-empty string, and contains no invalid characters \x00 to \x1f.
+ * returns EXIT_SUCCESS if the file name is valid.
+ * Otherwise, returns EXIT_FAILURE.
+ */
+static inline int _is_valid_fname(const char *fname, size_t name_length);
 
 int get_text_v1(sock_t socket) {
     int64_t length;
@@ -86,9 +95,6 @@ int send_text_v1(sock_t socket) {
 static int _save_file_common(int version, sock_t socket, const char *file_name) {
     int64_t file_size;
     if (read_size(socket, &file_size) != EXIT_SUCCESS) return EXIT_FAILURE;
-#ifdef DEBUG_MODE
-    printf("data len = %lli\n", (long long)file_size);
-#endif
     if (file_size > configuration.max_file_size) {
         return EXIT_FAILURE;
     }
@@ -137,10 +143,93 @@ static int _save_file_common(int version, sock_t socket, const char *file_name) 
     return EXIT_SUCCESS;
 }
 
+static inline int _is_valid_fname(const char *fname, size_t name_length) {
+    if (u8_check((const uint8_t *)fname, name_length)) {
+#ifdef DEBUG_MODE
+        fputs("Invalid UTF-8\n", stderr);
+#endif
+        return EXIT_FAILURE;
+    }
+    do {
+        if ((unsigned char)*fname < 32) return EXIT_FAILURE;
+        fname++;
+    } while (*fname);
+    return EXIT_SUCCESS;
+}
+
 #if PROTOCOL_MIN <= 1
+/*
+ * Get only the base name.
+ * Path seperator is assumed to be '/' regardless of the platform.
+ */
+static inline int _get_base_name(char *file_name, size_t name_length) {
+    const char *base_name = strrchr(file_name, '/');  // path separator is / when communicating with the client
+    if (base_name) {
+        base_name++;                                                         // don't want the '/' before the file name
+        memmove(file_name, base_name, strnlen(base_name, name_length) + 1);  // overlapping memory area
+    }
+    return EXIT_SUCCESS;
+}
+
+/*
+ * Change file name if exists
+ */
+static inline int _rename_if_exists(char *file_name, size_t max_len) {
+    char tmp_fname[max_len + 1];
+    if (configuration.working_dir != NULL || strcmp(file_name, "clipshare.conf")) {
+        if (snprintf_check(tmp_fname, max_len, ".%c%s", PATH_SEP, file_name)) return EXIT_FAILURE;
+    } else {
+        // do not create file named clipshare.conf
+        if (snprintf_check(tmp_fname, max_len, ".%c1_%s", PATH_SEP, file_name)) return EXIT_FAILURE;
+    }
+    int n = 1;
+    while (file_exists(tmp_fname)) {
+        if (n > 999999) return EXIT_FAILURE;
+        if (snprintf_check(tmp_fname, max_len, ".%c%i_%s", PATH_SEP, n++, file_name)) return EXIT_FAILURE;
+    }
+    strncpy(file_name, tmp_fname, max_len);
+    file_name[max_len] = 0;
+    return EXIT_SUCCESS;
+}
 
 int get_files_v1(sock_t socket) {
-    // TODO (thevindu-w): implement
+    int64_t cnt;
+    if (read_size(socket, &cnt) != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (cnt <= 0) return EXIT_FAILURE;
+
+    for (int64_t file_num = 0; file_num < cnt; file_num++) {
+        int64_t name_length;
+        if (read_size(socket, &name_length) != EXIT_SUCCESS) return EXIT_FAILURE;
+        // limit file name length to 1024 chars
+        if (name_length <= 0 || name_length > MAX_FILE_NAME_LENGTH) return EXIT_FAILURE;
+
+        const uint64_t name_max_len = (uint64_t)(name_length + 16);
+        if (name_max_len > MAX_FILE_NAME_LENGTH) {
+            error("Too long file name.");
+            return EXIT_FAILURE;
+        }
+        char file_name[name_max_len + 1];
+        if (read_sock(socket, file_name, (uint64_t)name_length) == EXIT_FAILURE) {
+            return EXIT_FAILURE;
+        }
+        file_name[name_length] = 0;
+        if (_is_valid_fname(file_name, (size_t)name_length) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+            printf("Invalid filename \'%s\'\n", file_name);
+#endif
+            return EXIT_FAILURE;
+        }
+
+        if (_get_base_name(file_name, (size_t)name_length) != EXIT_SUCCESS) return EXIT_FAILURE;
+
+        // PATH_SEP is not allowed in file name
+        if (strchr(file_name, PATH_SEP)) return EXIT_FAILURE;
+
+        // if file already exists, use a different file name
+        if (_rename_if_exists(file_name, name_max_len) != EXIT_SUCCESS) return EXIT_FAILURE;
+
+        if (_save_file_common(1, socket, file_name) != EXIT_SUCCESS) return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }
 
