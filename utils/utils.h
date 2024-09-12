@@ -4,6 +4,7 @@
 #include <globals.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <utils/list_utils.h>
 
 #if defined(__linux__) || defined(__APPLE__)
 #define PATH_SEP '/'
@@ -57,6 +58,12 @@ extern int get_clipboard_text(char **bufptr, size_t *lenptr);
 extern int put_clipboard_text(char *data, size_t len);
 
 /*
+ * Get the file size of the file from the given file pointer fp.
+ * returns the file size on success and -1 on failure.
+ */
+extern int64_t get_file_size(FILE *fp);
+
+/*
  * Check if a file exists at the path given by file_name.
  * returns 1 if a file or directory or other special file type exists or 0 otherwise.
  */
@@ -84,6 +91,14 @@ extern int64_t convert_eol(char **str_p, int force_lf);
 #define remove_file(filename) remove(filename)
 #define chdir_wrapper(path) chdir(path)
 #define getcwd_wrapper(len) getcwd(NULL, len)
+
+/**
+ * Get a list of copied files and directories as a single string.
+ * The output string is allocated with malloc, and contains the list of URL-encoded file/dir names, separated by '\n'
+ * (new-line character). The offset is set to the starting offset (in bytes) of the file list.
+ * Returns the string of file list on success or NULL on error.
+ */
+extern char *get_copied_files_as_str(int *offset);
 
 #elif defined(_WIN32)
 
@@ -113,6 +128,17 @@ extern FILE *open_file(const char *filename, const char *mode);
 extern int remove_file(const char *filename);
 
 #endif
+
+#if PROTOCOL_MIN <= 1
+
+/*
+ * Get a list of copied files from the clipboard.
+ * Only regular files are included in the list.
+ * returns the file list on success and NULL on failure.
+ */
+extern list2 *get_copied_files(void);
+
+#endif  // PROTOCOL_MIN <= 1
 
 #if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 

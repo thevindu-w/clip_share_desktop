@@ -9,7 +9,7 @@ CC=gcc
 CFLAGS=-c -pipe -I. --std=gnu11
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
-OBJS=main.o utils/utils.o utils/net_utils.o utils/config.o xclip/xclip.o xclip/xclib.o proto/selector.o proto/versions.o proto/methods.o
+OBJS=main.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o
 
 LINK_FLAGS_BUILD=
 
@@ -20,6 +20,7 @@ else
 endif
 
 ifeq ($(detected_OS),Linux)
+	OBJS+= xclip/xclip.o xclip/xclib.o
 	CFLAGS_OPTIM=-Os
 	LDLIBS=-lunistring -lX11 -lXmu -lXt
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections

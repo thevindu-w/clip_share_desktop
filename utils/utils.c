@@ -12,6 +12,13 @@
 #include <xclip/xclip.h>
 #endif
 
+#if defined(__linux__) || defined(__APPLE__)
+static inline char hex2char(char h);
+static int url_decode(char *);
+#elif defined(_WIN32)
+static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, int *wlen_p);
+#endif
+
 int snprintf_check(char *dest, size_t size, const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -94,6 +101,26 @@ int file_exists(const char *file_name) {
     free(wfname);
 #endif
     return f_ok == 0;
+}
+
+int64_t get_file_size(FILE *fp) {
+    struct stat statbuf;
+    if (fstat(fileno(fp), &statbuf)) {
+#ifdef DEBUG_MODE
+        puts("fstat failed");
+#endif
+        return -1;
+    }
+    if (!S_ISREG(statbuf.st_mode)) {
+#ifdef DEBUG_MODE
+        puts("not a file");
+#endif
+        return -1;
+    }
+    fseek(fp, 0L, SEEK_END);
+    int64_t file_size = ftell(fp);
+    rewind(fp);
+    return file_size;
 }
 
 int is_directory(const char *path, int follow_symlinks) {
@@ -207,6 +234,56 @@ int64_t convert_eol(char **str_p, int force_lf) {
     return _convert_to_lf(*str_p);
 }
 
+#if PROTOCOL_MIN <= 1
+
+#if defined(__linux__) || defined(__APPLE__)
+
+list2 *get_copied_files(void) {
+    int offset = 0;
+    char *fnames = get_copied_files_as_str(&offset);
+    if (!fnames) {
+        return NULL;
+    }
+    char *file_path = fnames + offset;
+
+    size_t file_cnt = 1;
+    for (char *ptr = file_path; *ptr; ptr++) {
+        if (*ptr == '\n') {
+            file_cnt++;
+            *ptr = 0;
+        }
+    }
+
+    list2 *lst = init_list(file_cnt);
+    if (!lst) {
+        free(fnames);
+        return NULL;
+    }
+    char *fname = file_path;
+    for (size_t i = 0; i < file_cnt; i++) {
+        size_t off = strnlen(fname, 2047) + 1;
+        if (url_decode(fname) == EXIT_FAILURE) break;
+
+        struct stat statbuf;
+        if (stat(fname, &statbuf)) {
+            fname += off;
+            continue;
+        }
+        if (!S_ISREG(statbuf.st_mode)) {
+            fname += off;
+            continue;
+        }
+        append(lst, strdup(fname));
+        fname += off;
+    }
+    free(fnames);
+    return lst;
+}
+
+#endif
+
+#endif  // PROTOCOL_MIN <= 1
+
 #if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 
 /*
@@ -277,6 +354,45 @@ int mkdirs(const char *dir_path) {
 
 #endif  // (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 
+#if defined(__linux__) || defined(__APPLE__)
+
+static inline char hex2char(char h) {
+    if ('0' <= h && h <= '9') return (char)((int)h - '0');
+    if ('A' <= h && h <= 'F') return (char)((int)h - 'A' + 10);
+    if ('a' <= h && h <= 'f') return (char)((int)h - 'a' + 10);
+    return -1;
+}
+
+static int url_decode(char *str) {
+    if (strncmp("file://", str, 7)) return EXIT_FAILURE;
+    char *ptr1 = str;
+    const char *ptr2 = str + 7;
+    if (!ptr2) return EXIT_FAILURE;
+    do {
+        char c;
+        if (*ptr2 == '%') {
+            ptr2++;
+            char tmp = *ptr2;
+            char c1 = hex2char(tmp);
+            if (c1 < 0) return EXIT_FAILURE;  // invalid url
+            c = (char)(c1 << 4);
+            ptr2++;
+            tmp = *ptr2;
+            c1 = hex2char(tmp);
+            if (c1 < 0) return EXIT_FAILURE;  // invalid url
+            c |= c1;
+        } else {
+            c = *ptr2;
+        }
+        *ptr1 = c;
+        ptr1++;
+        ptr2++;
+    } while (*ptr2);
+    *ptr1 = 0;
+    return EXIT_SUCCESS;
+}
+#endif
+
 #ifdef __linux__
 
 int get_clipboard_text(char **buf_ptr, size_t *len_ptr) {
@@ -298,6 +414,60 @@ int put_clipboard_text(char *data, size_t len) {
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
+}
+
+char *get_copied_files_as_str(int *offset) {
+    const char *const expected_target = "x-special/gnome-copied-files";
+    char *targets;
+    size_t targets_len;
+    if (xclip_util(XCLIP_OUT, "TARGETS", &targets_len, &targets) || targets_len <= 0) {  // do not change the order
+#ifdef DEBUG_MODE
+        printf("xclip read TARGETS. len = %zu\n", targets_len);
+#endif
+        if (targets) free(targets);
+        return NULL;
+    }
+    char found = 0;
+    char *copy = targets;
+    const char *token;
+    while ((token = strsep(&copy, "\n"))) {
+        if (!strcmp(token, expected_target)) {
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+#ifdef DEBUG_MODE
+        puts("No copied files");
+#endif
+        free(targets);
+        return NULL;
+    }
+    free(targets);
+
+    char *fnames;
+    size_t fname_len;
+    if (xclip_util(XCLIP_OUT, expected_target, &fname_len, &fnames) || fname_len <= 0) {  // do not change the order
+#ifdef DEBUG_MODE
+        printf("xclip read copied files. len = %zu\n", fname_len);
+#endif
+        if (fnames) free(fnames);
+        return NULL;
+    }
+    fnames[fname_len] = 0;
+
+    char *file_path = strchr(fnames, '\n');
+    if (!file_path) {
+        free(fnames);
+        return NULL;
+    }
+    *file_path = 0;
+    if (strcmp(fnames, "copy") && strcmp(fnames, "cut")) {
+        free(fnames);
+        return NULL;
+    }
+    *offset = (int)(file_path - fnames) + 1;
+    return fnames;
 }
 
 #endif

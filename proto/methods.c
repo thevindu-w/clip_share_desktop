@@ -18,6 +18,13 @@
 #define FILE_BUF_SZ 65536  // 64 KiB
 #define MAX_FILE_NAME_LENGTH 2048
 
+#define MIN(x, y) (x < y ? x : y)
+
+/*
+ * Common function to send files.
+ */
+static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len);
+
 /*
  * Common function to save files in get_files and get_image methods.
  */
@@ -30,6 +37,8 @@ static int _save_file_common(int version, sock_t socket, const char *file_name);
  * Otherwise, returns EXIT_FAILURE.
  */
 static inline int _is_valid_fname(const char *fname, size_t name_length);
+
+static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len);
 
 int get_text_v1(sock_t socket) {
     int64_t length;
@@ -89,6 +98,141 @@ int send_text_v1(sock_t socket) {
         return EXIT_FAILURE;
     }
     free(buf);
+    return EXIT_SUCCESS;
+}
+
+static int _transfer_regular_file(sock_t socket, const char *file_path, const char *filename, size_t fname_len) {
+    FILE *fp = open_file(file_path, "rb");
+    if (!fp) {
+        error("Couldn't open some files");
+        return EXIT_FAILURE;
+    }
+    int64_t file_size = get_file_size(fp);
+    if (file_size < 0 || file_size > configuration.max_file_size) {
+#ifdef DEBUG_MODE
+        printf("file size = %lli\n", (long long)file_size);
+#endif
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+
+    if (send_size(socket, (int64_t)fname_len) == EXIT_FAILURE) {
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+    if (write_sock(socket, filename, fname_len) == EXIT_FAILURE) {
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+
+    if (send_size(socket, file_size) == EXIT_FAILURE) {
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+
+    char data[FILE_BUF_SZ];
+    while (file_size > 0) {
+        size_t read = fread(data, 1, FILE_BUF_SZ, fp);
+        if (read == 0) continue;
+        if (write_sock(socket, data, read) == EXIT_FAILURE) {
+            fclose(fp);
+            return EXIT_FAILURE;
+        }
+        file_size -= (ssize_t)read;
+    }
+    fclose(fp);
+    return EXIT_SUCCESS;
+}
+
+static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len) {
+    const char *tmp_fname;
+    switch (version) {
+#if PROTOCOL_MIN <= 1
+        case 1: {
+            tmp_fname = strrchr(file_path, PATH_SEP);
+            if (tmp_fname == NULL) {
+                tmp_fname = file_path;
+            } else {
+                tmp_fname++;  // remove '/'
+            }
+            break;
+        }
+#endif
+#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
+        case 2:
+        case 3: {
+            tmp_fname = file_path + path_len;
+            break;
+        }
+#else
+        (void)path_len;
+#endif
+        default: {
+            return EXIT_FAILURE;
+        }
+    }
+
+    const size_t _tmp_len = strnlen(tmp_fname, MAX_FILE_NAME_LENGTH);
+    if (_tmp_len > MAX_FILE_NAME_LENGTH) {
+        error("Too long file name.");
+        return EXIT_FAILURE;
+    }
+    char filename[_tmp_len + 1];
+    strncpy(filename, tmp_fname, _tmp_len);
+    filename[_tmp_len] = 0;
+    const size_t fname_len = strnlen(filename, _tmp_len);
+    if (fname_len > MIN(_tmp_len, MAX_FILE_NAME_LENGTH)) {
+        return EXIT_FAILURE;
+    }
+
+#if PATH_SEP != '/' && PROTOCOL_MAX > 1
+    if (version > 1) {
+        // path separator is always / when communicating with the client
+        for (size_t ind = 0; ind < fname_len; ind++) {
+            if (filename[ind] == PATH_SEP) filename[ind] = '/';
+        }
+    }
+#endif
+
+#if PROTOCOL_MAX >= 3
+    if (filename[fname_len - 1] == '/') {  // filename is converted to have / as path separator on all platforms
+        filename[fname_len - 1] = 0;
+        return _transfer_directory(socket, filename, fname_len - 1);
+    }
+#endif
+    return _transfer_regular_file(socket, file_path, filename, fname_len);
+}
+
+static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len) {
+    if (!file_list || file_list->len == 0) {
+        if (file_list) free_list(file_list);
+        return EXIT_SUCCESS;
+    }
+
+    size_t file_cnt = file_list->len;
+    char **files = (char **)file_list->array;
+
+    if (version > 1 && (send_size(socket, (int64_t)file_cnt) != EXIT_SUCCESS)) {
+        free_list(file_list);
+        return EXIT_FAILURE;
+    }
+    if (version == 1) file_cnt = 1;  // proto v1 can only send 1 file
+
+    for (size_t i = 0; i < file_cnt; i++) {
+        const char *file_path = files[i];
+#ifdef DEBUG_MODE
+        printf("file name = %s\n", file_path);
+#endif
+
+        if (_transfer_single_file(version, socket, file_path, path_len) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+            puts("Transfer failed");
+#endif
+            free_list(file_list);
+            return EXIT_FAILURE;
+        }
+    }
+    free_list(file_list);
     return EXIT_SUCCESS;
 }
 
@@ -234,7 +378,8 @@ int get_files_v1(sock_t socket) {
 }
 
 int send_file_v1(sock_t socket) {
-    // TODO (thevindu-w): implement
+    list2 *file_list = get_copied_files();
+    return _send_files_common(1, socket, file_list, 0);
     return EXIT_SUCCESS;
 }
 
