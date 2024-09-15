@@ -12,7 +12,9 @@
 sock_t connect_server(uint32_t server_addr, uint16_t port) {
     sock_t sock = socket(PF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
-        fprintf(stderr, "Can\'t open socket\n");
+#ifdef DEBUG_MODE
+        fputs("Can\'t open socket\n", stderr);
+#endif
         return -1;
     }
     struct sockaddr_in s_addr_in;
@@ -22,7 +24,9 @@ sock_t connect_server(uint32_t server_addr, uint16_t port) {
 
     int status = connect(sock, (struct sockaddr *)&s_addr_in, sizeof(s_addr_in));
     if (status < 0) {
-        fprintf(stderr, "Can\'t open socket\n");
+#ifdef DEBUG_MODE
+        fputs("Connection failed\n", stderr);
+#endif
         close_socket(sock);
         return -1;
     }

@@ -5,12 +5,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <utils/utils.h>
+#include <client.h>
 
 #define COMMAND_HELP 127
 #define COMMAND_GET_TEXT 1
 #define COMMAND_SEND_TEXT 2
 #define COMMAND_GET_FILES 3
 #define COMMAND_SEND_FILES 4
+#define COMMAND_GET_IMAGE 5
 
 // tcp and udp
 #define APP_PORT 4337
@@ -29,26 +31,6 @@ size_t cwd_len;
 
 static inline void print_usage(const char *prog_name) { fprintf(stderr, "Usage: %s COMMAND [ARGS]\n", prog_name); }
 
-static inline void get_text() {
-    // TODO: Implement
-    puts("Get text done");
-}
-
-static inline void send_text() {
-    // TODO: Implement
-    puts("Send text done");
-}
-
-static inline void get_files() {
-    // TODO: Implement
-    puts("Get files done");
-}
-
-static inline void send_files() {
-    // TODO: Implement
-    puts("Send files done");
-}
-
 /*
  * Parse command line arguments and set corresponding variables
  */
@@ -66,6 +48,8 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p) {
         *command_p = COMMAND_GET_FILES;
     } else if (strncmp(cmd, "fs", 3) == 0) {
         *command_p = COMMAND_SEND_FILES;
+    } else if (strncmp(cmd, "i", 2) == 0) {
+        *command_p = COMMAND_GET_IMAGE;
     } else {
         fprintf(stderr, "Invalid command %s\n", argv[1]);
         *command_p = 0;
@@ -199,6 +183,10 @@ int main(int argc, char **argv) {
         }
         case COMMAND_SEND_FILES: {
             send_files();
+            break;
+        }
+        case COMMAND_GET_IMAGE: {
+            get_image();
             break;
         }
         default: {

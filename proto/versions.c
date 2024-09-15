@@ -1,19 +1,10 @@
 #include <proto/methods.h>
 #include <proto/versions.h>
+#include <proto/selector.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <utils/net_utils.h>
-
-// methods
-#define METHOD_GET_TEXT 1
-#define METHOD_SEND_TEXT 2
-#define METHOD_GET_FILE 3
-#define METHOD_SEND_FILE 4
-#define METHOD_GET_IMAGE 5
-#define METHOD_GET_COPIED_IMAGE 6
-#define METHOD_GET_SCREENSHOT 7
-#define METHOD_INFO 125
 
 // status codes
 #define STATUS_UNKNOWN_METHOD 3
