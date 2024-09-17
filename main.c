@@ -1,11 +1,12 @@
+#include <client.h>
 #include <globals.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <utils/net_utils.h>
 #include <utils/utils.h>
-#include <client.h>
 
 #define COMMAND_HELP 127
 #define COMMAND_GET_TEXT 1
@@ -28,15 +29,35 @@ config configuration;
 char *error_log_file;
 char *cwd;
 size_t cwd_len;
+uint32_t server_addr;
 
-static inline void print_usage(const char *prog_name) { fprintf(stderr, "Usage: %s COMMAND [ARGS]\n", prog_name); }
+static inline void print_usage(const char *prog_name) {
+    fprintf(stderr, "Usage: %s <server-address-ipv4> COMMAND\n", prog_name);
+    fprintf(stderr,
+            "Commands available:\n"
+            "\th  : Help\n"
+            "\tg  : Get copied text\n"
+            "\ts  : Send copied text\n"
+            "\tfg : Get copied files\n"
+            "\tfs : Send copied files\n"
+            "\ti  : Get image\n");
+    fprintf(stderr,
+            "\nExample: %s  192.168.21.42  g\n"
+            "\tThis command gets copied text from the device having IP address 192.168.21.42\n\n",
+            prog_name);
+}
 
 /*
  * Parse command line arguments and set corresponding variables
  */
 static inline void _parse_args(int argc, char **argv, int8_t *command_p) {
+    if (ipv4_aton(argv[1], &server_addr) != EXIT_SUCCESS) {
+        fprintf(stderr, "Invalid server address %s\n", argv[1]);
+        *command_p = 0;
+        return;
+    }
     char cmd[4];
-    strncpy(cmd, argv[1], 3);
+    strncpy(cmd, argv[2], 3);
     cmd[3] = 0;
     if (strncmp(cmd, "h", 2) == 0) {
         *command_p = COMMAND_HELP;
@@ -51,7 +72,7 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p) {
     } else if (strncmp(cmd, "i", 2) == 0) {
         *command_p = COMMAND_GET_IMAGE;
     } else {
-        fprintf(stderr, "Invalid command %s\n", argv[1]);
+        fprintf(stderr, "Invalid command %s\n", argv[2]);
         *command_p = 0;
     }
 }
@@ -145,7 +166,7 @@ int main(int argc, char **argv) {
         prog_name++;  // don't want the '/' before the program name
     }
 
-    if (argc <= 1) {
+    if (argc < 3) {
         print_usage(prog_name);
         return 1;
     }

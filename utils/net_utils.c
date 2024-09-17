@@ -9,6 +9,37 @@
 #include <winsock2.h>
 #endif
 
+int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
+    if (!address_ptr || !address_str) return EXIT_FAILURE;
+    unsigned int a;
+    unsigned int b;
+    unsigned int c;
+    unsigned int d;
+    if (sscanf(address_str, "%u.%u.%u.%u", &a, &b, &c, &d) != 4 || a >= 256 || b >= 256 || c >= 256 || d >= 256) {
+#ifdef DEBUG_MODE
+        printf("Invalid address %s\n", address_str);
+#endif
+        return EXIT_FAILURE;
+    }
+    struct in_addr addr;
+#if defined(__linux__) || defined(__APPLE__)
+    if (inet_aton(address_str, &addr) != 1) {
+#elif defined(_WIN32)
+    if ((addr.s_addr = inet_addr(address_str)) == INADDR_NONE) {
+#endif
+#ifdef DEBUG_MODE
+        printf("Invalid address %s\n", address_str);
+#endif
+        return EXIT_FAILURE;
+    }
+#if defined(__linux__) || defined(__APPLE__)
+    *address_ptr = addr.s_addr;
+#elif defined(_WIN32)
+    *address_ptr = (uint32_t)addr.s_addr;
+#endif
+    return EXIT_SUCCESS;
+}
+
 sock_t connect_server(uint32_t server_addr, uint16_t port) {
     sock_t sock = socket(PF_INET, SOCK_STREAM, 0);
     if (sock < 0) {

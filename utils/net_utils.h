@@ -13,6 +13,8 @@ typedef int sock_t;
 typedef SOCKET sock_t;
 #endif
 
+extern int ipv4_aton(const char *address_str, uint32_t *address_ptr);
+
 extern sock_t connect_server(uint32_t server_addr, uint16_t port);
 
 extern int read_sock(sock_t sock, char *buf, uint64_t size);

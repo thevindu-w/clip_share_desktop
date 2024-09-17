@@ -407,13 +407,13 @@ int get_clipboard_text(char **buf_ptr, size_t *len_ptr) {
 }
 
 int put_clipboard_text(char *data, size_t len) {
+    if (fork() > 0) return EXIT_SUCCESS;  // prevent caller from hanging
     if (xclip_util(XCLIP_IN, NULL, &len, &data) != EXIT_SUCCESS) {
-#ifdef DEBUG_MODE
-        fputs("Failed to write to clipboard\n", stderr);
-#endif
-        return EXIT_FAILURE;
+        if (data) free(data);
+        error_exit("Failed to write to clipboard");
     }
-    return EXIT_SUCCESS;
+    if (data) free(data);
+    exit_wrapper(EXIT_SUCCESS);
 }
 
 char *get_copied_files_as_str(int *offset) {
