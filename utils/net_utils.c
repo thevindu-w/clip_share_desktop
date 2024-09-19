@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <utils/net_utils.h>
+#include <utils/utils.h>
 #if defined(__linux__) || defined(__APPLE__)
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -48,6 +49,14 @@ sock_t connect_server(uint32_t server_addr, uint16_t port) {
 #endif
         return -1;
     }
+    // set timeout option to 5s
+    struct timeval tv_connect = {5, 0};
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect)) ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv_connect, sizeof(tv_connect))) {
+        error("Can't set the timeout option of the connection");
+        return -1;
+    }
+
     struct sockaddr_in s_addr_in;
     s_addr_in.sin_family = AF_INET;
     s_addr_in.sin_addr.s_addr = server_addr;
@@ -59,6 +68,14 @@ sock_t connect_server(uint32_t server_addr, uint16_t port) {
         fputs("Connection failed\n", stderr);
 #endif
         close_socket(sock);
+        return -1;
+    }
+
+    // set timeout option to 100ms
+    struct timeval tv = {0, 100000};
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv)) ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv))) {
+        error("Can't set the timeout option of the connection");
         return -1;
     }
 
@@ -107,7 +124,6 @@ int write_sock(sock_t sock, const char *buf, uint64_t size) {
     return EXIT_SUCCESS;
 }
 
-
 int send_size(sock_t socket, int64_t size) {
     char sz_buf[8];
     int64_t sz = size;
@@ -133,7 +149,6 @@ int read_size(sock_t socket, int64_t *size_ptr) {
     *size_ptr = size;
     return EXIT_SUCCESS;
 }
-
 
 void close_socket(sock_t sock) {
 #if defined(__linux__) || defined(__APPLE__)

@@ -7,7 +7,10 @@
 
 static int _invoke_method(unsigned char method) {
     sock_t sock = connect_server(server_addr, configuration.app_port);
-    if (sock <= 0) return EXIT_FAILURE;
+    if (sock <= 0) {
+        puts("Couldn't connect");
+        return EXIT_FAILURE;
+    }
     int ret = handle_proto(sock, method);
     close_socket(sock);
     return ret;
