@@ -395,7 +395,8 @@ int get_image_v1(sock_t socket) {
 }
 
 int info_v1(sock_t socket) {
-    // TODO (thevindu-w): implement
+    // TODO(thevindu-w): implement
+    (void)socket;
     return EXIT_SUCCESS;
 }
 

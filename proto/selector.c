@@ -82,7 +82,10 @@ int handle_proto(sock_t socket, unsigned char method) {
             break;
         }
 #endif
-        default:  // invalid or unknown version
-            break;
+        default: {  // invalid or unknown version
+            error("Invalid protocol version");
+            return EXIT_FAILURE;
+        }
+            return EXIT_FAILURE;
     }
 }

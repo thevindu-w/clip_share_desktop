@@ -50,7 +50,7 @@ static inline void print_usage(const char *prog_name) {
 /*
  * Parse command line arguments and set corresponding variables
  */
-static inline void _parse_args(int argc, char **argv, int8_t *command_p) {
+static inline void _parse_args(char **argv, int8_t *command_p) {
     if (ipv4_aton(argv[1], &server_addr) != EXIT_SUCCESS) {
         fprintf(stderr, "Invalid server address %s\n", argv[1]);
         *command_p = 0;
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
     _apply_default_conf();
 
     int8_t command;
-    _parse_args(argc, argv, &command);
+    _parse_args(argv, &command);
 
     if (configuration.working_dir) _change_working_dir();
     cwd = getcwd_wrapper(0);

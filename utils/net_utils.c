@@ -41,7 +41,7 @@ int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
     return EXIT_SUCCESS;
 }
 
-sock_t connect_server(uint32_t server_addr, uint16_t port) {
+sock_t connect_server(uint32_t addr, uint16_t port) {
     sock_t sock = socket(PF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
 #ifdef DEBUG_MODE
@@ -59,7 +59,7 @@ sock_t connect_server(uint32_t server_addr, uint16_t port) {
 
     struct sockaddr_in s_addr_in;
     s_addr_in.sin_family = AF_INET;
-    s_addr_in.sin_addr.s_addr = server_addr;
+    s_addr_in.sin_addr.s_addr = addr;
     s_addr_in.sin_port = htons(port);
 
     int status = connect(sock, (struct sockaddr *)&s_addr_in, sizeof(s_addr_in));

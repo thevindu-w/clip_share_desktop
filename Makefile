@@ -6,7 +6,7 @@ MIN_PROTO=1
 MAX_PROTO=1
 
 CC=gcc
-CFLAGS=-c -pipe -I. --std=gnu11
+CFLAGS=-c -pipe -I. --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
 OBJS=main.o client.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o
@@ -21,10 +21,12 @@ endif
 
 ifeq ($(detected_OS),Linux)
 	OBJS+= xclip/xclip.o xclip/xclib.o
+	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS_OPTIM=-Os
 	LDLIBS=-lunistring -lX11 -lXmu -lXt
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
+	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS+= -D__USE_MINGW_ANSI_STDIO
 	CFLAGS_OPTIM=-O3
 	LINK_FLAGS_BUILD=-no-pie -mwindows
@@ -34,7 +36,6 @@ export CPATH=$(shell brew --prefix)/include
 export LIBRARY_PATH=$(shell brew --prefix)/lib
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
-	CFLAGS+= -D__USE_MINGW_ANSI_STDIO
 else
 $(error ClipShare is not supported on this platform!)
 endif

@@ -16,7 +16,7 @@ static int _invoke_method(unsigned char method) {
     return ret;
 }
 
-void get_text() {
+void get_text(void) {
     const char *msg_suffix;
     if (_invoke_method(METHOD_GET_TEXT) == EXIT_SUCCESS)
         msg_suffix = "done";
@@ -25,7 +25,7 @@ void get_text() {
     printf("Get text %s\n", msg_suffix);
 }
 
-void send_text() {
+void send_text(void) {
     const char *msg_suffix;
     if (_invoke_method(METHOD_SEND_TEXT) == EXIT_SUCCESS)
         msg_suffix = "done";
@@ -34,7 +34,7 @@ void send_text() {
     printf("Send text %s\n", msg_suffix);
 }
 
-void get_files() {
+void get_files(void) {
     const char *msg_suffix;
     if (_invoke_method(METHOD_GET_FILE) == EXIT_SUCCESS)
         msg_suffix = "done";
@@ -43,7 +43,7 @@ void get_files() {
     printf("Get files %s\n", msg_suffix);
 }
 
-void send_files() {
+void send_files(void) {
     const char *msg_suffix;
     if (_invoke_method(METHOD_SEND_FILE) == EXIT_SUCCESS)
         msg_suffix = "done";
@@ -52,7 +52,7 @@ void send_files() {
     printf("Send files %s\n", msg_suffix);
 }
 
-void get_image() {
+void get_image(void) {
     const char *msg_suffix;
     if (_invoke_method(METHOD_GET_IMAGE) == EXIT_SUCCESS)
         msg_suffix = "done";
