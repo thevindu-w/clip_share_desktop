@@ -90,7 +90,7 @@ int read_sock(sock_t sock, char *buf, uint64_t size) {
         ssize_t sz_read;
         uint64_t req_sz = size - total_sz_read;
         if (req_sz > 0x7fffffff) req_sz = 0x7fffffff;  // prevent overflow
-        sz_read = recv(sock, buf, req_sz, 0);
+        sz_read = recv(sock, ptr, req_sz, 0);
         if (sz_read > 0) {
             total_sz_read += (uint64_t)sz_read;
             cnt = 0;
@@ -113,7 +113,7 @@ int write_sock(sock_t sock, const char *buf, uint64_t size) {
         ssize_t sz_written;
         uint64_t req_sz = size - total_written;
         if (req_sz > 0x7fffffff) req_sz = 0x7fffffff;  // prevent overflow
-        sz_written = send(sock, buf, req_sz, 0);
+        sz_written = send(sock, ptr, req_sz, 0);
         if (sz_written > 0) {
             total_written += (uint64_t)sz_written;
             cnt = 0;
