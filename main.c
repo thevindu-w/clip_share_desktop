@@ -166,6 +166,13 @@ int main(int argc, char **argv) {
         prog_name++;  // don't want the '/' before the program name
     }
 
+#ifdef _WIN32
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        freopen("CONOUT$", "w", stdout);
+        freopen("CONOUT$", "w", stderr);
+    }
+#endif
+
     if (argc < 3) {
         print_usage(prog_name);
         return 1;
@@ -184,6 +191,13 @@ int main(int argc, char **argv) {
     if (configuration.working_dir) _change_working_dir();
     cwd = getcwd_wrapper(0);
     cwd_len = strnlen(cwd, 2048);
+
+#ifdef _WIN32
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+        error_exit("Failed WSAStartup");
+    }
+#endif
 
     switch (command) {
         case COMMAND_HELP: {

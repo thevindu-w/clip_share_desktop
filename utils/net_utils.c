@@ -43,18 +43,18 @@ int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
 
 sock_t connect_server(uint32_t addr, uint16_t port) {
     sock_t sock = socket(PF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
+    if (sock == INVALID_SOCKET) {
 #ifdef DEBUG_MODE
         fputs("Can\'t open socket\n", stderr);
 #endif
-        return -1;
+        return INVALID_SOCKET;
     }
     // set timeout option to 5s
     struct timeval tv_connect = {5, 0};
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect)) ||
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv_connect, sizeof(tv_connect))) {
         error("Can't set the timeout option of the connection");
-        return -1;
+        return INVALID_SOCKET;
     }
 
     struct sockaddr_in s_addr_in;
@@ -68,7 +68,7 @@ sock_t connect_server(uint32_t addr, uint16_t port) {
         fputs("Connection failed\n", stderr);
 #endif
         close_socket(sock);
-        return -1;
+        return INVALID_SOCKET;
     }
 
     // set timeout option to 100ms
@@ -76,7 +76,7 @@ sock_t connect_server(uint32_t addr, uint16_t port) {
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv)) ||
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv))) {
         error("Can't set the timeout option of the connection");
-        return -1;
+        return INVALID_SOCKET;
     }
 
     return sock;
@@ -90,7 +90,11 @@ int read_sock(sock_t sock, char *buf, uint64_t size) {
         ssize_t sz_read;
         uint64_t req_sz = size - total_sz_read;
         if (req_sz > 0x7fffffff) req_sz = 0x7fffffff;  // prevent overflow
+#ifdef _WIN32
+        sz_read = recv(sock, ptr, (int)req_sz, 0);
+#else
         sz_read = recv(sock, ptr, req_sz, 0);
+#endif
         if (sz_read > 0) {
             total_sz_read += (uint64_t)sz_read;
             cnt = 0;
@@ -113,7 +117,11 @@ int write_sock(sock_t sock, const char *buf, uint64_t size) {
         ssize_t sz_written;
         uint64_t req_sz = size - total_written;
         if (req_sz > 0x7fffffff) req_sz = 0x7fffffff;  // prevent overflow
+#ifdef _WIN32
+        sz_written = send(sock, ptr, (int)req_sz, 0);
+#else
         sz_written = send(sock, ptr, req_sz, 0);
+#endif
         if (sz_written > 0) {
             total_written += (uint64_t)sz_written;
             cnt = 0;

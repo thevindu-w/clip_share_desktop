@@ -11,12 +11,17 @@
 #include <X11/Xmu/Atoms.h>
 #include <xclip/xclip.h>
 #endif
+#ifdef _WIN32
+#include <direct.h>
+#include <windows.h>
+#endif
 
 #if defined(__linux__) || defined(__APPLE__)
 static inline char hex2char(char h);
 static int url_decode(char *);
 #elif defined(_WIN32)
 static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, int *wlen_p);
+static inline void _wappend(list2 *lst, const wchar_t *wstr);
 #endif
 
 int snprintf_check(char *dest, size_t size, const char *fmt, ...) {
@@ -280,6 +285,59 @@ list2 *get_copied_files(void) {
     return lst;
 }
 
+#elif defined(_WIN32)
+
+list2 *get_copied_files(void) {
+    if (!OpenClipboard(0)) return NULL;
+    if (!IsClipboardFormatAvailable(CF_HDROP)) {
+        CloseClipboard();
+        return NULL;
+    }
+    HGLOBAL hGlobal = (HGLOBAL)GetClipboardData(CF_HDROP);
+    if (!hGlobal) {
+        CloseClipboard();
+        return NULL;
+    }
+    HDROP hDrop = (HDROP)GlobalLock(hGlobal);
+    if (!hDrop) {
+        CloseClipboard();
+        return NULL;
+    }
+
+    size_t file_cnt = DragQueryFile(hDrop, (UINT)(-1), NULL, MAX_PATH);
+
+    if (file_cnt <= 0) {
+        GlobalUnlock(hGlobal);
+        CloseClipboard();
+        return NULL;
+    }
+    list2 *lst = init_list(file_cnt);
+    if (!lst) {
+        GlobalUnlock(hGlobal);
+        CloseClipboard();
+        return NULL;
+    }
+
+    wchar_t fileName[MAX_PATH + 1];
+    for (size_t i = 0; i < file_cnt; i++) {
+        fileName[0] = '\0';
+        DragQueryFileW(hDrop, (UINT)i, fileName, MAX_PATH);
+        DWORD attr = GetFileAttributesW(fileName);
+        DWORD dontWant =
+            FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_OFFLINE;
+        if (attr & dontWant) {
+#ifdef DEBUG_MODE
+            wprintf(L"not a file : %s\n", fileName);
+#endif
+            continue;
+        }
+        _wappend(lst, fileName);
+    }
+    GlobalUnlock(hGlobal);
+    CloseClipboard();
+    return lst;
+}
+
 #endif
 
 #endif  // PROTOCOL_MIN <= 1
@@ -470,4 +528,138 @@ char *get_copied_files_as_str(int *offset) {
     return fnames;
 }
 
+#elif defined(_WIN32)
+
+static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, int *wlen_p) {
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8str, -1, NULL, 0);
+    if (wlen <= 0) return EXIT_FAILURE;
+    wchar_t *wstr = malloc((size_t)wlen * sizeof(wchar_t));
+    if (!wstr) return EXIT_FAILURE;
+    MultiByteToWideChar(CP_UTF8, 0, utf8str, -1, wstr, wlen);
+    wstr[wlen - 1] = 0;
+    *wstr_p = wstr;
+    if (wlen_p) *wlen_p = wlen - 1;
+    return EXIT_SUCCESS;
+}
+
+int wchar_to_utf8_str(const wchar_t *wstr, char **utf8str_p, int *len_p) {
+    int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+    if (len <= 0) return EXIT_FAILURE;
+    char *str = malloc((size_t)len);
+    if (!str) return EXIT_FAILURE;
+    WideCharToMultiByte(CP_UTF8, 0, wstr, -1, str, len, NULL, NULL);
+    str[len - 1] = 0;
+    *utf8str_p = str;
+    if (len_p) *len_p = len - 1;
+    return EXIT_SUCCESS;
+}
+
+int chdir_wrapper(const char *path) {
+    wchar_t *wpath;
+    if (utf8_to_wchar_str(path, &wpath, NULL) != EXIT_SUCCESS) return -1;
+    int result = _wchdir(wpath);
+    free(wpath);
+    return result;
+}
+
+char *getcwd_wrapper(int len) {
+    wchar_t *wcwd = _wgetcwd(NULL, len);
+    if (!wcwd) return NULL;
+    char *utf8path;
+    int alloc_len;
+    if (wchar_to_utf8_str(wcwd, &utf8path, &alloc_len) != EXIT_SUCCESS) {
+        free(wcwd);
+        return NULL;
+    }
+    free(wcwd);
+    if (alloc_len < len) utf8path = realloc(utf8path, (size_t)len);
+    return utf8path;
+}
+
+FILE *open_file(const char *filename, const char *mode) {
+    wchar_t *wfname;
+    wchar_t *wmode;
+    if (utf8_to_wchar_str(filename, &wfname, NULL) != EXIT_SUCCESS) return NULL;
+    if (utf8_to_wchar_str(mode, &wmode, NULL) != EXIT_SUCCESS) {
+        free(wfname);
+        return NULL;
+    }
+    FILE *fp = _wfopen(wfname, wmode);
+    free(wfname);
+    free(wmode);
+    return fp;
+}
+
+int remove_file(const char *filename) {
+    wchar_t *wfname;
+    if (utf8_to_wchar_str(filename, &wfname, NULL) != EXIT_SUCCESS) return -1;
+    int result = _wremove(wfname);
+    free(wfname);
+    return result;
+}
+
+/*
+ * A wrapper to append() for wide strings.
+ * Convert wchar_t * string to utf-8 and append to list
+ */
+static inline void _wappend(list2 *lst, const wchar_t *wstr) {
+    char *utf8path;
+    if (wchar_to_utf8_str(wstr, &utf8path, NULL) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        wprintf(L"Error while converting file path: %s\n", wstr);
+#endif
+        return;
+    }
+    append(lst, utf8path);
+}
+
+int get_clipboard_text(char **bufptr, size_t *lenptr) {
+    if (!OpenClipboard(0)) return EXIT_FAILURE;
+    if (!IsClipboardFormatAvailable(CF_TEXT)) {
+        CloseClipboard();
+        return EXIT_FAILURE;
+    }
+    HANDLE h = GetClipboardData(CF_UNICODETEXT);
+    char *data;
+    int len;
+    if (wchar_to_utf8_str((wchar_t *)h, &data, &len) != EXIT_SUCCESS) {
+        data = NULL;
+        len = 0;
+    }
+    CloseClipboard();
+
+    if (!data) {
+#ifdef DEBUG_MODE
+        fputs("clipboard data is null\n", stderr);
+#endif
+        *lenptr = 0;
+        return EXIT_FAILURE;
+    }
+    *bufptr = data;
+    *lenptr = (size_t)len;
+    data[*lenptr] = 0;
+    return EXIT_SUCCESS;
+}
+
+int put_clipboard_text(char *data, size_t len) {
+    if (!OpenClipboard(0)) return EXIT_FAILURE;
+    wchar_t *wstr;
+    int wlen;
+    char prev = data[len];
+    data[len] = 0;
+    if (utf8_to_wchar_str(data, &wstr, &wlen) != EXIT_SUCCESS) {
+        data[len] = prev;
+        CloseClipboard();
+        return EXIT_FAILURE;
+    }
+    data[len] = prev;
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (size_t)(wlen + 1) * sizeof(wchar_t));
+    wcscpy_s(GlobalLock(hMem), (rsize_t)(wlen + 1), wstr);
+    GlobalUnlock(hMem);
+    free(wstr);
+    EmptyClipboard();
+    HANDLE res = SetClipboardData(CF_UNICODETEXT, hMem);
+    CloseClipboard();
+    return (res == NULL ? EXIT_FAILURE : EXIT_SUCCESS);
+}
 #endif
