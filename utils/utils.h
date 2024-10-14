@@ -31,6 +31,14 @@
 #endif
 
 /*
+ * List of files and the length of the path of their parent directory
+ */
+typedef struct _dir_files {
+    size_t path_len;
+    list2 *lst;
+} dir_files;
+
+/*
  * A wrapper for snprintf.
  * returns 1 if snprintf failed or truncated
  * returns 0 otherwise
@@ -168,6 +176,15 @@ extern list2 *get_copied_files(void);
  * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
  */
 extern int mkdirs(const char *path);
+
+/*
+ * Accepts a valid pointer to a dir_files structure
+ * Get copied files and directories from the clipboard.
+ * Only regular files are included in the file list.
+ * Set the path_len to the length of path name of the directory which the files are copied.
+ * Sets directories and files in dfiles_p on success and sets the path_len to 0 and file list to NULL on failure.
+ */
+extern void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs);
 
 #endif
 

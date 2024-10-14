@@ -398,7 +398,6 @@ int get_files_v1(sock_t socket) {
 int send_file_v1(sock_t socket) {
     list2 *file_list = get_copied_files();
     return _send_files_common(1, socket, file_list, 0);
-    return EXIT_SUCCESS;
 }
 
 #endif
@@ -421,30 +420,38 @@ int info_v1(sock_t socket) {
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
 int get_files_v2(sock_t socket) {
     // TODO (thevindu-w): implement
+    (void)socket;
     return EXIT_SUCCESS;
 }
 
-int send_files_v2(sock_t socket) {  // TODO (thevindu-w): implement
-    return EXIT_SUCCESS;
+int send_files_v2(sock_t socket) {
+    dir_files copied_dir_files;
+    get_copied_dirs_files(&copied_dir_files, 0);
+    return _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len);
 }
 #endif
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
 int get_copied_image_v3(sock_t socket) {  // TODO (thevindu-w): implement
+    (void)socket;
     return EXIT_SUCCESS;
 }
 
 int get_screenshot_v3(sock_t socket) {
     // TODO (thevindu-w): implement
+    (void)socket;
     return EXIT_SUCCESS;
 }
 
 int get_files_v3(sock_t socket) {
     // TODO (thevindu-w): implement
+    (void)socket;
     return EXIT_SUCCESS;
 }
 
-int send_files_v3(sock_t socket) {  // TODO (thevindu-w): implement
+int send_files_v3(sock_t socket) {
+    // TODO (thevindu-w): implement
+    (void)socket;
     return EXIT_SUCCESS;
 }
 #endif

@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <dirent.h>
 #include <globals.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -33,6 +34,8 @@
 #include <direct.h>
 #include <windows.h>
 #endif
+
+#define MAX_RECURSE_DEPTH 256
 
 #if defined(__linux__) || defined(__APPLE__)
 static inline char hex2char(char h);
@@ -427,6 +430,138 @@ int mkdirs(const char *dir_path) {
     }
     return EXIT_SUCCESS;
 }
+
+#if defined(__linux__) || defined(__APPLE__)
+
+/*
+ * Check if the path is a file or a directory.
+ * If the path is a directory, calls _recurse_dir() on that.
+ * Otherwise, appends the path to the list
+ */
+static void _process_path(const char *path, list2 *lst, int depth, int include_leaf_dirs);
+
+/*
+ * Recursively append all file paths in the directory and its subdirectories
+ * to the list.
+ * maximum recursion depth is limited to MAX_RECURSE_DEPTH
+ */
+static void _recurse_dir(const char *_path, list2 *lst, int depth, int include_leaf_dirs);
+
+static void _process_path(const char *path, list2 *lst, int depth, int include_leaf_dirs) {
+    struct stat sb;
+    if (lstat(path, &sb) != 0) return;
+    if (S_ISDIR(sb.st_mode)) {
+        _recurse_dir(path, lst, depth + 1, include_leaf_dirs);
+    } else if (S_ISREG(sb.st_mode)) {
+        append(lst, strdup(path));
+    }
+}
+
+static void _recurse_dir(const char *_path, list2 *lst, int depth, int include_leaf_dirs) {
+    if (depth > MAX_RECURSE_DEPTH) return;
+    DIR *d = opendir(_path);
+    if (!d) {
+#ifdef DEBUG_MODE
+        printf("Error opening directory %s", _path);
+#endif
+        return;
+    }
+    size_t p_len = strnlen(_path, 2050);
+    if (p_len > 2048) {
+        error("Too long file name.");
+        (void)closedir(d);
+        return;
+    }
+    char path[p_len + 2];
+    strncpy(path, _path, p_len + 1);
+    path[p_len + 1] = 0;
+    if (path[p_len - 1] != PATH_SEP) {
+        path[p_len++] = PATH_SEP;
+        path[p_len] = '\0';
+    }
+    const struct dirent *dir;
+    int is_empty = 1;
+    while ((dir = readdir(d)) != NULL) {
+        const char *filename = dir->d_name;
+        if (!(strcmp(filename, ".") && strcmp(filename, ".."))) continue;
+        is_empty = 0;
+        const size_t _fname_len = strnlen(filename, sizeof(dir->d_name));
+        if (_fname_len + p_len > 2048) {
+            error("Too long file name.");
+            (void)closedir(d);
+            return;
+        }
+        char pathname[_fname_len + p_len + 1];
+        strncpy(pathname, path, p_len);
+        strncpy(pathname + p_len, filename, _fname_len + 1);
+        pathname[p_len + _fname_len] = 0;
+        _process_path(pathname, lst, depth, include_leaf_dirs);
+    }
+    if (include_leaf_dirs && is_empty) {
+        append(lst, strdup(path));
+    }
+    (void)closedir(d);
+}
+
+void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
+    dfiles_p->lst = NULL;
+    dfiles_p->path_len = 0;
+    int offset = 0;
+    char *fnames = get_copied_files_as_str(&offset);
+    if (!fnames) {
+        return;
+    }
+    char *file_path = fnames + offset;
+
+    size_t file_cnt = 1;
+    for (char *ptr = file_path; *ptr; ptr++) {
+        if (*ptr == '\n') {
+            file_cnt++;
+            *ptr = 0;
+        }
+    }
+
+    list2 *lst = init_list(file_cnt);
+    if (!lst) {
+        free(fnames);
+        return;
+    }
+    dfiles_p->lst = lst;
+    char *fname = file_path;
+    for (size_t i = 0; i < file_cnt; i++) {
+        const size_t off = strnlen(fname, 2047) + 1;
+        if (url_decode(fname) != EXIT_SUCCESS) break;
+        // fname has changed after url_decode
+        if (i == 0) {
+            size_t fname_len = strnlen(fname, 2047);
+            if (fname_len == 0) break;                                       // empty file name
+            if (fname[fname_len - 1] == PATH_SEP) fname[fname_len - 1] = 0;  // if directory, remove ending /
+            const char *sep_ptr = strrchr(fname, PATH_SEP);
+            if (sep_ptr > fname) {
+                dfiles_p->path_len = (size_t)sep_ptr - (size_t)fname + 1;
+            }
+        }
+
+        struct stat statbuf;
+        if (stat(fname, &statbuf)) {
+#ifdef DEBUG_MODE
+            puts("stat failed");
+#endif
+            fname += off;
+            continue;
+        }
+        if (S_ISDIR(statbuf.st_mode)) {
+            _recurse_dir(fname, lst, 1, include_leaf_dirs);
+            fname += off;
+        } else if (S_ISREG(statbuf.st_mode)) {
+            append(lst, strdup(fname));
+            fname += off;
+        }
+    }
+    free(fnames);
+}
+
+#endif
 
 #endif  // (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 
