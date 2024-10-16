@@ -39,6 +39,20 @@
 #define MIN(x, y) (x < y ? x : y)
 
 /*
+ * Check if path contains /../ (go to parent dir)
+ */
+static inline int _check_path(const char *path) {
+    char bad_path[] = "/../";
+    bad_path[0] = PATH_SEP;
+    bad_path[3] = PATH_SEP;
+    const char *ptr = strstr(path, bad_path);
+    if (ptr) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+/*
  * Common function to send files.
  */
 static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len);
@@ -417,12 +431,157 @@ int info_v1(sock_t socket) {
     return EXIT_SUCCESS;
 }
 
-#if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
-int get_files_v2(sock_t socket) {
-    // TODO (thevindu-w): implement
-    (void)socket;
+#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
+/*
+ * Make parent directories for path
+ */
+static inline int _make_directories(const char *path) {
+    char *base_name = strrchr(path, PATH_SEP);
+    if (!base_name) return EXIT_FAILURE;
+    *base_name = 0;
+    if (mkdirs(path) != EXIT_SUCCESS) {
+        *base_name = PATH_SEP;
+        return EXIT_FAILURE;
+    }
+    *base_name = PATH_SEP;
     return EXIT_SUCCESS;
 }
+
+static int save_file(int version, sock_t socket, const char *dirname) {
+    int64_t fname_size;
+    if (read_size(socket, &fname_size) != EXIT_SUCCESS) return EXIT_FAILURE;
+#ifdef DEBUG_MODE
+    printf("name_len = %zi\n", (ssize_t)fname_size);
+#endif
+    // limit file name length to 1024 chars
+    if (fname_size <= 0 || fname_size > MAX_FILE_NAME_LENGTH) return EXIT_FAILURE;
+
+    const uint64_t name_length = (uint64_t)fname_size;
+    char file_name[name_length + 1];
+    if (read_sock(socket, file_name, name_length) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fputs("Read file name failed\n", stderr);
+#endif
+        return EXIT_FAILURE;
+    }
+
+    file_name[name_length] = 0;
+    if (_is_valid_fname(file_name, name_length) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        printf("Invalid filename \'%s\'\n", file_name);
+#endif
+        return EXIT_FAILURE;
+    }
+    if (file_name[name_length - 1] == '/') file_name[name_length - 1] = 0;  // remove trailing /
+
+#if PATH_SEP != '/'
+    // replace '/' with PATH_SEP
+    for (size_t ind = 0; ind < name_length; ind++) {
+        if (file_name[ind] == '/') {
+            file_name[ind] = PATH_SEP;
+            if (ind > 0 && file_name[ind - 1] == PATH_SEP) return EXIT_FAILURE;  // "//" in path not allowed
+        }
+    }
+#endif
+
+    char new_path[name_length + 20];
+    if (file_name[0] == PATH_SEP) {
+        if (snprintf_check(new_path, name_length + 20, "%s%s", dirname, file_name)) return EXIT_FAILURE;
+    } else {
+        if (snprintf_check(new_path, name_length + 20, "%s%c%s", dirname, PATH_SEP, file_name)) return EXIT_FAILURE;
+    }
+
+    // path must not contain /../ (go to parent dir)
+    if (_check_path(new_path) != EXIT_SUCCESS) return EXIT_FAILURE;
+
+    // make parent directories
+    if (_make_directories(new_path) != EXIT_SUCCESS) return EXIT_FAILURE;
+
+    // check if file exists
+    if (file_exists(new_path)) return EXIT_FAILURE;
+
+    return _save_file_common(version, socket, new_path);
+}
+
+static char *_check_and_rename(const char *filename, const char *dirname) {
+    const size_t name_len = strnlen(filename, MAX_FILE_NAME_LENGTH);
+    if (name_len > MAX_FILE_NAME_LENGTH) {
+        error("Too long file name.");
+        return NULL;
+    }
+    const size_t name_max_len = name_len + 20;
+    char old_path[name_max_len];
+    if (snprintf_check(old_path, name_max_len, "%s%c%s", dirname, PATH_SEP, filename)) return NULL;
+
+    char new_path[name_max_len];
+    if (configuration.working_dir != NULL || strcmp(filename, "clipshare.conf")) {
+        // "./" is important to prevent file names like "C:\path"
+        if (snprintf_check(new_path, name_max_len, ".%c%s", PATH_SEP, filename)) return NULL;
+    } else {
+        // do not create file named clipshare.conf. "./" is important to prevent file names like "C:\path"
+        if (snprintf_check(new_path, name_max_len, ".%c1_%s", PATH_SEP, filename)) return NULL;
+    }
+
+    // if new_path already exists, use a different file name
+    int n = 1;
+    while (file_exists(new_path)) {
+        if (n > 999999) return NULL;
+        if (snprintf_check(new_path, name_max_len, ".%c%i_%s", PATH_SEP, n++, filename)) return NULL;
+    }
+
+    if (rename_file(old_path, new_path)) {
+#ifdef DEBUG_MODE
+        printf("Rename failed : %s\n", new_path);
+#endif
+        return NULL;
+    }
+
+    char *path = (char *)malloc(cwd_len + name_max_len + 2);  // for PATH_SEP and null terminator
+    strncpy(path, cwd, cwd_len + 1);
+    size_t p_len = cwd_len;
+    path[p_len++] = PATH_SEP;
+    strncpy(path + p_len, new_path + 2, name_max_len + 1);  // +2 for ./ (new_path always starts with ./)
+    path[cwd_len + name_max_len + 1] = 0;
+    return path;
+}
+
+static int _get_files_dirs(int version, sock_t socket) {
+    int64_t cnt;
+    if (read_size(socket, &cnt) != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (cnt <= 0) return EXIT_FAILURE;
+    char dirname[17];
+    unsigned id = (unsigned)time(NULL);
+    do {
+        if (snprintf_check(dirname, 17, ".%c%x", PATH_SEP, id)) return EXIT_FAILURE;
+        id = (unsigned)rand();
+    } while (file_exists(dirname));
+
+    if (mkdirs(dirname) != EXIT_SUCCESS) return EXIT_FAILURE;
+
+    for (int64_t file_num = 0; file_num < cnt; file_num++) {
+        if (save_file(version, socket, dirname) != EXIT_SUCCESS) {
+            return EXIT_FAILURE;
+        }
+    }
+    close_socket(socket);
+    list2 *files = list_dir(dirname);
+    if (!files) return EXIT_FAILURE;
+    int status = EXIT_SUCCESS;
+    for (size_t i = 0; i < files->len; i++) {
+        const char *filename = files->array[i];
+        char *new_path = _check_and_rename(filename, dirname);
+        if (!new_path) status = EXIT_FAILURE;
+        free(new_path);
+    }
+    free_list(files);
+    if (status == EXIT_SUCCESS && remove_directory(dirname)) status = EXIT_FAILURE;
+    return status;
+}
+
+#endif
+
+#if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
+int get_files_v2(sock_t socket) { return _get_files_dirs(2, socket); }
 
 int send_files_v2(sock_t socket) {
     dir_files copied_dir_files;

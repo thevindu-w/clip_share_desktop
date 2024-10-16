@@ -178,6 +178,12 @@ extern list2 *get_copied_files(void);
 extern int mkdirs(const char *path);
 
 /*
+ * Get a list of files in the directory at the path given by dirname.
+ * returns the list of files on success or NULL on failure
+ */
+extern list2 *list_dir(const char *dirname);
+
+/*
  * Accepts a valid pointer to a dir_files structure
  * Get copied files and directories from the clipboard.
  * Only regular files are included in the file list.
@@ -186,6 +192,12 @@ extern int mkdirs(const char *path);
  */
 extern void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs);
 
+#if defined(__linux__) || defined(__APPLE__)
+
+#define rename_file(old_name, new_name) rename(old_name, new_name)
+#define remove_directory(path) rmdir(path)
+
+#endif
 #endif
 
 #endif  // UTILS_UTILS_H_

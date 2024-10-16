@@ -431,6 +431,51 @@ int mkdirs(const char *dir_path) {
     return EXIT_SUCCESS;
 }
 
+list2 *list_dir(const char *dirname) {
+#if defined(__linux__) || defined(__APPLE__)
+    DIR *d = opendir(dirname);
+#elif defined(_WIN32)
+    wchar_t *wdname;
+    if (utf8_to_wchar_str(dirname, &wdname, NULL) != EXIT_SUCCESS) {
+        return NULL;
+    }
+    _WDIR *d = _wopendir(wdname);
+    free(wdname);
+#endif
+    if (!d) {
+#ifdef DEBUG_MODE
+        puts("Error opening directory");
+#endif
+        return NULL;
+    }
+    list2 *lst = init_list(2);
+    if (!lst) return NULL;
+    while (1) {
+#if defined(__linux__) || defined(__APPLE__)
+        const struct dirent *dir = readdir(d);
+        const char *filename;
+#elif defined(_WIN32)
+        const struct _wdirent *dir = _wreaddir(d);
+        const wchar_t *filename;
+#endif
+        if (dir == NULL) break;
+        filename = dir->d_name;
+#if defined(__linux__) || defined(__APPLE__)
+        if (!(strcmp(filename, ".") && strcmp(filename, ".."))) continue;
+        append(lst, strdup(filename));
+#elif defined(_WIN32)
+        if (!(wcscmp(filename, L".") && wcscmp(filename, L".."))) continue;
+        _wappend(lst, filename);
+#endif
+    }
+#if defined(__linux__) || defined(__APPLE__)
+    (void)closedir(d);
+#elif defined(_WIN32)
+    (void)_wclosedir(d);
+#endif
+    return lst;
+}
+
 #if defined(__linux__) || defined(__APPLE__)
 
 /*
