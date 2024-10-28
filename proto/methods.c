@@ -176,6 +176,22 @@ static int _transfer_regular_file(sock_t socket, const char *file_path, const ch
     return EXIT_SUCCESS;
 }
 
+#if PROTOCOL_MAX >= 3
+static int _transfer_directory(sock_t socket, const char *filename, size_t fname_len) {
+    if (send_size(socket, (int64_t)fname_len) == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
+
+    if (write_sock(socket, filename, fname_len) == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
+    if (send_size(socket, -1) == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+#endif
+
 static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len) {
     const char *tmp_fname;
     switch (version) {
@@ -602,11 +618,7 @@ int get_screenshot_v3(sock_t socket) {
     return EXIT_SUCCESS;
 }
 
-int get_files_v3(sock_t socket) {
-    // TODO (thevindu-w): implement
-    (void)socket;
-    return EXIT_SUCCESS;
-}
+int get_files_v3(sock_t socket) { return _get_files_dirs(3, socket); }
 
 int send_files_v3(sock_t socket) {
     // TODO (thevindu-w): implement
