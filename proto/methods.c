@@ -621,8 +621,8 @@ int get_screenshot_v3(sock_t socket) {
 int get_files_v3(sock_t socket) { return _get_files_dirs(3, socket); }
 
 int send_files_v3(sock_t socket) {
-    // TODO (thevindu-w): implement
-    (void)socket;
-    return EXIT_SUCCESS;
+    dir_files copied_dir_files;
+    get_copied_dirs_files(&copied_dir_files, 1);
+    return _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len);
 }
 #endif
