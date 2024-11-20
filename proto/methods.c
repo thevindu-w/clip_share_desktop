@@ -432,7 +432,7 @@ int send_file_v1(sock_t socket) {
 
 #endif
 
-int get_image_v1(sock_t socket) {
+static inline int _save_image_common(sock_t socket) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     unsigned long long t = (unsigned long long)(ts.tv_sec + ts.tv_nsec / 1000000);
@@ -440,6 +440,8 @@ int get_image_v1(sock_t socket) {
     snprintf(file_name, 35, "%llx.png", t);
     return _save_file_common(1, socket, file_name);
 }
+
+int get_image_v1(sock_t socket) { return _save_image_common(socket); }
 
 int info_v1(sock_t socket) {
     // TODO(thevindu-w): implement
@@ -607,10 +609,7 @@ int send_files_v2(sock_t socket) {
 #endif
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
-int get_copied_image_v3(sock_t socket) {  // TODO (thevindu-w): implement
-    (void)socket;
-    return EXIT_SUCCESS;
-}
+int get_copied_image_v3(sock_t socket) { return _save_image_common(socket); }
 
 int get_screenshot_v3(sock_t socket) {
     // TODO (thevindu-w): implement

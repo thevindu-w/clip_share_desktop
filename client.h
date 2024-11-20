@@ -28,4 +28,8 @@ extern void get_files(void);
 extern void send_files(void);
 
 extern void get_image(void);
+
+extern void get_copied_image(void);
+
+extern void get_screenshot(void);
 #endif  // CLIENT_H_

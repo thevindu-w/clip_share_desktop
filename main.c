@@ -32,6 +32,8 @@
 #define COMMAND_GET_FILES 3
 #define COMMAND_SEND_FILES 4
 #define COMMAND_GET_IMAGE 5
+#define COMMAND_GET_COPIED_IMAGE 6
+#define COMMAND_GET_SCREENSHOT 7
 
 // tcp and udp
 #define APP_PORT 4337
@@ -58,7 +60,9 @@ static inline void print_usage(const char *prog_name) {
             "\ts  : Send copied text\n"
             "\tfg : Get copied files\n"
             "\tfs : Send copied files\n"
-            "\ti  : Get image\n");
+            "\ti  : Get image\n"
+            "\tic : Get copied image\n"
+            "\tis : Get screenshot\n");
     fprintf(stderr,
             "\nExample: %s  192.168.21.42  g\n"
             "\tThis command gets copied text from the device having IP address 192.168.21.42\n\n",
@@ -89,6 +93,10 @@ static inline void _parse_args(char **argv, int8_t *command_p) {
         *command_p = COMMAND_SEND_FILES;
     } else if (strncmp(cmd, "i", 2) == 0) {
         *command_p = COMMAND_GET_IMAGE;
+    } else if (strncmp(cmd, "ic", 2) == 0) {
+        *command_p = COMMAND_GET_COPIED_IMAGE;
+    } else if (strncmp(cmd, "is", 2) == 0) {
+        *command_p = COMMAND_GET_SCREENSHOT;
     } else {
         fprintf(stderr, "Invalid command %s\n", argv[2]);
         *command_p = 0;
@@ -240,6 +248,14 @@ int main(int argc, char **argv) {
         }
         case COMMAND_GET_IMAGE: {
             get_image();
+            break;
+        }
+        case COMMAND_GET_COPIED_IMAGE: {
+            get_copied_image();
+            break;
+        }
+        case COMMAND_GET_SCREENSHOT: {
+            get_screenshot();
             break;
         }
         default: {

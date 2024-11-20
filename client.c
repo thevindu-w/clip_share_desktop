@@ -78,3 +78,21 @@ void get_image(void) {
         msg_suffix = "failed!";
     printf("Get image %s\n", msg_suffix);
 }
+
+void get_copied_image(void) {
+    const char *msg_suffix;
+    if (_invoke_method(METHOD_GET_COPIED_IMAGE) == EXIT_SUCCESS)
+        msg_suffix = "done";
+    else
+        msg_suffix = "failed!";
+    printf("Get copied image %s\n", msg_suffix);
+}
+
+void get_screenshot(void) {
+    const char *msg_suffix;
+    if (_invoke_method(METHOD_GET_SCREENSHOT) == EXIT_SUCCESS)
+        msg_suffix = "done";
+    else
+        msg_suffix = "failed!";
+    printf("Get screenshot %s\n", msg_suffix);
+}
