@@ -612,9 +612,17 @@ int send_files_v2(sock_t socket) {
 int get_copied_image_v3(sock_t socket) { return _save_image_common(socket); }
 
 int get_screenshot_v3(sock_t socket) {
-    // TODO (thevindu-w): implement
-    (void)socket;
-    return EXIT_SUCCESS;
+    if (send_size(socket, 0) != EXIT_SUCCESS) { // TODO (thevindu-w): let user select the display number
+        return EXIT_FAILURE;
+    }
+    unsigned char status;
+    if (read_sock(socket, (char *)&status, 1) != EXIT_SUCCESS || status != STATUS_OK) {
+#ifdef DEBUG_MODE
+        fprintf(stderr, "Display selection failed\n");
+#endif
+        return EXIT_FAILURE;
+    }
+    return _save_image_common(socket);
 }
 
 int get_files_v3(sock_t socket) { return _get_files_dirs(3, socket); }
