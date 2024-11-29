@@ -1,5 +1,5 @@
 /*
- * globals.h - header containing global variables
+ * clients/udp_scan.h - header for UDP scanner
  * Copyright (C) 2024 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,14 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef GLOBALS_H_
-#define GLOBALS_H_
+#ifndef UDP_SCAN_H_
+#define UDP_SCAN_H_
 
-#include <utils/config.h>
+#include <utils/list_utils.h>
 
-extern config configuration;
-extern char *error_log_file;
-extern char *cwd;
-extern size_t cwd_len;
+extern list2* udp_scan(void);
 
-#endif  // GLOBALS_H_
+#endif  // UDP_SCAN_H_

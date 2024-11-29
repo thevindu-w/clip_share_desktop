@@ -1,5 +1,5 @@
 /*
- * client.h - header for client methods
+ * clients/cli_client.h - header for CLI client methods
  * Copyright (C) 2024 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,20 +16,22 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef CLIENT_H_
-#define CLIENT_H_
+#ifndef CLIENTS_CLIENT_H_
+#define CLIENTS_CLIENT_H_
 
-extern void get_text(void);
+#include <stdint.h>
 
-extern void send_text(void);
+extern void get_text(uint32_t server_addr);
 
-extern void get_files(void);
+extern void send_text(uint32_t server_addr);
 
-extern void send_files(void);
+extern void get_files(uint32_t server_addr);
 
-extern void get_image(void);
+extern void send_files(uint32_t server_addr);
 
-extern void get_copied_image(void);
+extern void get_image(uint32_t server_addr);
 
-extern void get_screenshot(void);
-#endif  // CLIENT_H_
+extern void get_copied_image(uint32_t server_addr);
+
+extern void get_screenshot(uint32_t server_addr);
+#endif  // CLIENTS_CLIENT_H_

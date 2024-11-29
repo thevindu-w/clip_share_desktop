@@ -1,5 +1,5 @@
 /*
- * client.c - methods for client
+ * clients/cli_client.c - methods for CLI client
  * Copyright (C) 2024 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,14 +16,14 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <client.h>
+#include <clients/cli_client.h>
 #include <globals.h>
 #include <proto/selector.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <utils/net_utils.h>
 
-static int _invoke_method(unsigned char method) {
+static int _invoke_method(uint32_t server_addr, unsigned char method) {
     sock_t sock = connect_server(server_addr, configuration.app_port);
     if (sock == INVALID_SOCKET) {
         puts("Couldn't connect");
@@ -34,63 +34,63 @@ static int _invoke_method(unsigned char method) {
     return ret;
 }
 
-void get_text(void) {
+void get_text(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(METHOD_GET_TEXT) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_TEXT) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Get text %s\n", msg_suffix);
 }
 
-void send_text(void) {
+void send_text(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(METHOD_SEND_TEXT) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_SEND_TEXT) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Send text %s\n", msg_suffix);
 }
 
-void get_files(void) {
+void get_files(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(METHOD_GET_FILE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_FILE) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Get files %s\n", msg_suffix);
 }
 
-void send_files(void) {
+void send_files(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(METHOD_SEND_FILE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_SEND_FILE) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Send files %s\n", msg_suffix);
 }
 
-void get_image(void) {
+void get_image(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(METHOD_GET_IMAGE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_IMAGE) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Get image %s\n", msg_suffix);
 }
 
-void get_copied_image(void) {
+void get_copied_image(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(METHOD_GET_COPIED_IMAGE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_COPIED_IMAGE) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Get copied image %s\n", msg_suffix);
 }
 
-void get_screenshot(void) {
+void get_screenshot(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(METHOD_GET_SCREENSHOT) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_SCREENSHOT) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";

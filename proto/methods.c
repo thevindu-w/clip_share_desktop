@@ -435,9 +435,9 @@ int send_file_v1(sock_t socket) {
 static inline int _save_image_common(sock_t socket) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    unsigned long long t = (unsigned long long)(ts.tv_sec + ts.tv_nsec / 1000000);
+    unsigned long long millis = (unsigned long long) ts.tv_sec * 1000 + (unsigned long long) ts.tv_nsec / 1000000;
     char file_name[40];
-    snprintf(file_name, 35, "%llx.png", t);
+    snprintf(file_name, 35, "%llx.png", millis);
     return _save_file_common(1, socket, file_name);
 }
 

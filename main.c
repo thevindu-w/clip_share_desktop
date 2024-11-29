@@ -16,7 +16,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <client.h>
+#include <clients/cli_client.h>
+#include <clients/udp_scan.h>
 #include <globals.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -49,10 +50,10 @@ config configuration;
 char *error_log_file;
 char *cwd;
 size_t cwd_len;
-uint32_t server_addr;
 
 static inline void print_usage(const char *prog_name) {
     fprintf(stderr, "Usage: %s <server-address-ipv4> COMMAND\n", prog_name);
+    fprintf(stderr, "  or:  %s scan\n", prog_name);
     fprintf(stderr,
             "Commands available:\n"
             "\th  : Help\n"
@@ -72,8 +73,8 @@ static inline void print_usage(const char *prog_name) {
 /*
  * Parse command line arguments and set corresponding variables
  */
-static inline void _parse_args(char **argv, int8_t *command_p) {
-    if (ipv4_aton(argv[1], &server_addr) != EXIT_SUCCESS) {
+static inline void _parse_args(char **argv, int8_t *command_p, uint32_t *server_addr_p) {
+    if (ipv4_aton(argv[1], server_addr_p) != EXIT_SUCCESS) {
         fprintf(stderr, "Invalid server address %s\n", argv[1]);
         *command_p = 0;
         return;
@@ -180,6 +181,68 @@ static inline void _apply_default_conf(void) {
         configuration.max_proto_version = PROTOCOL_MAX;
 }
 
+static inline void _net_scan(void) {
+    list2 *servers = udp_scan();
+    if (!servers) {
+        fprintf(stderr, "Scan failed\n");
+        exit(EXIT_FAILURE);
+    }
+    if (servers->len == 0) {
+        fprintf(stderr, "No servers found\n");
+        free_list(servers);
+        return;
+    }
+    for (size_t i = 0; i < servers->len; i++) {
+        puts(servers->array[i]);
+    }
+    free_list(servers);
+}
+
+static inline void _cli_client(char **argv, const char *prog_name) {
+    int8_t command;
+    uint32_t server_addr;
+    _parse_args(argv, &command, &server_addr);
+
+    switch (command) {
+        case COMMAND_HELP: {
+            print_usage(prog_name);
+            break;
+        }
+        case COMMAND_GET_TEXT: {
+            get_text(server_addr);
+            break;
+        }
+        case COMMAND_SEND_TEXT: {
+            send_text(server_addr);
+            break;
+        }
+        case COMMAND_GET_FILES: {
+            get_files(server_addr);
+            break;
+        }
+        case COMMAND_SEND_FILES: {
+            send_files(server_addr);
+            break;
+        }
+        case COMMAND_GET_IMAGE: {
+            get_image(server_addr);
+            break;
+        }
+        case COMMAND_GET_COPIED_IMAGE: {
+            get_copied_image(server_addr);
+            break;
+        }
+        case COMMAND_GET_SCREENSHOT: {
+            get_screenshot(server_addr);
+            break;
+        }
+        default: {
+            print_usage(prog_name);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
 /*
  * The main entrypoint of the application
  */
@@ -199,20 +262,12 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    if (argc < 3) {
-        print_usage(prog_name);
-        return 1;
-    }
-
     _set_error_log_file(ERROR_LOG_FILE);
 
     char *conf_path = strdup(CONFIG_FILE);
     parse_conf(&configuration, conf_path);
     free(conf_path);
     _apply_default_conf();
-
-    int8_t command;
-    _parse_args(argv, &command);
 
     if (configuration.working_dir) _change_working_dir();
     cwd = getcwd_wrapper(0);
@@ -225,43 +280,13 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    switch (command) {
-        case COMMAND_HELP: {
-            print_usage(prog_name);
-            exit(0);
-        }
-        case COMMAND_GET_TEXT: {
-            get_text();
-            break;
-        }
-        case COMMAND_SEND_TEXT: {
-            send_text();
-            break;
-        }
-        case COMMAND_GET_FILES: {
-            get_files();
-            break;
-        }
-        case COMMAND_SEND_FILES: {
-            send_files();
-            break;
-        }
-        case COMMAND_GET_IMAGE: {
-            get_image();
-            break;
-        }
-        case COMMAND_GET_COPIED_IMAGE: {
-            get_copied_image();
-            break;
-        }
-        case COMMAND_GET_SCREENSHOT: {
-            get_screenshot();
-            break;
-        }
-        default: {
-            print_usage(prog_name);
-            exit(1);
-        }
+    if (argc == 3) {
+        _cli_client(argv, prog_name);
+    } else if (argc == 2 && !strcmp(argv[1], "scan")) {
+        _net_scan();
+    } else {
+        print_usage(prog_name);
+        return EXIT_FAILURE;
     }
 
     return 0;
