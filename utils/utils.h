@@ -38,6 +38,8 @@ typedef struct _dir_files {
     list2 *lst;
 } dir_files;
 
+extern void print_usage(const char *prog_name);
+
 /*
  * A wrapper for snprintf.
  * returns 1 if snprintf failed or truncated

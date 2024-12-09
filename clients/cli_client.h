@@ -19,19 +19,8 @@
 #ifndef CLIENTS_CLIENT_H_
 #define CLIENTS_CLIENT_H_
 
-#include <stdint.h>
+extern void cli_client(char **argv, const char *prog_name);
 
-extern void get_text(uint32_t server_addr);
+extern void net_scan(void);
 
-extern void send_text(uint32_t server_addr);
-
-extern void get_files(uint32_t server_addr);
-
-extern void send_files(uint32_t server_addr);
-
-extern void get_image(uint32_t server_addr);
-
-extern void get_copied_image(uint32_t server_addr);
-
-extern void get_screenshot(uint32_t server_addr);
 #endif  // CLIENTS_CLIENT_H_
