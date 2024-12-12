@@ -17,6 +17,7 @@
  */
 
 #include <clients/cli_client.h>
+#include <clients/gui_client.h>
 #include <globals.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -93,7 +94,7 @@ static inline void _change_working_dir(void) {
     }
     char *new_work_dir = getcwd_wrapper(0);
     if (old_work_dir == NULL || new_work_dir == NULL) {
-        const char *err = "Error occured during changing working directory.";
+        const char *err = "Error occurred during changing working directory.";
         fprintf(stderr, "%s\n", err);
         if (old_work_dir) free(old_work_dir);
         if (new_work_dir) free(new_work_dir);
@@ -211,6 +212,8 @@ int main(int argc, char **argv) {
         cli_client(argv, prog_name);
     } else if (argc == 2 && !strcmp(argv[1], "scan")) {
         net_scan();
+    } else if (argc == 1) {
+        start_web();
     } else {
         print_usage(prog_name);
         return EXIT_FAILURE;

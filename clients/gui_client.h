@@ -1,5 +1,5 @@
 /*
- * clients/cli_client.h - header for CLI client methods
+ * clients/gui_client.h - header for CLI client methods
  * Copyright (C) 2024 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,11 +16,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef CLIENTS_CLI_CLIENT_H_
-#define CLIENTS_CLI_CLIENT_H_
+#ifndef CLIENTS_GUI_CLIENT_H_
+#define CLIENTS_GUI_CLIENT_H_
 
-extern void cli_client(char **argv, const char *prog_name);
+extern void start_web(void);
 
-extern void net_scan(void);
-
-#endif  // CLIENTS_CLI_CLIENT_H_
+#endif  // CLIENTS_GUI_CLIENT_H_

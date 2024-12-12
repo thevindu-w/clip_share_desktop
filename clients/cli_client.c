@@ -42,7 +42,7 @@ static int _invoke_method(uint32_t server_addr, unsigned char method) {
         puts("Couldn't connect");
         return EXIT_FAILURE;
     }
-    int ret = handle_proto(sock, method);
+    int ret = handle_proto(sock, method, NULL);
     close_socket(sock);
     return ret;
 }

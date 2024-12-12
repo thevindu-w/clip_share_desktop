@@ -55,12 +55,12 @@ static inline int _check_path(const char *path) {
 /*
  * Common function to send files.
  */
-static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len);
+static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len, StatusCallback *callback);
 
 /*
  * Common function to save files in get_files and get_image methods.
  */
-static int _save_file_common(int version, sock_t socket, const char *file_name);
+static int _save_file_common(int version, sock_t socket, const char *file_name, StatusCallback *callback);
 
 /*
  * Check if the file name is valid.
@@ -70,16 +70,23 @@ static int _save_file_common(int version, sock_t socket, const char *file_name);
  */
 static inline int _is_valid_fname(const char *fname, size_t name_length);
 
-static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len);
+static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len,
+                                 StatusCallback *callback);
 
-int get_text_v1(sock_t socket) {
+int get_text_v1(sock_t socket, StatusCallback *callback) {
     int64_t length;
-    if (read_size(socket, &length) != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (read_size(socket, &length) != EXIT_SUCCESS) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
 #ifdef DEBUG_MODE
     printf("Len = %zi\n", (ssize_t)length);
 #endif
     // limit maximum length to max_text_length
-    if (length <= 0 || length > configuration.max_text_length) return EXIT_FAILURE;
+    if (length <= 0 || length > configuration.max_text_length) {
+        if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
 
     char *data = malloc((uint64_t)length + 1);
     if (read_sock(socket, data, (uint64_t)length) == EXIT_FAILURE) {
@@ -87,6 +94,7 @@ int get_text_v1(sock_t socket) {
         fputs("Read data failed\n", stderr);
 #endif
         free(data);
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     data[length] = 0;
@@ -95,11 +103,13 @@ int get_text_v1(sock_t socket) {
         fputs("Invalid UTF-8\n", stderr);
 #endif
         free(data);
+        if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 #ifdef DEBUG_MODE
     if (length < 1024) puts(data);
 #endif
+    if (callback) callback->function(OK, data, (size_t)length, callback->params);
     length = convert_eol(&data, 0);
     if (length < 0) return EXIT_FAILURE;
     close_socket(socket);
@@ -108,7 +118,7 @@ int get_text_v1(sock_t socket) {
     return EXIT_SUCCESS;
 }
 
-int send_text_v1(sock_t socket) {
+int send_text_v1(sock_t socket, StatusCallback *callback) {
     size_t length = 0;
     char *buf = NULL;
     if (get_clipboard_text(&buf, &length) != EXIT_SUCCESS || length <= 0 ||
@@ -117,23 +127,31 @@ int send_text_v1(sock_t socket) {
         printf("clipboard read text failed. len = %zu\n", length);
 #endif
         if (buf) free(buf);
+        if (callback) callback->function(NO_DATA, NULL, 0, callback->params);
         return EXIT_SUCCESS;
     }
     int64_t new_len = convert_eol(&buf, 1);
-    if (new_len <= 0) return EXIT_FAILURE;
+    if (new_len <= 0) {
+        if (callback) callback->function(NO_DATA, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
     if (send_size(socket, new_len) != EXIT_SUCCESS) {
         free(buf);
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     if (write_sock(socket, buf, (uint64_t)new_len) != EXIT_SUCCESS) {
         free(buf);
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     free(buf);
+    if (callback) callback->function(OK, buf, (size_t)new_len, callback->params);
     return EXIT_SUCCESS;
 }
 
-static int _transfer_regular_file(sock_t socket, const char *file_path, const char *filename, size_t fname_len) {
+static int _transfer_regular_file(sock_t socket, const char *file_path, const char *filename, size_t fname_len,
+                                  StatusCallback *callback) {
     FILE *fp = open_file(file_path, "rb");
     if (!fp) {
         error("Couldn't open some files");
@@ -150,15 +168,18 @@ static int _transfer_regular_file(sock_t socket, const char *file_path, const ch
 
     if (send_size(socket, (int64_t)fname_len) == EXIT_FAILURE) {
         fclose(fp);
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     if (write_sock(socket, filename, fname_len) == EXIT_FAILURE) {
         fclose(fp);
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
     if (send_size(socket, file_size) == EXIT_FAILURE) {
         fclose(fp);
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -168,6 +189,7 @@ static int _transfer_regular_file(sock_t socket, const char *file_path, const ch
         if (read == 0) continue;
         if (write_sock(socket, data, read) == EXIT_FAILURE) {
             fclose(fp);
+            if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
         file_size -= (ssize_t)read;
@@ -177,22 +199,26 @@ static int _transfer_regular_file(sock_t socket, const char *file_path, const ch
 }
 
 #if PROTOCOL_MAX >= 3
-static int _transfer_directory(sock_t socket, const char *filename, size_t fname_len) {
+static int _transfer_directory(sock_t socket, const char *filename, size_t fname_len, StatusCallback *callback) {
     if (send_size(socket, (int64_t)fname_len) == EXIT_FAILURE) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
     if (write_sock(socket, filename, fname_len) == EXIT_FAILURE) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     if (send_size(socket, -1) == EXIT_FAILURE) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }
 #endif
 
-static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len) {
+static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len,
+                                 StatusCallback *callback) {
     const char *tmp_fname;
     switch (version) {
 #if PROTOCOL_MIN <= 1
@@ -245,16 +271,17 @@ static int _transfer_single_file(int version, sock_t socket, const char *file_pa
 #if PROTOCOL_MAX >= 3
     if (filename[fname_len - 1] == '/') {  // filename is converted to have / as path separator on all platforms
         filename[fname_len - 1] = 0;
-        return _transfer_directory(socket, filename, fname_len - 1);
+        return _transfer_directory(socket, filename, fname_len - 1, callback);
     }
 #endif
-    return _transfer_regular_file(socket, file_path, filename, fname_len);
+    return _transfer_regular_file(socket, file_path, filename, fname_len, callback);
 }
 
-static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len) {
+static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len, StatusCallback *callback) {
     if (!file_list || file_list->len == 0) {
         if (file_list) free_list(file_list);
-        return EXIT_SUCCESS;
+        if (callback) callback->function(NO_DATA, NULL, 0, callback->params);
+        return EXIT_FAILURE;
     }
 
     size_t file_cnt = file_list->len;
@@ -262,6 +289,7 @@ static int _send_files_common(int version, sock_t socket, list2 *file_list, size
 
     if (version > 1 && (send_size(socket, (int64_t)file_cnt) != EXIT_SUCCESS)) {
         free_list(file_list);
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     if (version == 1) file_cnt = 1;  // proto v1 can only send 1 file
@@ -272,7 +300,7 @@ static int _send_files_common(int version, sock_t socket, list2 *file_list, size
         printf("file name = %s\n", file_path);
 #endif
 
-        if (_transfer_single_file(version, socket, file_path, path_len) != EXIT_SUCCESS) {
+        if (_transfer_single_file(version, socket, file_path, path_len, callback) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
             puts("Transfer failed");
 #endif
@@ -281,13 +309,18 @@ static int _send_files_common(int version, sock_t socket, list2 *file_list, size
         }
     }
     free_list(file_list);
+    if (callback) callback->function(OK, NULL, 0, callback->params);
     return EXIT_SUCCESS;
 }
 
-static int _save_file_common(int version, sock_t socket, const char *file_name) {
+static int _save_file_common(int version, sock_t socket, const char *file_name, StatusCallback *callback) {
     int64_t file_size;
-    if (read_size(socket, &file_size) != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (read_size(socket, &file_size) != EXIT_SUCCESS) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
     if (file_size > configuration.max_file_size) {
+        if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -299,6 +332,7 @@ static int _save_file_common(int version, sock_t socket, const char *file_name) 
     (void)version;
 #endif
     if (file_size < 0) {
+        if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -317,6 +351,7 @@ static int _save_file_common(int version, sock_t socket, const char *file_name) 
 #endif
             fclose(file);
             remove_file(file_name);
+            if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
         if (fwrite(data, 1, read_len, file) < read_len) {
@@ -384,24 +419,38 @@ static inline int _rename_if_exists(char *file_name, size_t max_len) {
     return EXIT_SUCCESS;
 }
 
-int get_files_v1(sock_t socket) {
+int get_files_v1(sock_t socket, StatusCallback *callback) {
     int64_t cnt;
-    if (read_size(socket, &cnt) != EXIT_SUCCESS) return EXIT_FAILURE;
-    if (cnt <= 0) return EXIT_FAILURE;
+    if (read_size(socket, &cnt) != EXIT_SUCCESS) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    if (cnt <= 0) {
+        if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
 
     for (int64_t file_num = 0; file_num < cnt; file_num++) {
         int64_t name_length;
-        if (read_size(socket, &name_length) != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (read_size(socket, &name_length) != EXIT_SUCCESS) {
+            if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
         // limit file name length to 1024 chars
-        if (name_length <= 0 || name_length > MAX_FILE_NAME_LENGTH) return EXIT_FAILURE;
+        if (name_length <= 0 || name_length > MAX_FILE_NAME_LENGTH) {
+            if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
 
         const uint64_t name_max_len = (uint64_t)(name_length + 16);
         if (name_max_len > MAX_FILE_NAME_LENGTH) {
             error("Too long file name.");
+            if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
         char file_name[name_max_len + 1];
         if (read_sock(socket, file_name, (uint64_t)name_length) == EXIT_FAILURE) {
+            if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
         file_name[name_length] = 0;
@@ -409,39 +458,48 @@ int get_files_v1(sock_t socket) {
 #ifdef DEBUG_MODE
             printf("Invalid filename \'%s\'\n", file_name);
 #endif
+            if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
 
         if (_get_base_name(file_name, (size_t)name_length) != EXIT_SUCCESS) return EXIT_FAILURE;
 
         // PATH_SEP is not allowed in file name
-        if (strchr(file_name, PATH_SEP)) return EXIT_FAILURE;
+        if (strchr(file_name, PATH_SEP)) {
+            if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
 
         // if file already exists, use a different file name
         if (_rename_if_exists(file_name, name_max_len) != EXIT_SUCCESS) return EXIT_FAILURE;
 
-        if (_save_file_common(1, socket, file_name) != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (_save_file_common(1, socket, file_name, callback) != EXIT_SUCCESS) return EXIT_FAILURE;
     }
+    if (callback) callback->function(OK, NULL, 0, callback->params);
     return EXIT_SUCCESS;
 }
 
-int send_file_v1(sock_t socket) {
+int send_file_v1(sock_t socket, StatusCallback *callback) {
     list2 *file_list = get_copied_files();
-    return _send_files_common(1, socket, file_list, 0);
+    return _send_files_common(1, socket, file_list, 0, callback);
 }
 
 #endif
 
-static inline int _save_image_common(sock_t socket) {
+static inline int _save_image_common(sock_t socket, StatusCallback *callback) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    unsigned long long millis = (unsigned long long) ts.tv_sec * 1000 + (unsigned long long) ts.tv_nsec / 1000000;
+    unsigned long long millis = (unsigned long long)ts.tv_sec * 1000 + (unsigned long long)ts.tv_nsec / 1000000;
     char file_name[40];
     snprintf(file_name, 35, "%llx.png", millis);
-    return _save_file_common(1, socket, file_name);
+    int status = _save_file_common(1, socket, file_name, callback);
+    if (status == EXIT_SUCCESS) {
+        callback->function(OK, file_name, strnlen(file_name, 2048), callback->params);
+    }
+    return status;
 }
 
-int get_image_v1(sock_t socket) { return _save_image_common(socket); }
+int get_image_v1(sock_t socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
 
 int info_v1(sock_t socket) {
     // TODO(thevindu-w): implement
@@ -465,14 +523,20 @@ static inline int _make_directories(const char *path) {
     return EXIT_SUCCESS;
 }
 
-static int save_file(int version, sock_t socket, const char *dirname) {
+static int save_file(int version, sock_t socket, const char *dirname, StatusCallback *callback) {
     int64_t fname_size;
-    if (read_size(socket, &fname_size) != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (read_size(socket, &fname_size) != EXIT_SUCCESS) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
 #ifdef DEBUG_MODE
     printf("name_len = %zi\n", (ssize_t)fname_size);
 #endif
     // limit file name length to 1024 chars
-    if (fname_size <= 0 || fname_size > MAX_FILE_NAME_LENGTH) return EXIT_FAILURE;
+    if (fname_size <= 0 || fname_size > MAX_FILE_NAME_LENGTH) {
+        if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
 
     const uint64_t name_length = (uint64_t)fname_size;
     char file_name[name_length + 1];
@@ -480,6 +544,7 @@ static int save_file(int version, sock_t socket, const char *dirname) {
 #ifdef DEBUG_MODE
         fputs("Read file name failed\n", stderr);
 #endif
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -488,6 +553,7 @@ static int save_file(int version, sock_t socket, const char *dirname) {
 #ifdef DEBUG_MODE
         printf("Invalid filename \'%s\'\n", file_name);
 #endif
+        if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     if (file_name[name_length - 1] == '/') file_name[name_length - 1] = 0;  // remove trailing /
@@ -497,7 +563,10 @@ static int save_file(int version, sock_t socket, const char *dirname) {
     for (size_t ind = 0; ind < name_length; ind++) {
         if (file_name[ind] == '/') {
             file_name[ind] = PATH_SEP;
-            if (ind > 0 && file_name[ind - 1] == PATH_SEP) return EXIT_FAILURE;  // "//" in path not allowed
+            if (ind > 0 && file_name[ind - 1] == PATH_SEP) {  // "//" in path not allowed
+                if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+                return EXIT_FAILURE;
+            }
         }
     }
 #endif
@@ -518,7 +587,7 @@ static int save_file(int version, sock_t socket, const char *dirname) {
     // check if file exists
     if (file_exists(new_path)) return EXIT_FAILURE;
 
-    return _save_file_common(version, socket, new_path);
+    return _save_file_common(version, socket, new_path, callback);
 }
 
 static char *_check_and_rename(const char *filename, const char *dirname) {
@@ -563,10 +632,16 @@ static char *_check_and_rename(const char *filename, const char *dirname) {
     return path;
 }
 
-static int _get_files_dirs(int version, sock_t socket) {
+static int _get_files_dirs(int version, sock_t socket, StatusCallback *callback) {
     int64_t cnt;
-    if (read_size(socket, &cnt) != EXIT_SUCCESS) return EXIT_FAILURE;
-    if (cnt <= 0) return EXIT_FAILURE;
+    if (read_size(socket, &cnt) != EXIT_SUCCESS) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    if (cnt <= 0) {
+        if (callback) callback->function(NO_DATA, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
     char dirname[17];
     unsigned id = (unsigned)time(NULL);
     do {
@@ -577,9 +652,7 @@ static int _get_files_dirs(int version, sock_t socket) {
     if (mkdirs(dirname) != EXIT_SUCCESS) return EXIT_FAILURE;
 
     for (int64_t file_num = 0; file_num < cnt; file_num++) {
-        if (save_file(version, socket, dirname) != EXIT_SUCCESS) {
-            return EXIT_FAILURE;
-        }
+        if (save_file(version, socket, dirname, callback) != EXIT_SUCCESS) return EXIT_FAILURE;
     }
     close_socket(socket);
     list2 *files = list_dir(dirname);
@@ -593,43 +666,50 @@ static int _get_files_dirs(int version, sock_t socket) {
     }
     free_list(files);
     if (status == EXIT_SUCCESS && remove_directory(dirname)) status = EXIT_FAILURE;
+    if (callback) callback->function(OK, NULL, 0, callback->params);
     return status;
 }
 
 #endif
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
-int get_files_v2(sock_t socket) { return _get_files_dirs(2, socket); }
+int get_files_v2(sock_t socket, StatusCallback *callback) { return _get_files_dirs(2, socket, callback); }
 
-int send_files_v2(sock_t socket) {
+int send_files_v2(sock_t socket, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 0);
-    return _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len);
+    return _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
 }
 #endif
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
-int get_copied_image_v3(sock_t socket) { return _save_image_common(socket); }
+int get_copied_image_v3(sock_t socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
 
-int get_screenshot_v3(sock_t socket) {
-    if (send_size(socket, 0) != EXIT_SUCCESS) { // TODO (thevindu-w): let user select the display number
+int get_screenshot_v3(sock_t socket, StatusCallback *callback) {
+    if (send_size(socket, 0) != EXIT_SUCCESS) {  // TODO (thevindu-w): let user select the display number
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
     unsigned char status;
-    if (read_sock(socket, (char *)&status, 1) != EXIT_SUCCESS || status != STATUS_OK) {
+    if (read_sock(socket, (char *)&status, 1) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
         fprintf(stderr, "Display selection failed\n");
 #endif
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
-    return _save_image_common(socket);
+    if (status != STATUS_OK) {
+        if (callback) callback->function(NO_DATA, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    return _save_image_common(socket, callback);
 }
 
-int get_files_v3(sock_t socket) { return _get_files_dirs(3, socket); }
+int get_files_v3(sock_t socket, StatusCallback *callback) { return _get_files_dirs(3, socket, callback); }
 
-int send_files_v3(sock_t socket) {
+int send_files_v3(sock_t socket, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 1);
-    return _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len);
+    return _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
 }
 #endif

@@ -28,9 +28,46 @@
 #define STATUS_UNKNOWN_METHOD 3
 #define STATUS_METHOD_NOT_IMPLEMENTED 4
 
+static inline int method_request(sock_t socket, unsigned char method, StatusCallback *callback) {
+    if (write_sock(socket, (char *)&method, 1) != EXIT_SUCCESS) {
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+
+    unsigned char method_status;
+    if (read_sock(socket, (char *)&method_status, 1) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fprintf(stderr, "Method selection failed\n");
+#endif
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+
+    switch (method_status) {
+        case STATUS_OK:
+            return EXIT_SUCCESS;
+
+        case STATUS_NO_DATA: {
+            if (callback) callback->function(NO_DATA, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
+
+        case STATUS_METHOD_NOT_IMPLEMENTED:
+        case STATUS_UNKNOWN_METHOD: {
+            if (callback) callback->function(PROTO_METHOD_ERROR, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
+
+        default: {
+            if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
+    }
+}
+
 #if PROTOCOL_MIN <= 1
 
-int version_1(sock_t socket, unsigned char method) {
+int version_1(sock_t socket, unsigned char method, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -48,48 +85,38 @@ int version_1(sock_t socket, unsigned char method) {
         }
     }
 
-    if (write_sock(socket, (char *)&method, 1) != EXIT_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    unsigned char method_status;
-    if (read_sock(socket, (char *)&method_status, 1) != EXIT_SUCCESS || method_status != STATUS_OK) {
-#ifdef DEBUG_MODE
-        fprintf(stderr, "Method selection failed\n");
-#endif
-        return EXIT_FAILURE;
-    }
+    if (method_request(socket, method, callback) != EXIT_SUCCESS) return EXIT_FAILURE;
 
     switch (method) {
         case METHOD_GET_TEXT: {
-            return get_text_v1(socket);
+            return get_text_v1(socket, callback);
         }
         case METHOD_SEND_TEXT: {
-            return send_text_v1(socket);
+            return send_text_v1(socket, callback);
         }
         case METHOD_GET_FILE: {
-            return get_files_v1(socket);
+            return get_files_v1(socket, callback);
         }
         case METHOD_SEND_FILE: {
-            return send_file_v1(socket);
+            return send_file_v1(socket, callback);
         }
         case METHOD_GET_IMAGE: {
-            return get_image_v1(socket);
+            return get_image_v1(socket, callback);
         }
         case METHOD_INFO: {
             return info_v1(socket);
         }
         default: {  // unknown method
+            if (callback) callback->function(PROTO_METHOD_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }
-    return EXIT_SUCCESS;
 }
 #endif
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
 
-int version_2(sock_t socket, unsigned char method) {
+int version_2(sock_t socket, unsigned char method, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -107,33 +134,23 @@ int version_2(sock_t socket, unsigned char method) {
         }
     }
 
-    if (write_sock(socket, (char *)&method, 1) != EXIT_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    unsigned char method_status;
-    if (read_sock(socket, (char *)&method_status, 1) != EXIT_SUCCESS || method_status != STATUS_OK) {
-#ifdef DEBUG_MODE
-        fprintf(stderr, "Method selection failed\n");
-#endif
-        return EXIT_FAILURE;
-    }
+    if (method_request(socket, method, callback) != EXIT_SUCCESS) return EXIT_FAILURE;
 
     switch (method) {
         case METHOD_GET_TEXT: {
-            return get_text_v1(socket);
+            return get_text_v1(socket, callback);
         }
         case METHOD_SEND_TEXT: {
-            return send_text_v1(socket);
+            return send_text_v1(socket, callback);
         }
         case METHOD_GET_FILE: {
-            return get_files_v2(socket);
+            return get_files_v2(socket, callback);
         }
         case METHOD_SEND_FILE: {
-            return send_files_v2(socket);
+            return send_files_v2(socket, callback);
         }
         case METHOD_GET_IMAGE: {
-            return get_image_v1(socket);
+            return get_image_v1(socket, callback);
         }
         case METHOD_INFO: {
             return info_v1(socket);
@@ -142,13 +159,12 @@ int version_2(sock_t socket, unsigned char method) {
             return EXIT_FAILURE;
         }
     }
-    return EXIT_SUCCESS;
 }
 #endif
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
 
-int version_3(sock_t socket, unsigned char method) {
+int version_3(sock_t socket, unsigned char method, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -168,39 +184,29 @@ int version_3(sock_t socket, unsigned char method) {
         }
     }
 
-    if (write_sock(socket, (char *)&method, 1) != EXIT_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    unsigned char method_status;
-    if (read_sock(socket, (char *)&method_status, 1) != EXIT_SUCCESS || method_status != STATUS_OK) {
-#ifdef DEBUG_MODE
-        fprintf(stderr, "Method selection failed\n");
-#endif
-        return EXIT_FAILURE;
-    }
+    if (method_request(socket, method, callback) != EXIT_SUCCESS) return EXIT_FAILURE;
 
     switch (method) {
         case METHOD_GET_TEXT: {
-            return get_text_v1(socket);
+            return get_text_v1(socket, callback);
         }
         case METHOD_SEND_TEXT: {
-            return send_text_v1(socket);
+            return send_text_v1(socket, callback);
         }
         case METHOD_GET_FILE: {
-            return get_files_v3(socket);
+            return get_files_v3(socket, callback);
         }
         case METHOD_SEND_FILE: {
-            return send_files_v3(socket);
+            return send_files_v3(socket, callback);
         }
         case METHOD_GET_IMAGE: {
-            return get_image_v1(socket);
+            return get_image_v1(socket, callback);
         }
         case METHOD_GET_COPIED_IMAGE: {
-            return get_copied_image_v3(socket);
+            return get_copied_image_v3(socket, callback);
         }
         case METHOD_GET_SCREENSHOT: {
-            return get_screenshot_v3(socket);
+            return get_screenshot_v3(socket, callback);
         }
         case METHOD_INFO: {
             return info_v1(socket);
@@ -209,6 +215,5 @@ int version_3(sock_t socket, unsigned char method) {
             return EXIT_FAILURE;
         }
     }
-    return EXIT_SUCCESS;
 }
 #endif

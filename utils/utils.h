@@ -109,7 +109,7 @@ extern int is_directory(const char *path, int follow_symlinks);
  * If force_lf is non-zero, convert EOL to LF regardless of the platform
  * Else, convert EOL of str to LF.
  * Returns the length of the new string without the terminating null character.
- * If an error occured, this will free() the *str_p and return -1.
+ * If an error occurred, this will free() the *str_p and return -1.
  */
 extern int64_t convert_eol(char **str_p, int force_lf);
 

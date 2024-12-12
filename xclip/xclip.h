@@ -10,7 +10,7 @@
  * Reads data from the provided memory buffer pointed by buf_ptr in set mode.
  * Gets or sets the size of the buffer in bytes from/to len_ptr.
  * Returns 0 on success.
- * Returns -1 if an error occured.
+ * Returns -1 if an error occurred.
  */
 extern int xclip_util(int io, const char *atom_name, unsigned long *len_ptr, char **buf_ptr);
 

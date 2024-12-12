@@ -25,7 +25,8 @@ CC=gcc
 CFLAGS=-c -pipe -I. --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
-OBJS=main.o clients/cli_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o
+OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o
+OBJS_BIN=blob/page.o
 
 LINK_FLAGS_BUILD=
 
@@ -36,10 +37,10 @@ else
 endif
 
 ifeq ($(detected_OS),Linux)
-	OBJS+= xclip/xclip.o xclip/xclib.o
+	OBJS_C+= xclip/xclip.o xclip/xclib.o
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS_OPTIM=-Os
-	LDLIBS=-lunistring -lX11 -lXmu -lXt
+	LDLIBS=-lmicrohttpd -lunistring -lX11 -lXmu -lXt
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
@@ -59,21 +60,26 @@ endif
 CFLAGS+= -DINFO_NAME=\"clip_share\" -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
 CFLAGS_OPTIM+= -Werror
 
+OBJS=$(OBJS_C) $(OBJS_BIN)
+
 # append '_debug' to objects for debug executable to prevent overwriting objects for main build
-DEBUG_OBJS=$(OBJS:.o=_debug.o)
+DEBUG_OBJS=$(OBJS_C:.o=_debug.o)
 
 $(PROGRAM_NAME): $(OBJS)
 	$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS) -o $@
 
-$(OBJS): %.o: %.c
+$(OBJS_C): %.o: %.c
 	$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $^ -o $@
 
 $(DEBUG_OBJS): %_debug.o: %.c
 	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $^ -o $@
 
+blob/page.o: blob/page.html
+	ld -r -b binary -o $@ $^
+
 .PHONY: clean debug
 
-debug: $(DEBUG_OBJS)
+debug: $(DEBUG_OBJS) $(OBJS_BIN)
 	$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
 
 clean:

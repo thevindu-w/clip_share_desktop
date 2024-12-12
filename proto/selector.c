@@ -29,7 +29,7 @@
 #define PROTOCOL_OBSOLETE 2
 #define PROTOCOL_UNKNOWN 3
 
-int handle_proto(sock_t socket, unsigned char method) {
+int handle_proto(sock_t socket, unsigned char method, StatusCallback *callback) {
     const unsigned short min_version = configuration.min_proto_version;
     const unsigned short max_version = configuration.max_proto_version;
     unsigned char version = (unsigned char)max_version;
@@ -39,6 +39,7 @@ int handle_proto(sock_t socket, unsigned char method) {
 #ifdef DEBUG_MODE
         fprintf(stderr, "send protocol version failed\n");
 #endif
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -46,6 +47,7 @@ int handle_proto(sock_t socket, unsigned char method) {
 #ifdef DEBUG_MODE
         fprintf(stderr, "read protocol version status failed\n");
 #endif
+        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -56,6 +58,7 @@ int handle_proto(sock_t socket, unsigned char method) {
 
         case PROTOCOL_OBSOLETE: {
             error("Client's protocol versions are obsolete");
+            if (callback) callback->function(PROTOCOL_VERSION_MISMATCH, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
 
@@ -64,12 +67,14 @@ int handle_proto(sock_t socket, unsigned char method) {
 #ifdef DEBUG_MODE
                 fprintf(stderr, "negotiate protocol version failed\n");
 #endif
+                if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
                 return EXIT_FAILURE;
             }
             if (version < min_version || version > max_version) {
                 status = 0;
                 write_sock(socket, (char *)&status, 1);  // Reject offer
                 error("Protocol version negotiation failed");
+                if (callback) callback->function(PROTOCOL_VERSION_MISMATCH, NULL, 0, callback->params);
                 return EXIT_FAILURE;
             }
             break;
@@ -77,6 +82,7 @@ int handle_proto(sock_t socket, unsigned char method) {
 
         default: {
             error("Server sent invalid protocol version status");
+            if (callback) callback->function(PROTOCOL_VERSION_MISMATCH, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }
@@ -84,24 +90,25 @@ int handle_proto(sock_t socket, unsigned char method) {
     switch (version) {
 #if PROTOCOL_MIN <= 1
         case 1: {
-            return version_1(socket, method);
+            return version_1(socket, method, callback);
             break;
         }
 #endif
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
         case 2: {
-            return version_2(socket, method);
+            return version_2(socket, method, callback);
             break;
         }
 #endif
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
         case 3: {
-            return version_3(socket, method);
+            return version_3(socket, method, callback);
             break;
         }
 #endif
         default: {  // invalid or unknown version
             error("Invalid protocol version");
+            if (callback) callback->function(PROTOCOL_VERSION_MISMATCH, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
             return EXIT_FAILURE;

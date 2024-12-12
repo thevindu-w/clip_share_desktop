@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClipShare</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            background-color: #F0F0F0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 8px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+
+        .header label {
+            flex: 0.22;
+            font-size: 21px;
+            text-align: right;
+            margin-right: 4px;
+        }
+
+        .header input {
+            flex: 0.4;
+            height: 100%;
+            padding-left: 4px;
+            margin-right: 15px;
+            font-size: 18px;
+        }
+
+        .header button {
+            flex: 0.2;
+            height: 100%;
+            background-color: #6666FF;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .output {
+            flex: 1;
+            margin: 12px 10px 0;
+            padding: 10px;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            line-height: 1.5;
+            border: 1px solid #ddd;
+            background-color: #FFF;
+        }
+
+        .btn-row {
+            display: flex;
+            justify-content: space-between;
+            height: 64px;
+            margin-top: 6px;
+        }
+
+        .btn-row button {
+            height: 100%;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+
+        .btn-send {
+            flex: 0.48;
+            background-color: red;
+        }
+
+        .btn-get {
+            flex: 0.32;
+            background-color: green;
+        }
+
+        .bottom-row {
+            margin-top: 6px;
+            margin-bottom: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <label for="server">Server:</label>
+            <input type="text" id="server" placeholder="192.168.1.2">
+            <button>SCAN</button>
+        </div>
+
+        <div id="output" class="output">
+        </div>
+
+        <div class="btn-row">
+            <button class="btn-send" onclick="onSendTxt()">SEND</button>
+            <button class="btn-send" onclick="onSendFile()">FILE</button>
+        </div>
+
+        <div class="btn-row bottom-row">
+            <button class="btn-get" onclick="onGetTxt()">GET</button>
+            <button class="btn-get" onclick="onGetImg()">IMAGE</button>
+            <button class="btn-get" onclick="onGetFile()">FILE</button>
+        </div>
+    </div>
+    <script>
+        const serverInput = document.getElementById('server');
+        const outputTxt = document.getElementById('output');
+
+        const getStateChangeFn = (xhr, successMsgPrefix, failureMsg) => {
+            return () => {
+                try {
+                    if (xhr.readyState == XMLHttpRequest.DONE) {
+                        switch (xhr.status) {
+                            case 200: {
+                                let data = xhr.responseText;
+                                if (!data) data = '';
+                                outputTxt.innerText = successMsgPrefix + data.substring(0, 32768);
+                                return;
+                            }
+                            case 404: {
+                                outputTxt.innerText = failureMsg.no_data;
+                                return;
+                            }
+                            case 500:
+                            case 501:
+                            case 502:
+                            case 504: {
+                                outputTxt.innerText = 'Error occurred!';
+                                return;
+                            } case 503: {
+                                outputTxt.innerText = 'Server unreachable!';
+                                return;
+                            }
+                        }
+                    }
+                } catch (error) {
+                }
+                outputTxt.innerText = failureMsg.general;
+            };
+        };
+
+        function onGetTxt() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", '/get/text?server=' + serverInput.value, true);
+            xhr.send();
+            xhr.onreadystatechange = getStateChangeFn(xhr, 'Received:\n', { no_data: 'No text copied!', general: 'Get text failed!' });
+        }
+
+        function onGetImg() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", '/get/image?server=' + serverInput.value, true);
+            xhr.send();
+            xhr.onreadystatechange = getStateChangeFn(xhr, 'Saved image to ', { no_data: 'No image copied!', general: 'Get image failed!' });
+        }
+
+        function onGetFile() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", '/get/file?server=' + serverInput.value, true);
+            xhr.send();
+            xhr.onreadystatechange = getStateChangeFn(xhr, 'Received all files', { no_data: 'No files copied!', general: 'Get files failed!' });
+        }
+
+        function onSendTxt() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", '/get/text?server=' + serverInput.value, true);
+            xhr.send();
+            xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent:\n', { no_data: 'No text copied!', general: 'Send text failed!' });
+        }
+
+        function onSendFile() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", '/send/file?server=' + serverInput.value, true);
+            xhr.send();
+            xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent all files', { no_data: 'No files copied!', general: 'Send text failed!' });
+        }
+    </script>
+</body>
+
+</html>
