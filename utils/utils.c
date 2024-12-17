@@ -134,6 +134,32 @@ void exit_wrapper(int code) {
     exit(code);
 }
 
+void cleanup(void) {
+#ifdef DEBUG_MODE
+#ifdef _WIN32
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        freopen("CONOUT$", "w", stdout);
+    }
+#endif
+    puts("Cleaning up resources before exit");
+#endif
+    if (error_log_file) {
+        free(error_log_file);
+        error_log_file = NULL;
+    }
+    if (cwd) {
+        free(cwd);
+        cwd = NULL;
+    }
+    clear_config(&configuration);
+#ifdef __linux__
+    if (_XA_CLIPBOARD) freeAtomPtr(_XA_CLIPBOARD);
+    if (_XA_UTF8_STRING) freeAtomPtr(_XA_UTF8_STRING);
+#elif defined(_WIN32)
+    WSACleanup();
+#endif
+}
+
 int file_exists(const char *file_name) {
     if (file_name[0] == 0) return 0;  // empty path
     int f_ok;
@@ -623,6 +649,162 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
         }
     }
     free(fnames);
+}
+
+#elif defined(_WIN32)
+
+/*
+ * Check if the path is a file or a directory.
+ * If the path is a directory, calls _recurse_dir() on that.
+ * Otherwise, appends the path to the list
+ */
+static void _process_path(const wchar_t *path, list2 *lst, int depth, int include_leaf_dirs);
+
+/*
+ * Recursively append all file paths in the directory and its subdirectories
+ * to the list.
+ * maximum recursion depth is limited to MAX_RECURSE_DEPTH
+ */
+static void _recurse_dir(const wchar_t *_path, list2 *lst, int depth, int include_leaf_dirs);
+
+static void _process_path(const wchar_t *path, list2 *lst, int depth, int include_leaf_dirs) {
+    struct stat sb;
+    if (wstat(path, &sb) != 0) return;
+    if (S_ISDIR(sb.st_mode)) {
+        _recurse_dir(path, lst, depth + 1, include_leaf_dirs);
+    } else if (S_ISREG(sb.st_mode)) {
+        _wappend(lst, path);
+    }
+}
+
+static void _recurse_dir(const wchar_t *_path, list2 *lst, int depth, int include_leaf_dirs) {
+    if (depth > MAX_RECURSE_DEPTH) return;
+    _WDIR *d = _wopendir(_path);
+    if (!d) {
+#ifdef DEBUG_MODE
+        wprintf(L"Error opening directory %s", _path);
+#endif
+        return;
+    }
+    size_t p_len = wcsnlen(_path, 2050);
+    if (p_len > 2048) {
+        error("Too long file name.");
+        (void)_wclosedir(d);
+        return;
+    }
+    wchar_t path[p_len + 2];
+    wcsncpy(path, _path, p_len + 1);
+    path[p_len + 1] = 0;
+    if (path[p_len - 1] != PATH_SEP) {
+        path[p_len++] = PATH_SEP;
+        path[p_len] = '\0';
+    }
+    const struct _wdirent *dir;
+    int is_empty = 1;
+    while ((dir = _wreaddir(d)) != NULL) {
+        const wchar_t *filename = dir->d_name;
+        if (!(wcscmp(filename, L".") && wcscmp(filename, L".."))) continue;
+        is_empty = 0;
+        const size_t _fname_len = wcslen(filename);
+        if (_fname_len + p_len > 2048) {
+            error("Too long file name.");
+            (void)_wclosedir(d);
+            return;
+        }
+        wchar_t pathname[_fname_len + p_len + 1];
+        wcsncpy(pathname, path, p_len);
+        wcsncpy(pathname + p_len, filename, _fname_len + 1);
+        pathname[p_len + _fname_len] = 0;
+        _process_path(pathname, lst, depth, include_leaf_dirs);
+    }
+    if (include_leaf_dirs && is_empty) {
+        _wappend(lst, wcsdup(path));
+    }
+    (void)_wclosedir(d);
+}
+
+void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
+    dfiles_p->lst = NULL;
+    dfiles_p->path_len = 0;
+
+    if (!OpenClipboard(0)) return;
+    if (!IsClipboardFormatAvailable(CF_HDROP)) {
+        CloseClipboard();
+        return;
+    }
+    HGLOBAL hGlobal = (HGLOBAL)GetClipboardData(CF_HDROP);
+    if (!hGlobal) {
+        CloseClipboard();
+        return;
+    }
+    HDROP hDrop = (HDROP)GlobalLock(hGlobal);
+    if (!hDrop) {
+        CloseClipboard();
+        return;
+    }
+
+    size_t file_cnt = DragQueryFile(hDrop, (UINT)(-1), NULL, MAX_PATH);
+
+    if (file_cnt <= 0) {
+        GlobalUnlock(hGlobal);
+        CloseClipboard();
+        return;
+    }
+    list2 *lst = init_list(file_cnt);
+    if (!lst) {
+        GlobalUnlock(hGlobal);
+        CloseClipboard();
+        return;
+    }
+    dfiles_p->lst = lst;
+    wchar_t fileName[MAX_PATH + 1];
+    for (size_t i = 0; i < file_cnt; i++) {
+        fileName[0] = 0;
+        DragQueryFileW(hDrop, (UINT)i, fileName, MAX_PATH);
+        DWORD attr = GetFileAttributesW(fileName);
+        DWORD dontWant = FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_OFFLINE;
+        if (attr & dontWant) {
+#ifdef DEBUG_MODE
+            wprintf(L"not a file or dir : %s\n", fileName);
+#endif
+            continue;
+        }
+        if (i == 0) {
+            wchar_t *sep_ptr = wcsrchr(fileName, PATH_SEP);
+            if (sep_ptr > fileName) {
+                dfiles_p->path_len = (size_t)(sep_ptr - fileName + 1);
+            }
+        }
+        if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+            _recurse_dir(fileName, lst, 1, include_leaf_dirs);
+        } else {  // regular file
+            _wappend(lst, fileName);
+        }
+    }
+    GlobalUnlock(hGlobal);
+    CloseClipboard();
+}
+
+int rename_file(const char *old_name, const char *new_name) {
+    wchar_t *wold;
+    wchar_t *wnew;
+    if (utf8_to_wchar_str(old_name, &wold, NULL) != EXIT_SUCCESS) return -1;
+    if (utf8_to_wchar_str(new_name, &wnew, NULL) != EXIT_SUCCESS) {
+        free(wold);
+        return -1;
+    }
+    int result = _wrename(wold, wnew);
+    free(wold);
+    free(wnew);
+    return result;
+}
+
+int remove_directory(const char *path) {
+    wchar_t *wpath;
+    if (utf8_to_wchar_str(path, &wpath, NULL) != EXIT_SUCCESS) return -1;
+    int result = (RemoveDirectoryW(wpath) == FALSE);
+    free(wpath);
+    return result;
 }
 
 #endif

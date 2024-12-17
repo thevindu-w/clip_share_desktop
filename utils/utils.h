@@ -68,6 +68,11 @@ extern void error_exit(const char *msg) __attribute__((noreturn));
 void exit_wrapper(int code) __attribute__((noreturn));
 
 /*
+ * Free up resources
+ */
+extern void cleanup(void);
+
+/*
  * Get copied text from clipboard.
  * Places the text in a buffer and sets the bufptr to point the buffer.
  * bufptr must be a valid pointer to a char * variable.
@@ -199,7 +204,22 @@ extern void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs);
 #define rename_file(old_name, new_name) rename(old_name, new_name)
 #define remove_directory(path) rmdir(path)
 
+#elif defined(_WIN32)
+
+/*
+ * A wrapper for rename() to be platform independent.
+ * Internally converts the path names to wide char on Windows.
+ */
+extern int rename_file(const char *old_name, const char *new_name);
+
+/*
+ * A wrapper for rmdir() to be platform independent.
+ * Internally converts the path names to wide char on Windows.
+ */
+extern int remove_directory(const char *path);
+
 #endif
-#endif
+
+#endif  // (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 
 #endif  // UTILS_UTILS_H_

@@ -40,10 +40,10 @@ typedef int socklen_t;
 
 list2 *udp_scan(void) {
     sock_t sock;
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
         return NULL;
     }
-    int broadcast = 1;
+    const char broadcast = 1;
     if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast)) return NULL;
     // set timeout option to 2s
     struct timeval tv_connect = {2, 0};
@@ -56,10 +56,12 @@ list2 *udp_scan(void) {
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(4337);
-    if (ipv4_aton("255.255.255.255", &serv_addr.sin_addr.s_addr) != EXIT_SUCCESS) {
+    uint32_t brd_addr;
+    if (ipv4_aton("255.255.255.255", &brd_addr) != EXIT_SUCCESS) {
         close_socket(sock);
         return NULL;
     }
+    serv_addr.sin_addr.s_addr = brd_addr;
 
     socklen_t len = sizeof(serv_addr);
     sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&serv_addr, len);

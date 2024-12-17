@@ -25,9 +25,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <utils/utils.h>
+#include <utils/net_utils.h>
 
 #ifdef __linux__
 #include <pwd.h>
+#elif defined(_WIN32)
+#include <userenv.h>
 #endif
 
 // tcp and udp
@@ -41,9 +44,11 @@
 #define CONFIG_FILE "clipshare-desktop.conf"
 
 config configuration;
-char *error_log_file;
-char *cwd;
+char *error_log_file = NULL;
+char *cwd = NULL;
 size_t cwd_len;
+
+static char *get_user_home(void);
 
 /*
  * Set the error_log_file absolute path
@@ -122,6 +127,44 @@ static inline void _apply_default_conf(void) {
         configuration.max_proto_version = PROTOCOL_MAX;
 }
 
+#ifdef _WIN32
+
+static char *get_user_home(void) {
+    DWORD pid = GetCurrentProcessId();
+    HANDLE procHndl = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    HANDLE token;
+    if (!OpenProcessToken(procHndl, TOKEN_QUERY, &token)) {
+        CloseHandle(procHndl);
+        return NULL;
+    }
+    DWORD wlen;
+    GetUserProfileDirectoryW(token, NULL, &wlen);
+    CloseHandle(token);
+    if (wlen >= 512) return NULL;
+    wchar_t whome[wlen];
+    if (!OpenProcessToken(procHndl, TOKEN_QUERY, &token)) {
+        CloseHandle(procHndl);
+        return NULL;
+    }
+    if (!GetUserProfileDirectoryW(token, whome, &wlen)) {
+        CloseHandle(procHndl);
+        CloseHandle(token);
+        return NULL;
+    }
+    CloseHandle(token);
+    CloseHandle(procHndl);
+    char *home = NULL;
+    int len;
+    if (!wchar_to_utf8_str(whome, &home, &len) == EXIT_SUCCESS) return NULL;
+    if (len >= 512 && home) {
+        free(home);
+        return NULL;
+    }
+    return home;
+}
+
+#endif
+
 #if defined(__linux__) || defined(__APPLE__)
 
 static char *get_user_home(void) {
@@ -179,6 +222,8 @@ int main(int argc, char **argv) {
     } else {
         prog_name++;  // don't want the '/' before the program name
     }
+
+    atexit(cleanup);
 
 #ifdef _WIN32
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {

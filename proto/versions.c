@@ -30,7 +30,7 @@
 
 static inline int method_request(sock_t socket, unsigned char method, StatusCallback *callback) {
     if (write_sock(socket, (char *)&method, 1) != EXIT_SUCCESS) {
-        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -39,7 +39,7 @@ static inline int method_request(sock_t socket, unsigned char method, StatusCall
 #ifdef DEBUG_MODE
         fprintf(stderr, "Method selection failed\n");
 #endif
-        if (callback) callback->function(COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
@@ -48,18 +48,18 @@ static inline int method_request(sock_t socket, unsigned char method, StatusCall
             return EXIT_SUCCESS;
 
         case STATUS_NO_DATA: {
-            if (callback) callback->function(NO_DATA, NULL, 0, callback->params);
+            if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
 
         case STATUS_METHOD_NOT_IMPLEMENTED:
         case STATUS_UNKNOWN_METHOD: {
-            if (callback) callback->function(PROTO_METHOD_ERROR, NULL, 0, callback->params);
+            if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
 
         default: {
-            if (callback) callback->function(DATA_ERROR, NULL, 0, callback->params);
+            if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }
@@ -107,7 +107,7 @@ int version_1(sock_t socket, unsigned char method, StatusCallback *callback) {
             return info_v1(socket);
         }
         default: {  // unknown method
-            if (callback) callback->function(PROTO_METHOD_ERROR, NULL, 0, callback->params);
+            if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }

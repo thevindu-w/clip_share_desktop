@@ -25,12 +25,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <utils/net_utils.h>
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 #define PORT 8888
+
+struct MHD_Daemon *http_daemon = NULL;
 
 extern char _binary_blob_page_html_start[];
 extern char _binary_blob_page_html_end[];
@@ -42,11 +47,15 @@ static size_t _page_size;
 static const char *CONTENT_TYPE_TEXT = "text/plain";
 static const char *CONTENT_TYPE_HTML = "text/html";
 
-static int pipedes[2];
-
 typedef struct _get_query_params {
     char *server;
 } get_query_params;
+
+#ifdef __linux__
+typedef int MHD_Result_t;
+#elif defined(_WIN32)
+typedef enum MHD_Result MHD_Result_t;
+#endif
 
 static void callback_fn(unsigned int status, const char *msg, size_t len, status_callback_params *params) {
     if (!params || params->called) return;
@@ -65,25 +74,25 @@ static void handle_method(struct MHD_Connection *connection, const char *address
     status_callback_params params = {.called = 0, .connection = connection};
     uint32_t server_addr;
     if (ipv4_aton(address, &server_addr) != EXIT_SUCCESS) {
-        callback_fn(INVALID_ADDRESS, NULL, 0, &params);
+        callback_fn(RESP_INVALID_ADDRESS, NULL, 0, &params);
         return;
     }
     sock_t sock = connect_server(server_addr, configuration.app_port);
     if (sock == INVALID_SOCKET) {
-        callback_fn(CONNECTION_FAILURE, NULL, 0, &params);
+        callback_fn(RESP_CONNECTION_FAILURE, NULL, 0, &params);
         return;
     }
     StatusCallback callback = {.function = &callback_fn, .params = &params};
     handle_proto(sock, method, &callback);
     close_socket(sock);
-    callback_fn(LOCAL_ERROR, NULL, 0, &params);
+    callback_fn(RESP_LOCAL_ERROR, NULL, 0, &params);
 }
 
-static int print_out_key(void *cls, enum MHD_ValueKind kind, const char *key, const char *value) {
+static MHD_Result_t print_out_key(void *cls, enum MHD_ValueKind kind, const char *key, const char *value) {
     (void)kind;
     get_query_params *query = (get_query_params *)cls;
-    if (!strcmp(key, "server")) {
-        query->server = strndup(value, 17);
+    if (!strcmp(key, "server") && strnlen(value, 17) < 16) {
+        query->server = strdup(value);
     }
 #ifdef DEBUG_MODE
     else {
@@ -93,9 +102,9 @@ static int print_out_key(void *cls, enum MHD_ValueKind kind, const char *key, co
     return MHD_YES;
 }
 
-static int answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url, const char *method,
-                                const char *version, const char *upload_data, size_t *upload_data_size,
-                                void **con_cls) {
+static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url,
+                                         const char *method, const char *version, const char *upload_data,
+                                         size_t *upload_data_size, void **con_cls) {
     struct MHD_Response *response;
     (void)cls;
     (void)version;
@@ -139,7 +148,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
         response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
         res_status = MHD_HTTP_NOT_IMPLEMENTED;
     }
-    int ret = MHD_queue_response(connection, res_status, response);
+    MHD_Result_t ret = MHD_queue_response(connection, res_status, response);
     MHD_destroy_response(response);
 
     return ret;
@@ -148,22 +157,14 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 void start_web(void) {
     _page_size = (size_t)(page_blob_end - page_blob);
 
-    struct MHD_Daemon *daemon;
+    http_daemon = MHD_start_daemon(MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
+                                   &answer_to_connection, NULL, MHD_OPTION_END);
+    if (!http_daemon) return;
 
-    if (pipe(pipedes)) return;
-    daemon = MHD_start_daemon(MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL, &answer_to_connection,
-                              NULL, MHD_OPTION_END);
-    if (NULL == daemon) {
-        close(pipedes[0]);
-        close(pipedes[1]);
-        return;
-    }
-
-    char c;
-    ssize_t rd = read(pipedes[0], &c, 1);
-    if (rd != 1) puts("Read failed");
-    puts("End");
-
-    MHD_stop_daemon(daemon);
+#if defined(__linux__) || defined(__APPLE__)
+    pause();
+#elif defined(_WIN32)
+    Sleep(INFINITE);
+#endif
     return;
 }
