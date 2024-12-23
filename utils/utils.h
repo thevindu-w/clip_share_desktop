@@ -63,11 +63,6 @@ extern void error(const char *msg);
 extern void error_exit(const char *msg) __attribute__((noreturn));
 
 /*
- * Exit after clearing config and other memory allocations
- */
-void exit_wrapper(int code) __attribute__((noreturn));
-
-/*
  * Free up resources
  */
 extern void cleanup(void);

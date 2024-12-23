@@ -95,7 +95,7 @@ void error(const char *msg) {
 
 void error_exit(const char *msg) {
     error(msg);
-    exit_wrapper(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 }
 
 #ifdef __linux__
@@ -122,17 +122,6 @@ static void freeAtomPtr(AtomPtr atomPtr) {
     }
 }
 #endif
-
-void exit_wrapper(int code) {
-    if (error_log_file) free(error_log_file);
-    if (cwd) free(cwd);
-    clear_config(&configuration);
-#ifdef __linux__
-    freeAtomPtr(_XA_CLIPBOARD);
-    freeAtomPtr(_XA_UTF8_STRING);
-#endif
-    exit(code);
-}
 
 void cleanup(void) {
 #ifdef DEBUG_MODE
@@ -870,7 +859,7 @@ int put_clipboard_text(char *data, size_t len) {
         error_exit("Failed to write to clipboard");
     }
     if (data) free(data);
-    exit_wrapper(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 }
 
 char *get_copied_files_as_str(int *offset) {

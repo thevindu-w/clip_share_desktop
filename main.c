@@ -29,6 +29,7 @@
 
 #ifdef __linux__
 #include <pwd.h>
+#include <sys/wait.h>
 #elif defined(_WIN32)
 #include <userenv.h>
 #endif
@@ -55,12 +56,12 @@ static char *get_user_home(void);
  */
 static inline void _set_error_log_file(const char *path) {
     char *working_dir = getcwd_wrapper(2050);
-    if (!working_dir) exit_wrapper(EXIT_FAILURE);
+    if (!working_dir) exit(EXIT_FAILURE);
     working_dir[2049] = 0;
     size_t working_dir_len = strnlen(working_dir, 2048);
     if (working_dir_len == 0 || working_dir_len >= 2048) {
         free(working_dir);
-        exit_wrapper(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
     size_t buf_sz = working_dir_len + strlen(path) + 1;  // +1 for terminating \0
     if (working_dir[working_dir_len - 1] != PATH_SEP) {
@@ -69,7 +70,7 @@ static inline void _set_error_log_file(const char *path) {
     error_log_file = malloc(buf_sz);
     if (!error_log_file) {
         free(working_dir);
-        exit_wrapper(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
     if (working_dir[working_dir_len - 1] == PATH_SEP) {
         snprintf_check(error_log_file, buf_sz, "%s%s", working_dir, ERROR_LOG_FILE);
@@ -181,6 +182,11 @@ static char *get_user_home(void) {
     return NULL;
 }
 
+__attribute__((noreturn)) static void exit_on_signal_handler(int sig) {
+    (void)sig;
+    exit(0);
+}
+
 #endif
 
 static char *get_conf_file(void) {
@@ -224,6 +230,18 @@ int main(int argc, char **argv) {
     }
 
     atexit(cleanup);
+
+#if defined(__linux__) || defined(__APPLE__)
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGINT, &exit_on_signal_handler);
+    signal(SIGTERM, &exit_on_signal_handler);
+    signal(SIGSEGV, &exit_on_signal_handler);
+    signal(SIGABRT, &exit_on_signal_handler);
+    signal(SIGQUIT, &exit_on_signal_handler);
+    signal(SIGSYS, &exit_on_signal_handler);
+    signal(SIGHUP, &exit_on_signal_handler);
+    signal(SIGBUS, &exit_on_signal_handler);
+#endif
 
 #ifdef _WIN32
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
