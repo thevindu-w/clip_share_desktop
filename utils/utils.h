@@ -63,7 +63,7 @@ extern void error(const char *msg);
 extern void error_exit(const char *msg) __attribute__((noreturn));
 
 /*
- * Free up resources
+ * Free up heap memory allocated to global variables
  */
 extern void cleanup(void);
 
@@ -77,13 +77,13 @@ extern void cleanup(void);
  * On failure, buffer is set to NULL.
  * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
  */
-extern int get_clipboard_text(char **bufptr, size_t *lenptr);
+extern int get_clipboard_text(char **bufptr, uint32_t *lenptr);
 
 /*
  * Reads len bytes of text from the data buffer and copies it into the clipboard.
  * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
  */
-extern int put_clipboard_text(char *data, size_t len);
+extern int put_clipboard_text(char *data, uint32_t len);
 
 /*
  * Get the file size of the file from the given file pointer fp.
@@ -107,9 +107,9 @@ extern int is_directory(const char *path, int follow_symlinks);
  * Converts line endings to LF or CRLF based on the platform.
  * param str_p is a valid pointer to malloced, null-terminated char * which may be realloced and returned.
  * If force_lf is non-zero, convert EOL to LF regardless of the platform
- * Else, convert EOL of str to LF.
- * Returns the length of the new string without the terminating null character.
- * If an error occurred, this will free() the *str_p and return -1.
+ * Else, convert EOL of str to LF
+ * Returns the length of the new string without the terminating '\0'.
+ * If an error occured, this will free() the *str_p and return -1.
  */
 extern int64_t convert_eol(char **str_p, int force_lf);
 
@@ -155,7 +155,7 @@ extern FILE *open_file(const char *filename, const char *mode);
  */
 extern int remove_file(const char *filename);
 
-extern int wchar_to_utf8_str(const wchar_t *wstr, char **utf8str_p, int *len_p);
+extern int wchar_to_utf8_str(const wchar_t *wstr, char **utf8str_p, uint32_t *len_p);
 
 #endif
 

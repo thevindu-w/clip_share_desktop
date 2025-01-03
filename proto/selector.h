@@ -20,6 +20,7 @@
 #define PROTO_SELECTOR_H_
 
 #include <clients/status_cb.h>
+#include <stdint.h>
 #include <utils/net_utils.h>
 
 // methods
@@ -37,6 +38,6 @@
  * Accepts a socket, negotiates the protocol version, and passes the control
  * to the respective version handler.
  */
-extern int handle_proto(sock_t socket, unsigned char method, StatusCallback *callback);
+extern int handle_proto(sock_t socket, uint8_t method, StatusCallback *callback);
 
 #endif  // PROTO_SELECTOR_H_

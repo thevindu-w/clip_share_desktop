@@ -80,7 +80,7 @@ list2 *udp_scan(void) {
         if (i == 0) {
             // reduce timeout for subsequent recvfrom calls to 200ms
             tv_connect.tv_sec = 0;
-            tv_connect.tv_usec = 200000;
+            tv_connect.tv_usec = 200000L;
             setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect));  // ignore failure
         }
     }

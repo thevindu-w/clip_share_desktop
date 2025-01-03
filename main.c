@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <utils/utils.h>
 #include <utils/net_utils.h>
+#include <utils/utils.h>
 
 #ifdef __linux__
 #include <pwd.h>
@@ -38,8 +38,8 @@
 #define APP_PORT 4337
 
 // maximum transfer sizes
-#define MAX_TEXT_LENGTH 4194304     // 4 MiB
-#define MAX_FILE_SIZE 68719476736l  // 64 GiB
+#define MAX_TEXT_LENGTH 4194304L     // 4 MiB
+#define MAX_FILE_SIZE 68719476736LL  // 64 GiB
 
 #define ERROR_LOG_FILE "client_err.log"
 #define CONFIG_FILE "clipshare-desktop.conf"
@@ -47,7 +47,7 @@
 config configuration;
 char *error_log_file = NULL;
 char *cwd = NULL;
-size_t cwd_len;
+size_t cwd_len = 0;
 
 static char *get_user_home(void);
 
@@ -86,14 +86,14 @@ static inline void _set_error_log_file(const char *path) {
 static inline void _change_working_dir(void) {
     if (!is_directory(configuration.working_dir, 1)) {
         char err[3072];
-        snprintf_check(err, 3072, "Not existing working directory \'%s\'", configuration.working_dir);
+        snprintf_check(err, 3072, "Error: Not existing working directory \'%s\'", configuration.working_dir);
         fprintf(stderr, "%s\n", err);
         error_exit(err);
     }
     char *old_work_dir = getcwd_wrapper(0);
     if (chdir_wrapper(configuration.working_dir)) {
         char err[3072];
-        snprintf_check(err, 3072, "Failed changing working directory to \'%s\'", configuration.working_dir);
+        snprintf_check(err, 3072, "Error: Failed changing working directory to \'%s\'", configuration.working_dir);
         fprintf(stderr, "%s\n", err);
         if (old_work_dir) free(old_work_dir);
         error_exit(err);
@@ -155,7 +155,7 @@ static char *get_user_home(void) {
     CloseHandle(token);
     CloseHandle(procHndl);
     char *home = NULL;
-    int len;
+    uint32_t len;
     if (!wchar_to_utf8_str(whome, &home, &len) == EXIT_SUCCESS) return NULL;
     if (len >= 512 && home) {
         free(home);
@@ -243,14 +243,14 @@ int main(int argc, char **argv) {
     signal(SIGBUS, &exit_on_signal_handler);
 #endif
 
+    _set_error_log_file(ERROR_LOG_FILE);
+
 #ifdef _WIN32
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
     }
 #endif
-
-    _set_error_log_file(ERROR_LOG_FILE);
 
     char *conf_path = get_conf_file();
     if (!conf_path) {

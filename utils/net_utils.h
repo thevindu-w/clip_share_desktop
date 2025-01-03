@@ -36,17 +36,42 @@ typedef SOCKET sock_t;
 #define INVALID_SOCKET -1
 #endif
 
+/*
+ * Converts a ipv4 address in dotted decimal into in_addr_t.
+ * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
+ */
 extern int ipv4_aton(const char *address_str, uint32_t *address_ptr);
 
 extern sock_t connect_server(uint32_t server_addr, uint16_t port);
 
+/*
+ * Reads num bytes from the socket into buf.
+ * buf should be writable and should have a capacitiy of at least num bytes.
+ * Waits until all the bytes are read. If reading failed before num bytes, returns EXIT_FAILURE
+ * Otherwise, returns EXIT_SUCCESS.
+ */
 extern int read_sock(sock_t sock, char *buf, uint64_t size);
 
+/*
+ * Writes num bytes from buf to the socket.
+ * At least num bytes of the buf should be readable.
+ * Waits until all the bytes are written. If writing failed before num bytes, returns EXIT_FAILURE
+ * Otherwise, returns EXIT_SUCCESS.
+ */
 extern int write_sock(sock_t sock, const char *buf, uint64_t size);
 
-extern int read_size(sock_t sock, int64_t *size_ptr);
-
+/*
+ * Sends a 64-bit signed integer num to socket as big-endian encoded 8 bytes.
+ * returns EXIT_SUCCESS on success. Otherwise, returns EXIT_FAILURE on error.
+ */
 extern int send_size(sock_t sock, int64_t num);
+
+/*
+ * Reads a 64-bit signed integer from socket as big-endian encoded 8 bytes.
+ * Stores the value of the read integer in the address given by size_ptr.
+ * returns EXIT_SUCCESS on success. Otherwise, returns EXIT_FAILURE on error.
+ */
+extern int read_size(sock_t sock, int64_t *size_ptr);
 
 extern void close_socket(sock_t sock);
 

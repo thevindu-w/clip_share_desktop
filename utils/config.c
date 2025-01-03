@@ -1,5 +1,5 @@
 /*
- * conf_parse.c - parse config file for application
+ * utils/conf_parse.c - parse config file for application
  * Copyright (C) 2024 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,6 +21,7 @@
 #include <string.h>
 #include <utils/config.h>
 #include <utils/net_utils.h>
+#include <utils/utils.h>
 
 #define LINE_MAX_LEN 2047
 
@@ -54,41 +55,45 @@ static inline void trim(char *str) {
  * str must be a valid and null-terminated string
  * conf_ptr must be a valid pointer to an unsigned 64-bit long integer
  * Sets the value pointed by conf_ptr to the unsigned 64-bit value given as a string in str if that is a valid value
- * between 1 and 2^32-1 inclusive. Otherwise, does not change the value pointed by conf_ptr
+ * between 1 and 2^61-1 inclusive. Otherwise, does not change the value pointed by conf_ptr
  */
 static inline void set_int64(const char *str, int64_t *conf_ptr) {
     char *end_ptr;
-    int64_t value = (ssize_t)strtoull(str, &end_ptr, 10);
+    int64_t value = (int64_t)strtoull(str, &end_ptr, 10);
     switch (*end_ptr) {
         case '\0':
             break;
         case 'k':
         case 'K': {
+            if (value > 2305843009213693LL) error_exit("Error: config value too large");
             value *= 1000;
             break;
         }
         case 'm':
         case 'M': {
-            value *= 1000000;
+            if (value > 2305843009213LL) error_exit("Error: config value too large");
+            value *= 1000000L;
             break;
         }
         case 'g':
         case 'G': {
-            value *= 1000000000;
+            if (value > 2305843009LL) error_exit("Error: config value too large");
+            value *= 1000000000L;
             break;
         }
         case 't':
         case 'T': {
-            value *= 1000000000000L;
+            if (value > 2305843L) error_exit("Error: config value too large");
+            value *= 1000000000000LL;
             break;
         }
-        default:
-            return;
+        default: {
+            error_exit("Error: config value has invalid suffix");
+        }
     }
-    if (*end_ptr && *(end_ptr + 1)) return;
-    if (0 < value) {
-        *conf_ptr = value;
-    }
+    if (*end_ptr && *(end_ptr + 1)) error_exit("Error: config value has invalid suffix");
+    if (value <= 0) error_exit("Error: invalid config value");
+    *conf_ptr = value;
 }
 
 /*
@@ -99,32 +104,36 @@ static inline void set_int64(const char *str, int64_t *conf_ptr) {
  */
 static inline void set_uint32(const char *str, uint32_t *conf_ptr) {
     char *end_ptr;
-    long long value = strtoll(str, &end_ptr, 10);
+    int64_t value = (int64_t)strtoull(str, &end_ptr, 10);
+    if (value < 0 || value > 4294967294LL) error_exit("Error: config value not in range 0-4294967294");
     switch (*end_ptr) {
         case '\0':
+            end_ptr--;
             break;
         case 'k':
         case 'K': {
+            if (value > 4294967L) error_exit("Error: config value too large");
             value *= 1000;
             break;
         }
         case 'm':
         case 'M': {
-            value *= 1000000;
+            if (value > 4294) error_exit("Error: config value too large");
+            value *= 1000000L;
             break;
         }
         case 'g':
         case 'G': {
-            value *= 1000000000;
+            if (value > 4) error_exit("Error: config value too large");
+            value *= 1000000000L;
             break;
         }
         default:
-            return;
+            error_exit("Error: config value has invalid suffix");
     }
-    if (*end_ptr && *(end_ptr + 1)) return;
-    if (0 < value && value <= 4294967295L) {
-        *conf_ptr = (uint32_t)value;
-    }
+    if (*end_ptr && *(end_ptr + 1)) error_exit("Error: config value has invalid suffix");
+    if (value <= 0 || 4294967295LL <= value) error_exit("Error: invalid config value");
+    *conf_ptr = (uint32_t)value;
 }
 
 /*
@@ -133,13 +142,12 @@ static inline void set_uint32(const char *str, uint32_t *conf_ptr) {
  * Sets the value pointed by conf_ptr to the unsigned short given as a string in str if that is a valid value between 1
  * and 65535 inclusive. Otherwise, does not change the value pointed by conf_ptr
  */
-static inline void set_ushort(const char *str, unsigned short *conf_ptr) {
+static inline void set_uint16(const char *str, uint16_t *conf_ptr) {
     char *end_ptr;
     long value = strtol(str, &end_ptr, 10);
-    if (*end_ptr) return;
-    if (0 < value && value < 65536) {
-        *conf_ptr = (unsigned short)value;
-    }
+    if (value < 0 || value > 65535L) error_exit("Error: config value not in range 0-65535");
+    if (*end_ptr) error_exit("Error: invalid config value");
+    *conf_ptr = (uint16_t)value;
 }
 
 /*
@@ -161,13 +169,13 @@ static void parse_line(char *line, config *cfg) {
     if (key[0] == '#') return;
 
     const size_t key_len = strnlen(key, LINE_MAX_LEN);
-    if (key_len <= 0 || key_len >= LINE_MAX_LEN) return;
+    if (key_len <= 0 || key_len >= LINE_MAX_LEN) error_exit("Error: invalid config key");
 
     const size_t value_len = strnlen(value, LINE_MAX_LEN);
-    if (value_len <= 0 || value_len >= LINE_MAX_LEN) return;
+    if (value_len <= 0 || value_len >= LINE_MAX_LEN) error_exit("Error: invalid config value");
 
     if (!strcmp("app_port", key)) {
-        set_ushort(value, &(cfg->app_port));
+        set_uint16(value, &(cfg->app_port));
     } else if (!strcmp("working_dir", key)) {
         if (cfg->working_dir) free(cfg->working_dir);
         cfg->working_dir = strdup(value);
@@ -176,9 +184,9 @@ static void parse_line(char *line, config *cfg) {
     } else if (!strcmp("max_file_size", key)) {
         set_int64(value, &(cfg->max_file_size));
     } else if (!strcmp("min_proto_version", key)) {
-        set_ushort(value, &(cfg->min_proto_version));
+        set_uint16(value, &(cfg->min_proto_version));
     } else if (!strcmp("max_proto_version", key)) {
-        set_ushort(value, &(cfg->max_proto_version));
+        set_uint16(value, &(cfg->max_proto_version));
 #ifdef DEBUG_MODE
     } else {
         printf("Unknown key \"%s\"\n", key);
@@ -221,5 +229,6 @@ void parse_conf(config *cfg, const char *file_name) {
 void clear_config(config *cfg) {
     if (cfg->working_dir) {
         free(cfg->working_dir);
+        cfg->working_dir = NULL;
     }
 }

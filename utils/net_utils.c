@@ -89,8 +89,8 @@ sock_t connect_server(uint32_t addr, uint16_t port) {
         return INVALID_SOCKET;
     }
 
-    // set timeout option to 100ms
-    struct timeval tv = {0, 100000};
+    // set timeout option to 0.5s
+    struct timeval tv = {0, 500000L};
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv)) ||
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv))) {
         error("Can't set the timeout option of the connection");
@@ -106,18 +106,18 @@ int read_sock(sock_t sock, char *buf, uint64_t size) {
     char *ptr = buf;
     while (total_sz_read < size) {
         ssize_t sz_read;
-        uint64_t req_sz = size - total_sz_read;
-        if (req_sz > 0x7fffffff) req_sz = 0x7fffffff;  // prevent overflow
+        uint64_t read_req_sz = size - total_sz_read;
+        if (read_req_sz > 0x7FFFFFFFL) read_req_sz = 0x7FFFFFFFL;  // prevent overflow due to casting
 #ifdef _WIN32
-        sz_read = recv(sock, ptr, (int)req_sz, 0);
+        sz_read = recv(sock, ptr, (int)read_req_sz, 0);
 #else
-        sz_read = recv(sock, ptr, req_sz, 0);
+        sz_read = recv(sock, ptr, read_req_sz, 0);
 #endif
         if (sz_read > 0) {
             total_sz_read += (uint64_t)sz_read;
             cnt = 0;
             ptr += sz_read;
-        } else if (cnt++ > 50) {
+        } else if (cnt++ > 10) {
 #ifdef DEBUG_MODE
             fputs("Read sock failed\n", stderr);
 #endif
@@ -133,18 +133,18 @@ int write_sock(sock_t sock, const char *buf, uint64_t size) {
     const char *ptr = buf;
     while (total_written < size) {
         ssize_t sz_written;
-        uint64_t req_sz = size - total_written;
-        if (req_sz > 0x7fffffff) req_sz = 0x7fffffff;  // prevent overflow
+        uint64_t write_req_sz = size - total_written;
+        if (write_req_sz > 0x7FFFFFFFL) write_req_sz = 0x7FFFFFFFL;  // prevent overflow due to casting
 #ifdef _WIN32
-        sz_written = send(sock, ptr, (int)req_sz, 0);
+        sz_written = send(sock, ptr, (int)write_req_sz, 0);
 #else
-        sz_written = send(sock, ptr, req_sz, 0);
+        sz_written = send(sock, ptr, write_req_sz, 0);
 #endif
         if (sz_written > 0) {
             total_written += (uint64_t)sz_written;
             cnt = 0;
             ptr += sz_written;
-        } else if (cnt++ > 50) {
+        } else if (cnt++ > 10) {
 #ifdef DEBUG_MODE
             fputs("Write sock failed\n", stderr);
 #endif

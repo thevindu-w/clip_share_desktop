@@ -1,5 +1,5 @@
 /*
- * config.h - header for conf_parse.c
+ * utils/config.h - header for conf_parse.c
  * Copyright (C) 2024 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,12 +23,12 @@
 #include <sys/types.h>
 
 typedef struct _config {
-    unsigned short app_port;
+    uint16_t app_port;
     char *working_dir;
     uint32_t max_text_length;
     int64_t max_file_size;
-    unsigned short min_proto_version;
-    unsigned short max_proto_version;
+    uint16_t min_proto_version;
+    uint16_t max_proto_version;
 } config;
 
 /*

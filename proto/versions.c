@@ -28,13 +28,13 @@
 #define STATUS_UNKNOWN_METHOD 3
 #define STATUS_METHOD_NOT_IMPLEMENTED 4
 
-static inline int method_request(sock_t socket, unsigned char method, StatusCallback *callback) {
+static inline int method_request(sock_t socket, uint8_t method, StatusCallback *callback) {
     if (write_sock(socket, (char *)&method, 1) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
 
-    unsigned char method_status;
+    uint8_t method_status;
     if (read_sock(socket, (char *)&method_status, 1) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
         fprintf(stderr, "Method selection failed\n");
@@ -67,7 +67,7 @@ static inline int method_request(sock_t socket, unsigned char method, StatusCall
 
 #if PROTOCOL_MIN <= 1
 
-int version_1(sock_t socket, unsigned char method, StatusCallback *callback) {
+int version_1(sock_t socket, uint8_t method, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -116,7 +116,7 @@ int version_1(sock_t socket, unsigned char method, StatusCallback *callback) {
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
 
-int version_2(sock_t socket, unsigned char method, StatusCallback *callback) {
+int version_2(sock_t socket, uint8_t method, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -164,7 +164,7 @@ int version_2(sock_t socket, unsigned char method, StatusCallback *callback) {
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
 
-int version_3(sock_t socket, unsigned char method, StatusCallback *callback) {
+int version_3(sock_t socket, uint8_t method, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:

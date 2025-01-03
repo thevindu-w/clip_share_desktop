@@ -16,6 +16,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _FILE_OFFSET_BITS 64
+
+#ifdef DEBUG_MODE
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#endif
+
 #include <dirent.h>
 #include <globals.h>
 #include <stdarg.h>
@@ -38,10 +45,10 @@
 #define MAX_RECURSE_DEPTH 256
 
 #if defined(__linux__) || defined(__APPLE__)
-static inline char hex2char(char h);
-static int url_decode(char *);
+static inline int8_t hex2char(char h);
+static int url_decode(char *, uint32_t *len_p);
 #elif defined(_WIN32)
-static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, int *wlen_p);
+static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, uint32_t *wlen_p);
 static inline void _wappend(list2 *lst, const wchar_t *wstr);
 #endif
 
@@ -177,8 +184,8 @@ int64_t get_file_size(FILE *fp) {
 #endif
         return -1;
     }
-    fseek(fp, 0L, SEEK_END);
-    int64_t file_size = ftell(fp);
+    fseeko(fp, 0L, SEEK_END);
+    int64_t file_size = ftello(fp);
     rewind(fp);
     return file_size;
 }
@@ -197,7 +204,7 @@ int is_directory(const char *path, int follow_symlinks) {
     (void)follow_symlinks;
     wchar_t *wpath;
     if (utf8_to_wchar_str(path, &wpath, NULL) != EXIT_SUCCESS) return -1;
-    stat_result = wstat(wpath, &sb);
+    stat_result = _wstat64(wpath, &sb);
     free(wpath);
 #endif
     if (stat_result == 0) {
@@ -232,6 +239,11 @@ static inline int _realloc_for_crlf(char **str_p, uint64_t *len_p) {
         return 0;
     }
     uint64_t req_len = ind + increase;
+    if (req_len >= 0xFFFFFFFFUL) {
+        free(str);
+        error("realloc size too large");
+        return -1;
+    }
     char *re_str = realloc(str, req_len + 1);  // +1 for terminating '\0'
     if (!re_str) {
         free(str);
@@ -313,8 +325,12 @@ list2 *get_copied_files(void) {
             *ptr = 0;
         }
     }
+    if (file_cnt >= 0xFFFFFFFFUL) {
+        free(fnames);
+        return NULL;
+    }
 
-    list2 *lst = init_list(file_cnt);
+    list2 *lst = init_list((uint32_t)file_cnt);
     if (!lst) {
         free(fnames);
         return NULL;
@@ -322,14 +338,20 @@ list2 *get_copied_files(void) {
     char *fname = file_path;
     for (size_t i = 0; i < file_cnt; i++) {
         size_t off = strnlen(fname, 2047) + 1;
-        if (url_decode(fname) == EXIT_FAILURE) break;
+        if (url_decode(fname, NULL) != EXIT_SUCCESS) break;
 
         struct stat statbuf;
         if (stat(fname, &statbuf)) {
+#ifdef DEBUG_MODE
+            puts("stat failed");
+#endif
             fname += off;
             continue;
         }
         if (!S_ISREG(statbuf.st_mode)) {
+#ifdef DEBUG_MODE
+            printf("not a file : %s\n", fname);
+#endif
             fname += off;
             continue;
         }
@@ -361,12 +383,12 @@ list2 *get_copied_files(void) {
 
     size_t file_cnt = DragQueryFile(hDrop, (UINT)(-1), NULL, MAX_PATH);
 
-    if (file_cnt <= 0) {
+    if (file_cnt <= 0 || file_cnt >= 0xFFFFFFFFUL) {
         GlobalUnlock(hGlobal);
         CloseClipboard();
         return NULL;
     }
-    list2 *lst = init_list(file_cnt);
+    list2 *lst = init_list((uint32_t)file_cnt);
     if (!lst) {
         GlobalUnlock(hGlobal);
         CloseClipboard();
@@ -405,8 +427,6 @@ list2 *get_copied_files(void) {
  * If the path points to an existing file which is not a directory or creating a directory failed, returns
  * EXIT_FAILURE.
  */
-static int _mkdir_check(const char *path);
-
 static int _mkdir_check(const char *path) {
     if (file_exists(path)) {
         if (!is_directory(path, 0)) return EXIT_FAILURE;
@@ -599,8 +619,12 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
             *ptr = 0;
         }
     }
+    if (file_cnt >= 0xFFFFFFFFUL) {
+        free(fnames);
+        return;
+    }
 
-    list2 *lst = init_list(file_cnt);
+    list2 *lst = init_list((uint32_t)file_cnt);
     if (!lst) {
         free(fnames);
         return;
@@ -609,11 +633,10 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
     char *fname = file_path;
     for (size_t i = 0; i < file_cnt; i++) {
         const size_t off = strnlen(fname, 2047) + 1;
-        if (url_decode(fname) != EXIT_SUCCESS) break;
+        uint32_t fname_len;
+        if (url_decode(fname, &fname_len) != EXIT_SUCCESS || fname_len == 0 || fname_len > 2047) break;
         // fname has changed after url_decode
         if (i == 0) {
-            size_t fname_len = strnlen(fname, 2047);
-            if (fname_len == 0) break;                                       // empty file name
             if (fname[fname_len - 1] == PATH_SEP) fname[fname_len - 1] = 0;  // if directory, remove ending /
             const char *sep_ptr = strrchr(fname, PATH_SEP);
             if (sep_ptr > fname) {
@@ -658,7 +681,7 @@ static void _recurse_dir(const wchar_t *_path, list2 *lst, int depth, int includ
 
 static void _process_path(const wchar_t *path, list2 *lst, int depth, int include_leaf_dirs) {
     struct stat sb;
-    if (wstat(path, &sb) != 0) return;
+    if (_wstat64(path, &sb) != 0) return;
     if (S_ISDIR(sb.st_mode)) {
         _recurse_dir(path, lst, depth + 1, include_leaf_dirs);
     } else if (S_ISREG(sb.st_mode)) {
@@ -734,12 +757,12 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
 
     size_t file_cnt = DragQueryFile(hDrop, (UINT)(-1), NULL, MAX_PATH);
 
-    if (file_cnt <= 0) {
+    if (file_cnt <= 0 || file_cnt >= 0xFFFFFFFFUL) {
         GlobalUnlock(hGlobal);
         CloseClipboard();
         return;
     }
-    list2 *lst = init_list(file_cnt);
+    list2 *lst = init_list((uint32_t)file_cnt);
     if (!lst) {
         GlobalUnlock(hGlobal);
         CloseClipboard();
@@ -802,14 +825,14 @@ int remove_directory(const char *path) {
 
 #if defined(__linux__) || defined(__APPLE__)
 
-static inline char hex2char(char h) {
-    if ('0' <= h && h <= '9') return (char)((int)h - '0');
-    if ('A' <= h && h <= 'F') return (char)((int)h - 'A' + 10);
-    if ('a' <= h && h <= 'f') return (char)((int)h - 'a' + 10);
+static inline int8_t hex2char(char h) {
+    if ('0' <= h && h <= '9') return (int8_t)((int)h - '0');
+    if ('A' <= h && h <= 'F') return (int8_t)((int)h - 'A' + 10);
+    if ('a' <= h && h <= 'f') return (int8_t)((int)h - 'a' + 10);
     return -1;
 }
 
-static int url_decode(char *str) {
+static int url_decode(char *str, uint32_t *len_p) {
     if (strncmp("file://", str, 7)) return EXIT_FAILURE;
     char *ptr1 = str;
     const char *ptr2 = str + 7;
@@ -819,14 +842,18 @@ static int url_decode(char *str) {
         if (*ptr2 == '%') {
             ptr2++;
             char tmp = *ptr2;
-            char c1 = hex2char(tmp);
+            int8_t c1 = hex2char(tmp);
             if (c1 < 0) return EXIT_FAILURE;  // invalid url
             c = (char)(c1 << 4);
             ptr2++;
             tmp = *ptr2;
             c1 = hex2char(tmp);
             if (c1 < 0) return EXIT_FAILURE;  // invalid url
+#if defined(__CHAR_UNSIGNED__) && __CHAR_UNSIGNED__
+            c |= (char)c1;
+#else
             c |= c1;
+#endif
         } else {
             c = *ptr2;
         }
@@ -835,16 +862,17 @@ static int url_decode(char *str) {
         ptr2++;
     } while (*ptr2);
     *ptr1 = 0;
+    if (len_p) *len_p = (uint32_t)(ptr1 - str);
     return EXIT_SUCCESS;
 }
 #endif
 
 #ifdef __linux__
 
-int get_clipboard_text(char **buf_ptr, size_t *len_ptr) {
+int get_clipboard_text(char **buf_ptr, uint32_t *len_ptr) {
     if (xclip_util(XCLIP_OUT, NULL, len_ptr, buf_ptr) != EXIT_SUCCESS || *len_ptr <= 0) {  // do not change the order
 #ifdef DEBUG_MODE
-        printf("xclip read text failed. len = %zu\n", *len_ptr);
+        printf("xclip read text failed. len = %" PRIu32 "\n", *len_ptr);
 #endif
         if (*buf_ptr) free(*buf_ptr);
         return EXIT_FAILURE;
@@ -852,7 +880,7 @@ int get_clipboard_text(char **buf_ptr, size_t *len_ptr) {
     return EXIT_SUCCESS;
 }
 
-int put_clipboard_text(char *data, size_t len) {
+int put_clipboard_text(char *data, uint32_t len) {
     if (fork() > 0) return EXIT_SUCCESS;  // prevent caller from hanging
     if (xclip_util(XCLIP_IN, NULL, &len, &data) != EXIT_SUCCESS) {
         if (data) free(data);
@@ -865,10 +893,10 @@ int put_clipboard_text(char *data, size_t len) {
 char *get_copied_files_as_str(int *offset) {
     const char *const expected_target = "x-special/gnome-copied-files";
     char *targets;
-    size_t targets_len;
+    uint32_t targets_len;
     if (xclip_util(XCLIP_OUT, "TARGETS", &targets_len, &targets) || targets_len <= 0) {  // do not change the order
 #ifdef DEBUG_MODE
-        printf("xclip read TARGETS. len = %zu\n", targets_len);
+        printf("xclip read TARGETS. len = %" PRIu32 "\n", targets_len);
 #endif
         if (targets) free(targets);
         return NULL;
@@ -892,10 +920,10 @@ char *get_copied_files_as_str(int *offset) {
     free(targets);
 
     char *fnames;
-    size_t fname_len;
+    uint32_t fname_len;
     if (xclip_util(XCLIP_OUT, expected_target, &fname_len, &fnames) || fname_len <= 0) {  // do not change the order
 #ifdef DEBUG_MODE
-        printf("xclip read copied files. len = %zu\n", fname_len);
+        printf("xclip read copied files. len = %" PRIu32 "\n", fname_len);
 #endif
         if (fnames) free(fnames);
         return NULL;
@@ -918,7 +946,7 @@ char *get_copied_files_as_str(int *offset) {
 
 #elif defined(_WIN32)
 
-static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, int *wlen_p) {
+static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, uint32_t *wlen_p) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8str, -1, NULL, 0);
     if (wlen <= 0) return EXIT_FAILURE;
     wchar_t *wstr = malloc((size_t)wlen * sizeof(wchar_t));
@@ -926,11 +954,11 @@ static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, int *wlen_p)
     MultiByteToWideChar(CP_UTF8, 0, utf8str, -1, wstr, wlen);
     wstr[wlen - 1] = 0;
     *wstr_p = wstr;
-    if (wlen_p) *wlen_p = wlen - 1;
+    if (wlen_p) *wlen_p = (uint32_t)(wlen - 1);
     return EXIT_SUCCESS;
 }
 
-int wchar_to_utf8_str(const wchar_t *wstr, char **utf8str_p, int *len_p) {
+int wchar_to_utf8_str(const wchar_t *wstr, char **utf8str_p, uint32_t *len_p) {
     int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
     if (len <= 0) return EXIT_FAILURE;
     char *str = malloc((size_t)len);
@@ -938,7 +966,7 @@ int wchar_to_utf8_str(const wchar_t *wstr, char **utf8str_p, int *len_p) {
     WideCharToMultiByte(CP_UTF8, 0, wstr, -1, str, len, NULL, NULL);
     str[len - 1] = 0;
     *utf8str_p = str;
-    if (len_p) *len_p = len - 1;
+    if (len_p) *len_p = (uint32_t)(len - 1);
     return EXIT_SUCCESS;
 }
 
@@ -954,13 +982,13 @@ char *getcwd_wrapper(int len) {
     wchar_t *wcwd = _wgetcwd(NULL, len);
     if (!wcwd) return NULL;
     char *utf8path;
-    int alloc_len;
+    uint32_t alloc_len;
     if (wchar_to_utf8_str(wcwd, &utf8path, &alloc_len) != EXIT_SUCCESS) {
         free(wcwd);
         return NULL;
     }
     free(wcwd);
-    if (alloc_len < len) utf8path = realloc(utf8path, (size_t)len);
+    if ((int)alloc_len < len) utf8path = realloc(utf8path, (size_t)len);
     return utf8path;
 }
 
@@ -1001,7 +1029,7 @@ static inline void _wappend(list2 *lst, const wchar_t *wstr) {
     append(lst, utf8path);
 }
 
-int get_clipboard_text(char **bufptr, size_t *lenptr) {
+int get_clipboard_text(char **bufptr, uint32_t *lenptr) {
     if (!OpenClipboard(0)) return EXIT_FAILURE;
     if (!IsClipboardFormatAvailable(CF_TEXT)) {
         CloseClipboard();
@@ -1009,7 +1037,7 @@ int get_clipboard_text(char **bufptr, size_t *lenptr) {
     }
     HANDLE h = GetClipboardData(CF_UNICODETEXT);
     char *data;
-    int len;
+    uint32_t len;
     if (wchar_to_utf8_str((wchar_t *)h, &data, &len) != EXIT_SUCCESS) {
         data = NULL;
         len = 0;
@@ -1024,15 +1052,15 @@ int get_clipboard_text(char **bufptr, size_t *lenptr) {
         return EXIT_FAILURE;
     }
     *bufptr = data;
-    *lenptr = (size_t)len;
+    *lenptr = (uint32_t)len;
     data[*lenptr] = 0;
     return EXIT_SUCCESS;
 }
 
-int put_clipboard_text(char *data, size_t len) {
+int put_clipboard_text(char *data, uint32_t len) {
     if (!OpenClipboard(0)) return EXIT_FAILURE;
     wchar_t *wstr;
-    int wlen;
+    uint32_t wlen;
     char prev = data[len];
     data[len] = 0;
     if (utf8_to_wchar_str(data, &wstr, &wlen) != EXIT_SUCCESS) {

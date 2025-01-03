@@ -173,7 +173,7 @@ static int doOut(Window win, unsigned long *len_ptr, char **buf_ptr, xclip_optio
     return EXIT_SUCCESS;
 }
 
-int xclip_util(int io, const char *atom_name, unsigned long *len_ptr, char **buf_ptr) {
+int xclip_util(int io, const char *atom_name, uint32_t *len_ptr, char **buf_ptr) {
     if (io == XCLIP_OUT) {
         *len_ptr = 0;
         *buf_ptr = NULL;
@@ -234,7 +234,7 @@ int xclip_util(int io, const char *atom_name, unsigned long *len_ptr, char **buf
 
     if (io == XCLIP_IN) return exit_code;
 
-    if (exit_code != EXIT_SUCCESS || len > 0xFFFFFFFFUL || !*buf_ptr) {
+    if (exit_code != EXIT_SUCCESS || len >= 0xFFFFFFFFUL || !*buf_ptr) {
         exit_code = EXIT_FAILURE;
     }
     if ((exit_code != EXIT_SUCCESS) ||
@@ -246,7 +246,7 @@ int xclip_util(int io, const char *atom_name, unsigned long *len_ptr, char **buf
         exit_code = EXIT_FAILURE;
     }
     if (exit_code == EXIT_SUCCESS) {
-        *len_ptr = len;
+        *len_ptr = (uint32_t)len;
     } else {
         if (*buf_ptr) free(*buf_ptr);
         *buf_ptr = NULL;
