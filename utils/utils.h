@@ -170,8 +170,6 @@ extern list2 *get_copied_files(void);
 
 #endif  // PROTOCOL_MIN <= 1
 
-#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
-
 /*
  * Creates the directory given by the path and all its parent directories if missing.
  * Will not delete any existing files or directories.
@@ -214,7 +212,5 @@ extern int rename_file(const char *old_name, const char *new_name);
 extern int remove_directory(const char *path);
 
 #endif
-
-#endif  // (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 
 #endif  // UTILS_UTILS_H_

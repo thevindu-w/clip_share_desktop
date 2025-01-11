@@ -419,8 +419,6 @@ list2 *get_copied_files(void) {
 
 #endif  // PROTOCOL_MIN <= 1
 
-#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
-
 /*
  * Try to create the directory at path.
  * If the path points to an existing directory or a new directory was created successfuly, returns EXIT_SUCCESS.
@@ -529,6 +527,8 @@ list2 *list_dir(const char *dirname) {
 #endif
     return lst;
 }
+
+#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
 
 #if defined(__linux__) || defined(__APPLE__)
 
@@ -797,28 +797,6 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
     CloseClipboard();
 }
 
-int rename_file(const char *old_name, const char *new_name) {
-    wchar_t *wold;
-    wchar_t *wnew;
-    if (utf8_to_wchar_str(old_name, &wold, NULL) != EXIT_SUCCESS) return -1;
-    if (utf8_to_wchar_str(new_name, &wnew, NULL) != EXIT_SUCCESS) {
-        free(wold);
-        return -1;
-    }
-    int result = _wrename(wold, wnew);
-    free(wold);
-    free(wnew);
-    return result;
-}
-
-int remove_directory(const char *path) {
-    wchar_t *wpath;
-    if (utf8_to_wchar_str(path, &wpath, NULL) != EXIT_SUCCESS) return -1;
-    int result = (RemoveDirectoryW(wpath) == FALSE);
-    free(wpath);
-    return result;
-}
-
 #endif
 
 #endif  // (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
@@ -945,6 +923,28 @@ char *get_copied_files_as_str(int *offset) {
 }
 
 #elif defined(_WIN32)
+
+int rename_file(const char *old_name, const char *new_name) {
+    wchar_t *wold;
+    wchar_t *wnew;
+    if (utf8_to_wchar_str(old_name, &wold, NULL) != EXIT_SUCCESS) return -1;
+    if (utf8_to_wchar_str(new_name, &wnew, NULL) != EXIT_SUCCESS) {
+        free(wold);
+        return -1;
+    }
+    int result = _wrename(wold, wnew);
+    free(wold);
+    free(wnew);
+    return result;
+}
+
+int remove_directory(const char *path) {
+    wchar_t *wpath;
+    if (utf8_to_wchar_str(path, &wpath, NULL) != EXIT_SUCCESS) return -1;
+    int result = (RemoveDirectoryW(wpath) == FALSE);
+    free(wpath);
+    return result;
+}
 
 static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, uint32_t *wlen_p) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8str, -1, NULL, 0);
