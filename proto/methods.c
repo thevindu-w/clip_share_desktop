@@ -47,6 +47,26 @@
 const char *bad_path = JOIN(PATH_SEP, "..", PATH_SEP);
 
 /*
+ * Send a data buffer to the peer.
+ * Sends the length first and then the data buffer.
+ */
+static inline int _send_data(sock_t socket, int64_t length, const char *data) {
+    if (send_size(socket, length) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fprintf(stderr, "send length failed\n");
+#endif
+        return EXIT_FAILURE;
+    }
+    if (length < 0 || write_sock(socket, data, (uint64_t)length) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fprintf(stderr, "send data failed\n");
+#endif
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+/*
  * Common function to send files.
  */
 static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len, StatusCallback *callback);
@@ -96,12 +116,7 @@ int send_text_v1(sock_t socket, StatusCallback *callback) {
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
-    if (send_size(socket, new_len) != EXIT_SUCCESS) {
-        free(buf);
-        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
-        return EXIT_FAILURE;
-    }
-    if (write_sock(socket, buf, (uint64_t)new_len) != EXIT_SUCCESS) {
+    if (_send_data(socket, new_len, buf) != EXIT_SUCCESS) {
         free(buf);
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
@@ -172,12 +187,7 @@ static int _transfer_regular_file(sock_t socket, const char *file_path, const ch
         return EXIT_FAILURE;
     }
 
-    if (send_size(socket, (int64_t)fname_len) != EXIT_SUCCESS) {
-        fclose(fp);
-        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
-        return EXIT_FAILURE;
-    }
-    if (write_sock(socket, filename, fname_len) != EXIT_SUCCESS) {
+    if (_send_data(socket, (int64_t)fname_len, filename) != EXIT_SUCCESS) {
         fclose(fp);
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
@@ -206,12 +216,7 @@ static int _transfer_regular_file(sock_t socket, const char *file_path, const ch
 
 #if PROTOCOL_MAX >= 3
 static int _transfer_directory(sock_t socket, const char *filename, size_t fname_len, StatusCallback *callback) {
-    if (send_size(socket, (int64_t)fname_len) != EXIT_SUCCESS) {
-        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
-        return EXIT_FAILURE;
-    }
-
-    if (write_sock(socket, filename, fname_len) != EXIT_SUCCESS) {
+    if (_send_data(socket, (int64_t)fname_len, filename) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
