@@ -70,11 +70,11 @@ list2 *udp_scan(void) {
     const int buf_sz = 16;
     char buffer[buf_sz];
     for (int i = 0; i < 1024; i++) {
-        int n = (int)recvfrom(sock, (char *)buffer, buf_sz, 0, (struct sockaddr *)&serv_addr, &len);
+        int n = (int)recvfrom(sock, (char *)buffer, (size_t)buf_sz, 0, (struct sockaddr *)&serv_addr, &len);
         if (n <= 0) n = 0;
         if (n >= buf_sz) n = buf_sz - 1;
         buffer[n] = '\0';
-        if (strncmp(INFO_NAME, buffer, buf_sz)) break;
+        if (strncmp(INFO_NAME, buffer, (size_t)buf_sz)) break;
         char *server = inet_ntoa(serv_addr.sin_addr);
         append(serv_lst, strdup(server));
         if (i == 0) {
