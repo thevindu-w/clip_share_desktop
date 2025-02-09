@@ -28,9 +28,12 @@
 #include <utils/net_utils.h>
 
 #if defined(__linux__) || defined(__APPLE__)
+#include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#elif defined(_WIN32)
+#include <winsock2.h>
 #endif
 
 #define PORT 8888
@@ -157,8 +160,14 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
 void start_web(void) {
     _page_size = (size_t)(page_blob_end - page_blob);
 
+    struct sockaddr_in bind_addr;
+    memset((char *)&bind_addr, 0, sizeof(bind_addr));
+    bind_addr.sin_family = AF_INET;
+    bind_addr.sin_port = htons(PORT);
+    bind_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
     http_daemon = MHD_start_daemon(MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
-                                   &answer_to_connection, NULL, MHD_OPTION_END);
+                                   &answer_to_connection, NULL, MHD_OPTION_SOCK_ADDR, &bind_addr, MHD_OPTION_END);
     if (!http_daemon) return;
 
 #if defined(__linux__) || defined(__APPLE__)
