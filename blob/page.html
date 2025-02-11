@@ -163,11 +163,21 @@
             };
         };
 
-        function onGetTxt() {
+        function sendRequest(path) {
+            const server = serverInput.value;
+            if (!/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/.test(server)) {
+                alert('Invalid server address');
+                return null;
+            }
             const xhr = new XMLHttpRequest();
-            xhr.open("POST", '/get/text?server=' + serverInput.value, true);
+            xhr.open("POST", path + '?server=' + serverInput.value, true);
             xhr.send();
-            xhr.onreadystatechange = getStateChangeFn(xhr, 'Received:\n', { no_data: 'No text copied!', general: 'Get text failed!' });
+            return xhr;
+        }
+
+        function onGetTxt() {
+            const xhr = sendRequest('/get/text');
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Received:\n', { no_data: 'No text copied!', general: 'Get text failed!' });
         }
 
         function onGetImg() {
@@ -178,24 +188,18 @@
         }
 
         function onGetFile() {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", '/get/file?server=' + serverInput.value, true);
-            xhr.send();
-            xhr.onreadystatechange = getStateChangeFn(xhr, 'Received all files', { no_data: 'No files copied!', general: 'Get files failed!' });
+            const xhr = sendRequest('/get/file');
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Received all files', { no_data: 'No files copied!', general: 'Get files failed!' });
         }
 
         function onSendTxt() {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", '/get/text?server=' + serverInput.value, true);
-            xhr.send();
-            xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent:\n', { no_data: 'No text copied!', general: 'Send text failed!' });
+            const xhr = sendRequest('/send/text');
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent:\n', { no_data: 'No text copied!', general: 'Send text failed!' });
         }
 
         function onSendFile() {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", '/send/file?server=' + serverInput.value, true);
-            xhr.send();
-            xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent all files', { no_data: 'No files copied!', general: 'Send text failed!' });
+            const xhr = sendRequest('/send/file');
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent all files', { no_data: 'No files copied!', general: 'Send text failed!' });
         }
     </script>
 </body>
