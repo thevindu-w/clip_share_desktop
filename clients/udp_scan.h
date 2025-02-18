@@ -16,11 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef UDP_SCAN_H_
-#define UDP_SCAN_H_
+#ifndef CLIENTS_UDP_SCAN_H_
+#define CLIENTS_UDP_SCAN_H_
 
 #include <utils/list_utils.h>
 
 extern list2* udp_scan(void);
 
-#endif  // UDP_SCAN_H_
+#endif  // CLIENTS_UDP_SCAN_H_

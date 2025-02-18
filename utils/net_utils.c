@@ -28,6 +28,12 @@
 #include <winsock2.h>
 #endif
 
+#if defined(__linux__) || defined(__APPLE__)
+#define close_sock(sock) close(sock)
+#elif defined(_WIN32)
+#define close_sock(sock) closesocket(sock);
+#endif
+
 int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
     if (!address_ptr || !address_str) return EXIT_FAILURE;
     unsigned int a;
@@ -59,20 +65,23 @@ int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
     return EXIT_SUCCESS;
 }
 
-sock_t connect_server(uint32_t addr, uint16_t port) {
+void connect_server(uint32_t addr, uint16_t port, socket_t *sock_p) {
+    sock_p->socket = 0;
+    sock_p->type = NULL_SOCK;
     sock_t sock = socket(PF_INET, SOCK_STREAM, 0);
     if (sock == INVALID_SOCKET) {
 #ifdef DEBUG_MODE
         fputs("Can\'t open socket\n", stderr);
 #endif
-        return INVALID_SOCKET;
+        return;
     }
     // set timeout option to 5s
     struct timeval tv_connect = {5, 0};
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect)) ||
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv_connect, sizeof(tv_connect))) {
+        close_sock(sock);
         error("Can't set the timeout option of the connection");
-        return INVALID_SOCKET;
+        return;
     }
 
     struct sockaddr_in s_addr_in;
@@ -85,22 +94,47 @@ sock_t connect_server(uint32_t addr, uint16_t port) {
 #ifdef DEBUG_MODE
         fputs("Connection failed\n", stderr);
 #endif
-        close_socket(sock);
-        return INVALID_SOCKET;
+        close_sock(sock);
+        return;
     }
 
     // set timeout option to 0.5s
     struct timeval tv = {0, 500000L};
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv)) ||
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv))) {
+        close_sock(sock);
         error("Can't set the timeout option of the connection");
-        return INVALID_SOCKET;
+        return;
     }
-
-    return sock;
+    sock_p->socket = sock;
+    sock_p->type = VALID_SOCK;
+    return;
 }
 
-int read_sock(sock_t sock, char *buf, uint64_t size) {
+void get_udp_socket(socket_t *sock_p) {
+    sock_p->socket = 0;
+    sock_p->type = NULL_SOCK;
+    sock_t sock;
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
+        return;
+    }
+    const char broadcast = 1;
+    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast)) {
+        close_sock(sock);
+        return;
+    }
+    // set timeout option to 2s
+    struct timeval tv_connect = {2, 0};
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect)) ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv_connect, sizeof(tv_connect))) {
+        close_sock(sock);
+        return;
+    }
+    sock_p->socket = sock;
+    sock_p->type = VALID_SOCK | TRNSPRT_UDP;
+}
+
+int read_sock(socket_t *socket, char *buf, uint64_t size) {
     int cnt = 0;
     uint64_t total_sz_read = 0;
     char *ptr = buf;
@@ -111,7 +145,7 @@ int read_sock(sock_t sock, char *buf, uint64_t size) {
 #ifdef _WIN32
         sz_read = recv(sock, ptr, (int)read_req_sz, 0);
 #else
-        sz_read = recv(sock, ptr, read_req_sz, 0);
+        sz_read = recv(socket->socket, ptr, read_req_sz, 0);
 #endif
         if (sz_read > 0) {
             total_sz_read += (uint64_t)sz_read;
@@ -127,7 +161,7 @@ int read_sock(sock_t sock, char *buf, uint64_t size) {
     return EXIT_SUCCESS;
 }
 
-int write_sock(sock_t sock, const char *buf, uint64_t size) {
+int write_sock(socket_t *socket, const char *buf, uint64_t size) {
     int cnt = 0;
     uint64_t total_written = 0;
     const char *ptr = buf;
@@ -138,7 +172,7 @@ int write_sock(sock_t sock, const char *buf, uint64_t size) {
 #ifdef _WIN32
         sz_written = send(sock, ptr, (int)write_req_sz, 0);
 #else
-        sz_written = send(sock, ptr, write_req_sz, 0);
+        sz_written = send(socket->socket, ptr, write_req_sz, 0);
 #endif
         if (sz_written > 0) {
             total_written += (uint64_t)sz_written;
@@ -154,7 +188,7 @@ int write_sock(sock_t sock, const char *buf, uint64_t size) {
     return EXIT_SUCCESS;
 }
 
-int send_size(sock_t socket, int64_t size) {
+int send_size(socket_t *socket, int64_t size) {
     char sz_buf[8];
     int64_t sz = size;
     for (int i = sizeof(sz_buf) - 1; i >= 0; i--) {
@@ -164,7 +198,7 @@ int send_size(sock_t socket, int64_t size) {
     return write_sock(socket, sz_buf, sizeof(sz_buf));
 }
 
-int read_size(sock_t socket, int64_t *size_ptr) {
+int read_size(socket_t *socket, int64_t *size_ptr) {
     unsigned char sz_buf[8];
     if (read_sock(socket, (char *)sz_buf, sizeof(sz_buf)) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
@@ -180,10 +214,12 @@ int read_size(sock_t socket, int64_t *size_ptr) {
     return EXIT_SUCCESS;
 }
 
-void close_socket(sock_t sock) {
-#if defined(__linux__) || defined(__APPLE__)
-    close(sock);
-#elif defined(_WIN32)
-    closesocket(sock);
-#endif
+void _close_socket(socket_t *socket, int await) {
+    if (IS_NULL_SOCK(socket->type)) return;
+    if (await) {
+        char tmp;
+        recv(socket->socket, &tmp, 1, 0);
+    }
+    close_sock(socket->socket);
+    socket->type = NULL_SOCK;
 }

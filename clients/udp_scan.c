@@ -39,33 +39,27 @@ typedef int socklen_t;
 #endif
 
 list2 *udp_scan(void) {
-    sock_t sock;
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
-        return NULL;
-    }
-    const char broadcast = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast)) return NULL;
-    // set timeout option to 2s
-    struct timeval tv_connect = {2, 0};
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect)) ||
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv_connect, sizeof(tv_connect))) {
-        return NULL;
-    }
-
     struct sockaddr_in serv_addr;
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(4337);
     uint32_t brd_addr;
     if (ipv4_aton("255.255.255.255", &brd_addr) != EXIT_SUCCESS) {
-        close_socket(sock);
         return NULL;
     }
     serv_addr.sin_addr.s_addr = brd_addr;
 
+    socket_t socket;
+    get_udp_socket(&socket);
+    if (IS_NULL_SOCK(socket.type)) {
+        return NULL;
+    }
+    sock_t sock = socket.socket;
+
     socklen_t len = sizeof(serv_addr);
     sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&serv_addr, len);
 
+    struct timeval tv_connect;
     list2 *serv_lst = init_list(1);
     const int buf_sz = 16;
     char buffer[buf_sz];
@@ -84,5 +78,6 @@ list2 *udp_scan(void) {
             setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect));  // ignore failure
         }
     }
+    close_socket_no_wait(&socket);
     return serv_lst;
 }

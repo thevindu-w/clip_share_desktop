@@ -37,13 +37,14 @@
 #define COMMAND_GET_SCREENSHOT 7
 
 static int _invoke_method(uint32_t server_addr, unsigned char method) {
-    sock_t sock = connect_server(server_addr, configuration.app_port);
-    if (sock == INVALID_SOCKET) {
+    socket_t sock;
+    connect_server(server_addr, configuration.app_port, &sock);
+    if (IS_NULL_SOCK(sock.type)) {
         puts("Couldn't connect");
         return EXIT_FAILURE;
     }
-    int ret = handle_proto(sock, method, NULL);
-    close_socket(sock);
+    int ret = handle_proto(&sock, method, NULL);
+    close_socket_no_wait(&sock);
     return ret;
 }
 

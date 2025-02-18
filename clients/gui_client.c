@@ -80,28 +80,27 @@ static void handle_method(struct MHD_Connection *connection, const char *address
         callback_fn(RESP_INVALID_ADDRESS, NULL, 0, &params);
         return;
     }
-    sock_t sock = connect_server(server_addr, configuration.app_port);
-    if (sock == INVALID_SOCKET) {
+    socket_t sock;
+    connect_server(server_addr, configuration.app_port, &sock);
+    if (IS_NULL_SOCK(sock.type)) {
         callback_fn(RESP_CONNECTION_FAILURE, NULL, 0, &params);
         return;
     }
     StatusCallback callback = {.function = &callback_fn, .params = &params};
-    handle_proto(sock, method, &callback);
-    close_socket(sock);
+    handle_proto(&sock, method, &callback);
+    close_socket(&sock);
     callback_fn(RESP_LOCAL_ERROR, NULL, 0, &params);
 }
 
-static MHD_Result_t print_out_key(void *cls, enum MHD_ValueKind kind, const char *key, const char *value) {
+static MHD_Result_t extract_query_params(void *cls, enum MHD_ValueKind kind, const char *key, const char *value) {
     (void)kind;
     get_query_params *query = (get_query_params *)cls;
+#ifdef DEBUG_MODE
+    printf("%s: %s\n", key, value);
+#endif
     if (!strcmp(key, "server") && strnlen(value, 17) < 16) {
         query->server = strdup(value);
     }
-#ifdef DEBUG_MODE
-    else {
-        printf("%s: %s\n", key, value);
-    }
-#endif
     return MHD_YES;
 }
 
@@ -123,7 +122,7 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
         MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_HTML);
     } else if (!strcmp(method, MHD_HTTP_METHOD_POST)) {
         get_query_params query = {.server = NULL};
-        MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, print_out_key, &query);
+        MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, extract_query_params, &query);
         if (!query.server) {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_BAD_REQUEST;

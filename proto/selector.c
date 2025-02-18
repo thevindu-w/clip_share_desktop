@@ -30,7 +30,7 @@
 #define PROTOCOL_OBSOLETE 2
 #define PROTOCOL_UNKNOWN 3
 
-int handle_proto(sock_t socket, uint8_t method, StatusCallback *callback) {
+int handle_proto(socket_t *socket, uint8_t method, StatusCallback *callback) {
     const uint16_t min_version = configuration.min_proto_version;
     const uint16_t max_version = configuration.max_proto_version;
     uint8_t version = (uint8_t)max_version;

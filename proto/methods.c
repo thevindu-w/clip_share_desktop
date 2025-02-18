@@ -50,7 +50,7 @@ const char *bad_path = JOIN(PATH_SEP, "..", PATH_SEP);
  * Send a data buffer to the peer.
  * Sends the length first and then the data buffer.
  */
-static inline int _send_data(sock_t socket, int64_t length, const char *data) {
+static inline int _send_data(socket_t *socket, int64_t length, const char *data) {
     if (send_size(socket, length) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
         fprintf(stderr, "send length failed\n");
@@ -69,17 +69,18 @@ static inline int _send_data(sock_t socket, int64_t length, const char *data) {
 /*
  * Common function to send files.
  */
-static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len, StatusCallback *callback);
+static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len,
+                              StatusCallback *callback);
 
 /*
  * Common function to send files.
  */
-static int _get_files_dirs(int version, sock_t socket, StatusCallback *callback);
+static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callback);
 
 /*
  * Common function to save files.
  */
-static int _save_file_common(int version, sock_t socket, const char *file_name, StatusCallback *callback);
+static int _save_file_common(int version, socket_t *socket, const char *file_name, StatusCallback *callback);
 
 /*
  * Check if the file name is valid.
@@ -89,10 +90,10 @@ static int _save_file_common(int version, sock_t socket, const char *file_name, 
  */
 static inline int _is_valid_fname(const char *fname, size_t name_length);
 
-static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len,
+static int _transfer_single_file(int version, socket_t *socket, const char *file_path, size_t path_len,
                                  StatusCallback *callback);
 
-int send_text_v1(sock_t socket, StatusCallback *callback) {
+int send_text_v1(socket_t *socket, StatusCallback *callback) {
     uint32_t length = 0;
     char *buf = NULL;
     if (get_clipboard_text(&buf, &length) != EXIT_SUCCESS || length <= 0 ||
@@ -126,7 +127,7 @@ int send_text_v1(sock_t socket, StatusCallback *callback) {
     return EXIT_SUCCESS;
 }
 
-int get_text_v1(sock_t socket, StatusCallback *callback) {
+int get_text_v1(socket_t *socket, StatusCallback *callback) {
     int64_t length;
     if (read_size(socket, &length) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
@@ -171,7 +172,7 @@ int get_text_v1(sock_t socket, StatusCallback *callback) {
     return EXIT_SUCCESS;
 }
 
-static int _transfer_regular_file(sock_t socket, const char *file_path, const char *filename, size_t fname_len,
+static int _transfer_regular_file(socket_t *socket, const char *file_path, const char *filename, size_t fname_len,
                                   StatusCallback *callback) {
     FILE *fp = open_file(file_path, "rb");
     if (!fp) {
@@ -215,7 +216,7 @@ static int _transfer_regular_file(sock_t socket, const char *file_path, const ch
 }
 
 #if PROTOCOL_MAX >= 3
-static int _transfer_directory(sock_t socket, const char *filename, size_t fname_len, StatusCallback *callback) {
+static int _transfer_directory(socket_t *socket, const char *filename, size_t fname_len, StatusCallback *callback) {
     if (_send_data(socket, (int64_t)fname_len, filename) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
@@ -228,7 +229,7 @@ static int _transfer_directory(sock_t socket, const char *filename, size_t fname
 }
 #endif
 
-static int _transfer_single_file(int version, sock_t socket, const char *file_path, size_t path_len,
+static int _transfer_single_file(int version, socket_t *socket, const char *file_path, size_t path_len,
                                  StatusCallback *callback) {
     const char *tmp_fname;
     switch (version) {
@@ -284,7 +285,8 @@ static int _transfer_single_file(int version, sock_t socket, const char *file_pa
     return _transfer_regular_file(socket, file_path, filename, fname_len, callback);
 }
 
-static int _send_files_common(int version, sock_t socket, list2 *file_list, size_t path_len, StatusCallback *callback) {
+static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len,
+                              StatusCallback *callback) {
     if (!file_list || file_list->len == 0 || file_list->len >= 0xFFFFFFFFUL) {
         if (file_list) free_list(file_list);
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
@@ -322,7 +324,7 @@ static int _send_files_common(int version, sock_t socket, list2 *file_list, size
     return EXIT_SUCCESS;
 }
 
-static int _save_file_common(int version, sock_t socket, const char *file_name, StatusCallback *callback) {
+static int _save_file_common(int version, socket_t *socket, const char *file_name, StatusCallback *callback) {
     int64_t file_size;
     if (read_size(socket, &file_size) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
@@ -431,20 +433,20 @@ static inline int _rename_if_exists(char *file_name, size_t max_len) {
     return EXIT_SUCCESS;
 }
 
-int send_file_v1(sock_t socket, StatusCallback *callback) {
+int send_file_v1(socket_t *socket, StatusCallback *callback) {
     list2 *file_list = get_copied_files();
     return _send_files_common(1, socket, file_list, 0, callback);
 }
 
-int get_files_v1(sock_t socket, StatusCallback *callback) { return _get_files_dirs(1, socket, callback); }
+int get_files_v1(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(1, socket, callback); }
 #endif
 
-static inline int _save_image_common(sock_t socket, StatusCallback *callback) {
+static inline int _save_image_common(socket_t *socket, StatusCallback *callback) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     uint64_t millis = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000L;
     char file_name[40];
-    snprintf(file_name, sizeof(file_name), "%" PRIX64 ".png", millis);
+    snprintf(file_name, sizeof(file_name), "%" PRIx64 ".png", millis);
     int status = _save_file_common(1, socket, file_name, callback);
     if (status == EXIT_SUCCESS) {
         callback->function(RESP_OK, file_name, strnlen(file_name, sizeof(file_name) - 1), callback->params);
@@ -452,9 +454,9 @@ static inline int _save_image_common(sock_t socket, StatusCallback *callback) {
     return status;
 }
 
-int get_image_v1(sock_t socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
+int get_image_v1(socket_t *socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
 
-int info_v1(sock_t socket) {
+int info_v1(socket_t *socket) {
     // TODO(thevindu-w): implement
     (void)socket;
     return EXIT_SUCCESS;
@@ -475,7 +477,7 @@ static inline int _make_directories(const char *path) {
     return EXIT_SUCCESS;
 }
 
-static int save_file(int version, sock_t socket, const char *dirname, StatusCallback *callback) {
+static int save_file(int version, socket_t *socket, const char *dirname, StatusCallback *callback) {
     int64_t fname_size;
     if (read_size(socket, &fname_size) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
@@ -591,7 +593,7 @@ static char *_check_and_rename(const char *filename, const char *dirname) {
     return path;
 }
 
-static int _get_files_dirs(int version, sock_t socket, StatusCallback *callback) {
+static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callback) {
     int64_t cnt;
     if (read_size(socket, &cnt) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
@@ -636,19 +638,19 @@ static int _get_files_dirs(int version, sock_t socket, StatusCallback *callback)
 }
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
-int send_files_v2(sock_t socket, StatusCallback *callback) {
+int send_files_v2(socket_t *socket, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 0);
     return _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
 }
 
-int get_files_v2(sock_t socket, StatusCallback *callback) { return _get_files_dirs(2, socket, callback); }
+int get_files_v2(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(2, socket, callback); }
 #endif
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
-int get_copied_image_v3(sock_t socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
+int get_copied_image_v3(socket_t *socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
 
-int get_screenshot_v3(sock_t socket, StatusCallback *callback) {
+int get_screenshot_v3(socket_t *socket, StatusCallback *callback) {
     if (send_size(socket, 0) != EXIT_SUCCESS) {  // TODO(thevindu-w): let user select the display number
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
@@ -668,11 +670,11 @@ int get_screenshot_v3(sock_t socket, StatusCallback *callback) {
     return _save_image_common(socket, callback);
 }
 
-int send_files_v3(sock_t socket, StatusCallback *callback) {
+int send_files_v3(socket_t *socket, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 1);
     return _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
 }
 
-int get_files_v3(sock_t socket, StatusCallback *callback) { return _get_files_dirs(3, socket, callback); }
+int get_files_v3(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(3, socket, callback); }
 #endif

@@ -38,6 +38,6 @@
  * Accepts a socket, negotiates the protocol version, and passes the control
  * to the respective version handler.
  */
-extern int handle_proto(sock_t socket, uint8_t method, StatusCallback *callback);
+extern int handle_proto(socket_t *socket, uint8_t method, StatusCallback *callback);
 
 #endif  // PROTO_SELECTOR_H_

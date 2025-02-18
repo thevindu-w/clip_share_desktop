@@ -36,13 +36,32 @@ typedef SOCKET sock_t;
 #define INVALID_SOCKET -1
 #endif
 
+// Connection validity mask
+#define MASK_VALID 0x1
+#define NULL_SOCK 0x0
+#define VALID_SOCK 0x1
+#define IS_NULL_SOCK(type) ((type & MASK_VALID) == NULL_SOCK)  // NOLINT(runtime/references)
+
+// Transport layer protocol mask
+#define MASK_TRNSPRT_PROTO 0x4
+#define TRNSPRT_TCP 0x0
+#define TRNSPRT_UDP 0x4
+#define IS_UDP(type) ((type & MASK_TRNSPRT_PROTO) == TRNSPRT_UDP)  // NOLINT(runtime/references)
+
+typedef struct _socket_t {
+    sock_t socket;
+    unsigned char type;
+} socket_t;
+
 /*
  * Converts a ipv4 address in dotted decimal into in_addr_t.
  * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
  */
 extern int ipv4_aton(const char *address_str, uint32_t *address_ptr);
 
-extern sock_t connect_server(uint32_t server_addr, uint16_t port);
+extern void connect_server(uint32_t server_addr, uint16_t port, socket_t *socket);
+
+extern void get_udp_socket(socket_t *sock_p);
 
 /*
  * Reads num bytes from the socket into buf.
@@ -50,7 +69,7 @@ extern sock_t connect_server(uint32_t server_addr, uint16_t port);
  * Waits until all the bytes are read. If reading failed before num bytes, returns EXIT_FAILURE
  * Otherwise, returns EXIT_SUCCESS.
  */
-extern int read_sock(sock_t sock, char *buf, uint64_t size);
+extern int read_sock(socket_t *socket, char *buf, uint64_t size);
 
 /*
  * Writes num bytes from buf to the socket.
@@ -58,21 +77,27 @@ extern int read_sock(sock_t sock, char *buf, uint64_t size);
  * Waits until all the bytes are written. If writing failed before num bytes, returns EXIT_FAILURE
  * Otherwise, returns EXIT_SUCCESS.
  */
-extern int write_sock(sock_t sock, const char *buf, uint64_t size);
+extern int write_sock(socket_t *socket, const char *buf, uint64_t size);
 
 /*
  * Sends a 64-bit signed integer num to socket as big-endian encoded 8 bytes.
  * returns EXIT_SUCCESS on success. Otherwise, returns EXIT_FAILURE on error.
  */
-extern int send_size(sock_t sock, int64_t num);
+extern int send_size(socket_t *socket, int64_t num);
 
 /*
  * Reads a 64-bit signed integer from socket as big-endian encoded 8 bytes.
  * Stores the value of the read integer in the address given by size_ptr.
  * returns EXIT_SUCCESS on success. Otherwise, returns EXIT_FAILURE on error.
  */
-extern int read_size(sock_t sock, int64_t *size_ptr);
+extern int read_size(socket_t *socket, int64_t *size_ptr);
 
-extern void close_socket(sock_t sock);
+/*
+ * Closes a socket.
+ */
+extern void _close_socket(socket_t *socket, int await);
+
+#define close_socket(socket) _close_socket(socket, 1)
+#define close_socket_no_wait(socket) _close_socket(socket, 0)
 
 #endif  // UTILS_NET_UTILS_H_
