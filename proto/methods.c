@@ -124,6 +124,7 @@ int send_text_v1(socket_t *socket, StatusCallback *callback) {
     }
     if (callback) callback->function(RESP_OK, buf, (size_t)new_len, callback->params);
     free(buf);
+    close_socket(socket);
     return EXIT_SUCCESS;
 }
 
@@ -166,7 +167,7 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
     if (callback) callback->function(RESP_OK, data, (size_t)length, callback->params);
     length = convert_eol(&data, 0);
     if (length <= 0) return EXIT_FAILURE;
-    close_socket(socket);
+    close_socket_no_wait(socket);
     put_clipboard_text(data, (uint32_t)length);
     free(data);
     return EXIT_SUCCESS;
@@ -321,6 +322,7 @@ static int _send_files_common(int version, socket_t *socket, list2 *file_list, s
     }
     free_list(file_list);
     if (callback) callback->function(RESP_OK, NULL, 0, callback->params);
+    close_socket(socket);
     return EXIT_SUCCESS;
 }
 
@@ -617,7 +619,7 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
             return EXIT_FAILURE;
         }
     }
-    close_socket(socket);
+    close_socket_no_wait(socket);
 
     list2 *files = list_dir(dirname);
     if (!files) return EXIT_FAILURE;

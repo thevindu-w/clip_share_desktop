@@ -181,10 +181,8 @@
         }
 
         function onGetImg() {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", '/get/image?server=' + serverInput.value, true);
-            xhr.send();
-            xhr.onreadystatechange = getStateChangeFn(xhr, 'Saved image to ', { no_data: 'No image copied!', general: 'Get image failed!' });
+            const xhr = sendRequest('/get/image');
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Saved image to ', { no_data: 'No image copied!', general: 'Get image failed!' });
         }
 
         function onGetFile() {

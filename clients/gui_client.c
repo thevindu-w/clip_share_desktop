@@ -88,7 +88,7 @@ static void handle_method(struct MHD_Connection *connection, const char *address
     }
     StatusCallback callback = {.function = &callback_fn, .params = &params};
     handle_proto(&sock, method, &callback);
-    close_socket(&sock);
+    close_socket_no_wait(&sock);
     callback_fn(RESP_LOCAL_ERROR, NULL, 0, &params);
 }
 
