@@ -109,7 +109,7 @@
         <div class="header">
             <label for="server">Server:</label>
             <input type="text" id="server" placeholder="192.168.1.2">
-            <button>SCAN</button>
+            <button onclick="onScan()">SCAN</button>
         </div>
 
         <div id="output" class="output">
@@ -198,6 +198,28 @@
         function onSendFile() {
             const xhr = sendRequest('/send/file');
             if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent all files', { no_data: 'No files copied!', general: 'Send text failed!' });
+        }
+
+        function onScan() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "/scan", true);
+            xhr.send();
+            xhr.onreadystatechange = () => {
+                try {
+                    if (xhr.readyState == XMLHttpRequest.DONE) {
+                        if (xhr.status != 200) {
+                            alert("Scan failed");
+                            return;
+                        }
+                        let data = xhr.responseText;
+                        if (!data) data = '';
+                        if (!data) alert('No servers found');
+                        serverInput.value = data.split(',')[0];
+                    }
+                } catch (error) {
+                    alert("Scan failed");
+                }
+            }
         }
     </script>
 </body>

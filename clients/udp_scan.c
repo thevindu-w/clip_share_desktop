@@ -43,11 +43,7 @@ list2 *udp_scan(void) {
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(4337);
-    uint32_t brd_addr;
-    if (ipv4_aton("255.255.255.255", &brd_addr) != EXIT_SUCCESS) {
-        return NULL;
-    }
-    serv_addr.sin_addr.s_addr = brd_addr;
+    serv_addr.sin_addr.s_addr = INADDR_BROADCAST;
 
     socket_t socket;
     get_udp_socket(&socket);

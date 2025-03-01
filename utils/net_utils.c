@@ -118,7 +118,7 @@ void get_udp_socket(socket_t *sock_p) {
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
         return;
     }
-    const char broadcast = 1;
+    const int broadcast = 1;
     if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast)) {
         close_sock(sock);
         return;

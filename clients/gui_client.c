@@ -18,6 +18,7 @@
 
 #include <clients/gui_client.h>
 #include <clients/status_cb.h>
+#include <clients/udp_scan.h>
 #include <globals.h>
 #include <microhttpd.h>
 #include <proto/selector.h>
@@ -92,6 +93,41 @@ static void handle_method(struct MHD_Connection *connection, const char *address
     callback_fn(RESP_LOCAL_ERROR, NULL, 0, &params);
 }
 
+static void handle_scan(struct MHD_Connection *connection) {
+    status_callback_params params = {.called = 0, .connection = connection};
+    list2 *server_list = udp_scan();
+    if (!server_list) {
+        callback_fn(RESP_OK, "", 0, &params);
+        return;
+    }
+    size_t tot_len = 0;
+    for (uint32_t i = 0; i < server_list->len; i++) {
+        char *addr = server_list->array[i];
+        if (!addr) continue;
+        tot_len += strnlen(addr, 64) + 1;
+    }
+    char *servers = malloc(tot_len);
+    if (!servers) {
+        free_list(server_list);
+        callback_fn(RESP_OK, "", 0, &params);
+        return;
+    }
+    char *ptr = servers;
+    for (uint32_t i = 0; i < server_list->len; i++) {
+        char *addr = server_list->array[i];
+        if (!addr) continue;
+        size_t len = strnlen(addr, 64);
+        strncpy(ptr, addr, len);
+        ptr += len;
+        *ptr = ',';
+        ptr++;
+    }
+    ptr--;
+    *ptr = '\0';
+    free_list(server_list);
+    callback_fn(RESP_OK, servers, tot_len - 1, &params);
+}
+
 static MHD_Result_t extract_query_params(void *cls, enum MHD_ValueKind kind, const char *key, const char *value) {
     (void)kind;
     get_query_params *query = (get_query_params *)cls;
@@ -123,7 +159,10 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
     } else if (!strcmp(method, MHD_HTTP_METHOD_POST)) {
         get_query_params query = {.server = NULL};
         MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, extract_query_params, &query);
-        if (!query.server) {
+        if (!strcmp(url, "/scan")) {
+            handle_scan(connection);
+            return MHD_YES;
+        } else if (!query.server) {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_BAD_REQUEST;
         } else if (!strcmp(url, "/get/text")) {
