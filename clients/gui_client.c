@@ -159,32 +159,34 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
     } else if (!strcmp(method, MHD_HTTP_METHOD_POST)) {
         get_query_params query = {.server = NULL};
         MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, extract_query_params, &query);
+        char handled = 0;
         if (!strcmp(url, "/scan")) {
             handle_scan(connection);
-            return MHD_YES;
+            handled = 1;
         } else if (!query.server) {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_BAD_REQUEST;
         } else if (!strcmp(url, "/get/text")) {
             handle_method(connection, query.server, METHOD_GET_TEXT);
-            return MHD_YES;
+            handled = 1;
         } else if (!strcmp(url, "/get/file")) {
             handle_method(connection, query.server, METHOD_GET_FILE);
-            return MHD_YES;
+            handled = 1;
         } else if (!strcmp(url, "/get/image")) {
             handle_method(connection, query.server, METHOD_GET_IMAGE);
-            return MHD_YES;
+            handled = 1;
         } else if (!strcmp(url, "/send/text")) {
             handle_method(connection, query.server, METHOD_SEND_TEXT);
-            return MHD_YES;
+            handled = 1;
         } else if (!strcmp(url, "/send/file")) {
             handle_method(connection, query.server, METHOD_SEND_FILE);
-            return MHD_YES;
+            handled = 1;
         } else {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_NOT_FOUND;
         }
         if (query.server) free(query.server);
+        if (handled) return MHD_YES;
     } else {
         response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
         res_status = MHD_HTTP_NOT_IMPLEMENTED;
