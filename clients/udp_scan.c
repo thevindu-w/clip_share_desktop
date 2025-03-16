@@ -55,13 +55,12 @@ list2 *udp_scan(void) {
     socklen_t len = sizeof(serv_addr);
     sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&serv_addr, len);
 
-    struct timeval tv_connect;
     list2 *serv_lst = init_list(1);
     const int buf_sz = 16;
     char buffer[buf_sz];
     for (int i = 0; i < 1024; i++) {
         int n = (int)recvfrom(sock, (char *)buffer, (size_t)buf_sz, 0, (struct sockaddr *)&serv_addr, &len);
-        if (n <= 0) n = 0;
+        if (n < 0) n = 0;
         if (n >= buf_sz) n = buf_sz - 1;
         buffer[n] = '\0';
         if (strncmp(INFO_NAME, buffer, (size_t)buf_sz)) break;
@@ -69,9 +68,12 @@ list2 *udp_scan(void) {
         append(serv_lst, strdup(server));
         if (i == 0) {
             // reduce timeout for subsequent recvfrom calls to 200ms
-            tv_connect.tv_sec = 0;
-            tv_connect.tv_usec = 200000L;
-            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect));  // ignore failure
+#if defined(__linux__) || defined(__APPLE__)
+            struct timeval timeout = {.tv_sec = 0, .tv_usec = 200000L};
+#elif defined(_WIN32)
+            DWORD timeout = 200;
+#endif
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));  // ignore failure
         }
     }
     close_socket_no_wait(&socket);

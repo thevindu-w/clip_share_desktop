@@ -96,7 +96,8 @@ static void handle_method(struct MHD_Connection *connection, const char *address
 static void handle_scan(struct MHD_Connection *connection) {
     status_callback_params params = {.called = 0, .connection = connection};
     list2 *server_list = udp_scan();
-    if (!server_list) {
+    if (!server_list || server_list->len < 1) {
+        if (server_list) free_list(server_list);
         callback_fn(RESP_OK, "", 0, &params);
         return;
     }

@@ -76,9 +76,13 @@ void connect_server(uint32_t addr, uint16_t port, socket_t *sock_p) {
         return;
     }
     // set timeout option to 5s
-    struct timeval tv_connect = {5, 0};
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect)) ||
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv_connect, sizeof(tv_connect))) {
+#if defined(__linux__) || defined(__APPLE__)
+    struct timeval timeout = {.tv_sec = 5, .tv_usec = 0};
+#elif defined(_WIN32)
+    DWORD timeout = 5000;
+#endif
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout))) {
         close_sock(sock);
         error("Can't set the timeout option of the connection");
         return;
@@ -99,9 +103,14 @@ void connect_server(uint32_t addr, uint16_t port, socket_t *sock_p) {
     }
 
     // set timeout option to 0.5s
-    struct timeval tv = {0, 500000L};
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv)) ||
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv))) {
+#if defined(__linux__) || defined(__APPLE__)
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 500000L;
+#elif defined(_WIN32)
+    timeout = 500;
+#endif
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout))) {
         close_sock(sock);
         error("Can't set the timeout option of the connection");
         return;
@@ -118,15 +127,19 @@ void get_udp_socket(socket_t *sock_p) {
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
         return;
     }
-    const int broadcast = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast)) {
+    int broadcast = 1;
+    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcast, sizeof(broadcast))) {
         close_sock(sock);
         return;
     }
     // set timeout option to 2s
-    struct timeval tv_connect = {2, 0};
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_connect, sizeof(tv_connect)) ||
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv_connect, sizeof(tv_connect))) {
+#if defined(__linux__) || defined(__APPLE__)
+    struct timeval timeout = {.tv_sec = 2, .tv_usec = 0};
+#elif defined(_WIN32)
+    DWORD timeout = 2000;
+#endif
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) ||
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout))) {
         close_sock(sock);
         return;
     }
@@ -143,7 +156,7 @@ int read_sock(socket_t *socket, char *buf, uint64_t size) {
         uint64_t read_req_sz = size - total_sz_read;
         if (read_req_sz > 0x7FFFFFFFL) read_req_sz = 0x7FFFFFFFL;  // prevent overflow due to casting
 #ifdef _WIN32
-        sz_read = recv(sock, ptr, (int)read_req_sz, 0);
+        sz_read = recv(socket->socket, ptr, (int)read_req_sz, 0);
 #else
         sz_read = recv(socket->socket, ptr, read_req_sz, 0);
 #endif
@@ -170,7 +183,7 @@ int write_sock(socket_t *socket, const char *buf, uint64_t size) {
         uint64_t write_req_sz = size - total_written;
         if (write_req_sz > 0x7FFFFFFFL) write_req_sz = 0x7FFFFFFFL;  // prevent overflow due to casting
 #ifdef _WIN32
-        sz_written = send(sock, ptr, (int)write_req_sz, 0);
+        sz_written = send(socket->socket, ptr, (int)write_req_sz, 0);
 #else
         sz_written = send(socket->socket, ptr, write_req_sz, 0);
 #endif
