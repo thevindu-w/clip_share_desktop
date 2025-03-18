@@ -28,6 +28,7 @@
 #include <utils/utils.h>
 
 #define COMMAND_HELP 127
+#define COMMAND_SCAN 126
 #define COMMAND_GET_TEXT 1
 #define COMMAND_SEND_TEXT 2
 #define COMMAND_GET_FILES 3
@@ -114,17 +115,16 @@ static inline void _get_screenshot(uint32_t server_addr) {
 /*
  * Parse command line arguments and set corresponding variables
  */
-static inline void _parse_args(char **argv, int8_t *command_p, uint32_t *server_addr_p) {
-    if (ipv4_aton(argv[1], server_addr_p) != EXIT_SUCCESS) {
-        fprintf(stderr, "Invalid server address %s\n", argv[1]);
-        *command_p = 0;
-        return;
-    }
+static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_t *server_addr_p) {
     char cmd[4];
-    strncpy(cmd, argv[2], 3);
+    strncpy(cmd, argv[1], 3);
     cmd[3] = 0;
     if (strncmp(cmd, "h", 2) == 0) {
         *command_p = COMMAND_HELP;
+        return;
+    } else if (strncmp(cmd, "sc", 3) == 0) {
+        *command_p = COMMAND_SCAN;
+        return;
     } else if (strncmp(cmd, "g", 2) == 0) {
         *command_p = COMMAND_GET_TEXT;
     } else if (strncmp(cmd, "s", 2) == 0) {
@@ -140,19 +140,33 @@ static inline void _parse_args(char **argv, int8_t *command_p, uint32_t *server_
     } else if (strncmp(cmd, "is", 2) == 0) {
         *command_p = COMMAND_GET_SCREENSHOT;
     } else {
-        fprintf(stderr, "Invalid command %s\n", argv[2]);
+        fprintf(stderr, "Invalid command %s\n\n", argv[1]);
+        *command_p = 0;
+        return;
+    }
+    if (argc < 3) {
+        fprintf(stderr, "Server address not provided\n\n");
+        *command_p = 0;
+        return;
+    }
+    if (ipv4_aton(argv[2], server_addr_p) != EXIT_SUCCESS) {
+        fprintf(stderr, "Invalid server address %s\n\n", argv[2]);
         *command_p = 0;
     }
 }
 
-void cli_client(char **argv, const char *prog_name) {
+void cli_client(int argc, char **argv, const char *prog_name) {
     int8_t command;
     uint32_t server_addr;
-    _parse_args(argv, &command, &server_addr);
+    _parse_args(argc, argv, &command, &server_addr);
 
     switch (command) {
         case COMMAND_HELP: {
             print_usage(prog_name);
+            break;
+        }
+         case COMMAND_SCAN: {
+            net_scan();
             break;
         }
         case COMMAND_GET_TEXT: {

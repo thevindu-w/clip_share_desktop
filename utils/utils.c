@@ -53,11 +53,11 @@ static inline void _wappend(list2 *lst, const wchar_t *wstr);
 #endif
 
 void print_usage(const char *prog_name) {
-    fprintf(stderr, "Usage: %s <server-address-ipv4> COMMAND\n", prog_name);
-    fprintf(stderr, "  or:  %s scan\n", prog_name);
+    fprintf(stderr, "Usage: %s COMMAND <server-address-ipv4>\n", prog_name);
     fprintf(stderr,
             "Commands available:\n"
-            "\th  : Help\n"
+            "\th  : Help - server address is not needed\n"
+            "\tsc : Scan - server address is not needed\n"
             "\tg  : Get copied text\n"
             "\ts  : Send copied text\n"
             "\tfg : Get copied files\n"
@@ -66,9 +66,11 @@ void print_usage(const char *prog_name) {
             "\tic : Get copied image\n"
             "\tis : Get screenshot\n");
     fprintf(stderr,
-            "\nExample: %s 192.168.21.42 g\n"
-            "\tThis command gets copied text from the device having IP address 192.168.21.42\n\n",
-            prog_name);
+            "\nExample: %s g 192.168.21.42\n"
+            "\tThis command gets copied text from the device having IP address 192.168.21.42\n"
+            "\nExample: %s sc\n"
+            "\tThis command scans and outputs the IP addresses of available servers.\n\n",
+            prog_name, prog_name);
 }
 
 int snprintf_check(char *dest, size_t size, const char *fmt, ...) {

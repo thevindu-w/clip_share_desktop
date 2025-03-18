@@ -271,10 +271,8 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    if (argc == 3) {
-        cli_client(argv, prog_name);
-    } else if (argc == 2 && !strcmp(argv[1], "scan")) {
-        net_scan();
+    if (argc == 2 || argc == 3) {
+        cli_client(argc, argv, prog_name);
     } else if (argc == 1) {
         start_web();
     } else {

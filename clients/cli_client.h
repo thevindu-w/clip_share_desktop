@@ -19,7 +19,7 @@
 #ifndef CLIENTS_CLI_CLIENT_H_
 #define CLIENTS_CLI_CLIENT_H_
 
-extern void cli_client(char **argv, const char *prog_name);
+extern void cli_client(int argc, char **argv, const char *prog_name);
 
 extern void net_scan(void);
 
