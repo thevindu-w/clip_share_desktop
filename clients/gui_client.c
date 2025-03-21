@@ -55,9 +55,9 @@ typedef struct _get_query_params {
     char *server;
 } get_query_params;
 
-#ifdef __linux__
+#ifdef MHD_YES
 typedef int MHD_Result_t;
-#elif defined(_WIN32)
+#else
 typedef enum MHD_Result MHD_Result_t;
 #endif
 
