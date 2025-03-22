@@ -22,6 +22,8 @@
 #include <microhttpd.h>
 #include <utils/config.h>
 
+#define CONFIG_FILE "clipshare-desktop.conf"
+
 extern config configuration;
 extern char *error_log_file;
 extern char *cwd;

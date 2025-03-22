@@ -414,27 +414,6 @@ static inline int _get_base_name(char *file_name, size_t name_length) {
     return EXIT_SUCCESS;
 }
 
-/*
- * Change file name if exists
- */
-static inline int _rename_if_exists(char *file_name, size_t max_len) {
-    char tmp_fname[max_len + 1];
-    if (configuration.working_dir != NULL || strcmp(file_name, "clipshare.conf")) {
-        if (snprintf_check(tmp_fname, max_len, ".%c%s", PATH_SEP, file_name)) return EXIT_FAILURE;
-    } else {
-        // do not create file named clipshare.conf
-        if (snprintf_check(tmp_fname, max_len, ".%c1_%s", PATH_SEP, file_name)) return EXIT_FAILURE;
-    }
-    int n = 1;
-    while (file_exists(tmp_fname)) {
-        if (n > 999999L) return EXIT_FAILURE;
-        if (snprintf_check(tmp_fname, max_len, ".%c%i_%s", PATH_SEP, n++, file_name)) return EXIT_FAILURE;
-    }
-    strncpy(file_name, tmp_fname, max_len);
-    file_name[max_len] = 0;
-    return EXIT_SUCCESS;
-}
-
 int send_file_v1(socket_t *socket, StatusCallback *callback) {
     list2 *file_list = get_copied_files();
     return _send_files_common(1, socket, file_list, 0, callback);
@@ -529,6 +508,8 @@ static int save_file(int version, socket_t *socket, const char *dirname, StatusC
 
 #if PROTOCOL_MIN <= 1
     if (version == 1) {
+        if (_get_base_name(file_name, (size_t)name_length) != EXIT_SUCCESS) return EXIT_FAILURE;
+
         // PATH_SEP is not allowed in version 1 get files
         if (strchr(file_name, PATH_SEP)) return EXIT_FAILURE;  // all '/'s are converted to PATH_SEP
     }
@@ -564,11 +545,11 @@ static char *_check_and_rename(const char *filename, const char *dirname) {
     if (snprintf_check(old_path, name_max_len, "%s%c%s", dirname, PATH_SEP, filename)) return NULL;
 
     char new_path[name_max_len];
-    if (configuration.working_dir != NULL || strcmp(filename, "clipshare.conf")) {
+    if (configuration.working_dir != NULL || strcmp(filename, CONFIG_FILE)) {
         // "./" is important to prevent file names like "C:\path"
         if (snprintf_check(new_path, name_max_len, ".%c%s", PATH_SEP, filename)) return NULL;
     } else {
-        // do not create file named clipshare.conf. "./" is important to prevent file names like "C:\path"
+        // do not create file named clipshare-desktop.conf. "./" is important to prevent file names like "C:\path"
         if (snprintf_check(new_path, name_max_len, ".%c1_%s", PATH_SEP, filename)) return NULL;
     }
 

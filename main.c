@@ -42,7 +42,6 @@
 #define MAX_FILE_SIZE 68719476736LL  // 64 GiB
 
 #define ERROR_LOG_FILE "client_err.log"
-#define CONFIG_FILE "clipshare-desktop.conf"
 
 config configuration;
 char *error_log_file = NULL;
