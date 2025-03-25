@@ -46,7 +46,7 @@ else ifeq ($(detected_OS),Windows)
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS+= -D__USE_MINGW_ANSI_STDIO
 	CFLAGS_OPTIM=-O3
-	LDLIBS=-l:libmicrohttpd.a -l:libunistring.a -lws2_32 -lgdi32 -lUserenv
+	LDLIBS=-l:libmicrohttpd.a -l:libunistring.a -l:libwinpthread.a -lws2_32 -lgdi32 -lUserenv
 	LINK_FLAGS_BUILD=-no-pie -mwindows
 	PROGRAM_NAME:=$(PROGRAM_NAME).exe
 else ifeq ($(detected_OS),Darwin)
