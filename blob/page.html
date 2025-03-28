@@ -39,7 +39,7 @@
             flex: 0.22;
             font-size: 21px;
             text-align: right;
-            margin-right: 4px;
+            margin-right: 5px;
         }
 
         .header input {
@@ -48,12 +48,14 @@
             padding-left: 4px;
             margin-right: 15px;
             font-size: 18px;
+            border-radius: 10px;
+            border-style: ridge;
         }
 
         .header button {
             flex: 0.2;
             height: 100%;
-            background-color: #6666FF;
+            background-color: #5555FF;
             color: white;
             font-size: 18px;
             font-weight: bold;
@@ -70,6 +72,11 @@
             line-height: 1.5;
             border: 1px solid #ddd;
             background-color: #FFF;
+            border-radius: 10px;
+        }
+
+        button {
+            border-radius: 10px;
         }
 
         .btn-row {
@@ -88,7 +95,7 @@
         }
 
         .btn-send {
-            flex: 0.48;
+            flex: 0.49;
             background-color: red;
         }
 
@@ -101,13 +108,19 @@
             margin-top: 6px;
             margin-bottom: 18px;
         }
+
+        #server-label {
+            margin-right: 10px;
+            font-weight: bolder;
+            color: #666;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <div class="header">
-            <label for="server">Server:</label>
+            <label id="server-label" for="server">SERVER</label>
             <input type="text" id="server" placeholder="192.168.1.2">
             <button onclick="onScan()">SCAN</button>
         </div>
@@ -116,14 +129,14 @@
         </div>
 
         <div class="btn-row">
-            <button class="btn-send" onclick="onSendTxt()">SEND</button>
-            <button class="btn-send" onclick="onSendFile()">FILE</button>
+            <button class="btn-send" onclick="onSendTxt()">SEND TEXT</button>
+            <button class="btn-send" onclick="onSendFile()">SEND FILE</button>
         </div>
 
         <div class="btn-row bottom-row">
-            <button class="btn-get" onclick="onGetTxt()">GET</button>
-            <button class="btn-get" onclick="onGetImg()">IMAGE</button>
-            <button class="btn-get" onclick="onGetFile()">FILE</button>
+            <button class="btn-get" onclick="onGetTxt()">GET TEXT</button>
+            <button class="btn-get" onclick="onGetImg()">GET IMAGE</button>
+            <button class="btn-get" onclick="onGetFile()">GET FILE</button>
         </div>
     </div>
     <script>
