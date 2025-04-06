@@ -176,6 +176,8 @@ static void parse_line(char *line, config *cfg) {
 
     if (!strcmp("app_port", key)) {
         set_uint16(value, &(cfg->app_port));
+    } else if (!strcmp("web_port", key)) {
+        set_uint16(value, &(cfg->web_port));
     } else if (!strcmp("working_dir", key)) {
         if (cfg->working_dir) free(cfg->working_dir);
         cfg->working_dir = strdup(value);
@@ -196,6 +198,7 @@ static void parse_line(char *line, config *cfg) {
 
 void parse_conf(config *cfg, const char *file_name) {
     cfg->app_port = 0;
+    cfg->web_port = 0;
     cfg->working_dir = NULL;
     cfg->max_text_length = 0;
     cfg->max_file_size = 0;

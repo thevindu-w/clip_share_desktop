@@ -37,6 +37,9 @@
 // tcp and udp
 #define APP_PORT 4337
 
+// web client port
+#define WEB_PORT 8888
+
 // maximum transfer sizes
 #define MAX_TEXT_LENGTH 4194304L     // 4 MiB
 #define MAX_FILE_SIZE 68719476736LL  // 64 GiB
@@ -118,6 +121,7 @@ static inline void _change_working_dir(void) {
  */
 static inline void _apply_default_conf(void) {
     if (configuration.app_port <= 0) configuration.app_port = APP_PORT;
+    if (configuration.web_port <= 0) configuration.web_port = WEB_PORT;
     if (configuration.max_text_length <= 0) configuration.max_text_length = MAX_TEXT_LENGTH;
     if (configuration.max_file_size <= 0) configuration.max_file_size = MAX_FILE_SIZE;
     if (configuration.min_proto_version < PROTOCOL_MIN) configuration.min_proto_version = PROTOCOL_MIN;
