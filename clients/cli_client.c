@@ -165,7 +165,7 @@ void cli_client(int argc, char **argv, const char *prog_name) {
             print_usage(prog_name);
             break;
         }
-         case COMMAND_SCAN: {
+        case COMMAND_SCAN: {
             net_scan();
             break;
         }
