@@ -277,6 +277,9 @@ int main(int argc, char **argv) {
     if (argc == 2 || argc == 3) {
         cli_client(argc, argv, prog_name);
     } else if (argc == 1) {
+#ifdef __linux__
+        if (fork() > 0) return EXIT_SUCCESS;
+#endif
         start_web();
     } else {
         print_usage(prog_name);
