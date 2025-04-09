@@ -143,8 +143,8 @@
         const serverInput = document.getElementById('server');
         const outputTxt = document.getElementById('output');
 
-        const getStateChangeFn = (xhr, successMsgPrefix, failureMsg) => {
-            return () => {
+        function getStateChangeFn(xhr, successMsgPrefix, failureMsg) {
+            return function () {
                 try {
                     if (xhr.readyState == XMLHttpRequest.DONE) {
                         switch (xhr.status) {
@@ -217,7 +217,7 @@
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/scan", true);
             xhr.send();
-            xhr.onreadystatechange = () => {
+            xhr.onreadystatechange = function () {
                 try {
                     if (xhr.readyState == XMLHttpRequest.DONE) {
                         if (xhr.status != 200) {
