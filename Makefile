@@ -18,11 +18,15 @@ MAKEFLAGS += -j4
 
 PROGRAM_NAME=clip-share-client
 
+SRC_DIR=src
+BUILD_DIR=build
+
 MIN_PROTO=1
 MAX_PROTO=3
 
 CC=gcc
-CFLAGS=-c -pipe -I. --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
+SED=sed
+CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
 OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o
@@ -60,28 +64,47 @@ endif
 CFLAGS+= -DINFO_NAME=\"clip_share\" -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
 CFLAGS_OPTIM+= -Werror
 
-OBJS=$(OBJS_C) $(OBJS_BIN)
+OBJS_C:=$(addprefix $(BUILD_DIR)/,$(OBJS_C))
+OBJS_BIN:=$(addprefix $(BUILD_DIR)/,$(OBJS_BIN))
 
 # append '_debug' to objects for debug executable to prevent overwriting objects for main build
-DEBUG_OBJS=$(OBJS_C:.o=_debug.o)
+DEBUG_OBJS_C=$(OBJS_C:.o=_debug.o)
+DEBUG_OBJS_BIN=$(OBJS_BIN:.o=_debug.o)
+DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_BIN)
+
+OBJS=$(OBJS_C) $(OBJS_BIN)
+ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS)
+DIRS=$(foreach file,$(ALL_DEPENDENCIES),$(dir $(file)))
+DIRS:=$(sort $(DIRS))
 
 $(PROGRAM_NAME): $(OBJS)
 	$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS) -o $@
 
-$(OBJS_C): %.o: %.c
+.SECONDEXPANSION:
+$(ALL_DEPENDENCIES): %: | $$(dir %)
+
+$(OBJS_C): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJS_BIN): $(BUILD_DIR)/%.o: $(BUILD_DIR)/%_.c
+$(OBJS):
 	$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $^ -o $@
 
-$(DEBUG_OBJS): %_debug.o: %.c
+$(DEBUG_OBJS_C): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%.c
+$(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: $(BUILD_DIR)/%_.c
+$(DEBUG_OBJS):
 	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $^ -o $@
 
-blob/page.o: blob/page.html
-	ld -r -b binary -o $@ $^
+$(BUILD_DIR)/blob/page_.c: $(SRC_DIR)/blob/page.html | $(BUILD_DIR)/blob/
+	xxd -i $< >$@
+	$(SED) -i 's/[a-zA-Z_]*blob_//g' $@
+
+$(DIRS):
+	mkdir -p $@
 
 .PHONY: clean debug
 
-debug: $(DEBUG_OBJS) $(OBJS_BIN)
+debug: $(DEBUG_OBJS)
 	$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
 
 clean:
-	$(RM) $(OBJS) $(DEBUG_OBJS)
+	$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES)
 	$(RM) $(PROGRAM_NAME)

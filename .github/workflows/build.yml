@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install gcc make libc6-dev libx11-dev libxmu-dev libunistring-dev libmicrohttpd-dev
+        sudo apt-get install gcc make sed xxd libc6-dev libx11-dev libxmu-dev libunistring-dev libmicrohttpd-dev
 
     - name: Build
       run: make

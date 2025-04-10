@@ -39,12 +39,8 @@
 
 struct MHD_Daemon *http_daemon = NULL;
 
-extern char _binary_blob_page_html_start[];
-extern char _binary_blob_page_html_end[];
-static size_t _page_size;
-
-#define page_blob _binary_blob_page_html_start
-#define page_blob_end _binary_blob_page_html_end
+extern char page_html[];
+extern unsigned int page_html_len;
 
 static const char *CONTENT_TYPE_TEXT = "text/plain";
 static const char *CONTENT_TYPE_HTML = "text/html";
@@ -153,7 +149,7 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
 
     unsigned int res_status = MHD_HTTP_OK;
     if (!strcmp(method, MHD_HTTP_METHOD_GET)) {
-        response = MHD_create_response_from_buffer(_page_size, (void *)page_blob, MHD_RESPMEM_PERSISTENT);
+        response = MHD_create_response_from_buffer(page_html_len, (void *)page_html, MHD_RESPMEM_PERSISTENT);
         MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_HTML);
     } else if (!strcmp(method, MHD_HTTP_METHOD_POST)) {
         get_query_params query = {.server = NULL};
@@ -197,8 +193,6 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
 }
 
 void start_web(void) {
-    _page_size = (size_t)(page_blob_end - page_blob);
-
     struct sockaddr_in bind_addr;
     memset((char *)&bind_addr, 0, sizeof(bind_addr));
     bind_addr.sin_family = AF_INET;

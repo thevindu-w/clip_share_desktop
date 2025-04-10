@@ -8,6 +8,7 @@ clip-share-client
 /*.conf
 TODO
 dist/
+build*
 .vscode/
 .trash/
 .DS_Store
