@@ -427,9 +427,9 @@ static inline int _save_image_common(socket_t *socket, StatusCallback *callback)
     clock_gettime(CLOCK_REALTIME, &ts);
     uint64_t millis = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000L;
     char file_name[40];
-    snprintf(file_name, sizeof(file_name), "%" PRIx64 ".png", millis);
+    if (snprintf_check(file_name, sizeof(file_name), "%" PRIx64 ".png", millis)) return EXIT_FAILURE;
     int status = _save_file_common(1, socket, file_name, callback);
-    if (status == EXIT_SUCCESS) {
+    if (status == EXIT_SUCCESS && callback) {
         callback->function(RESP_OK, file_name, strnlen(file_name, sizeof(file_name) - 1), callback->params);
     }
     return status;
