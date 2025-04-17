@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <utils/kill_others.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>
 
@@ -280,6 +281,7 @@ int main(int argc, char **argv) {
 #ifdef __linux__
         if (fork() > 0) return EXIT_SUCCESS;
 #endif
+        kill_other_processes(prog_name);
         start_web();
     } else {
         print_usage(prog_name);
