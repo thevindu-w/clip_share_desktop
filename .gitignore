@@ -4,6 +4,7 @@
 clip-share-client
 *.exe
 *.res
+src/res/**/*_.*
 *.log
 /*.conf
 TODO

@@ -25,13 +25,15 @@ MIN_PROTO=1
 MAX_PROTO=3
 
 CC=gcc
+CPP=cpp
 SED=sed
 CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
 OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o
-OBJS_BIN=blob/page.o
+OBJS_BIN=res/page.o
 
+OTHER_DEPENDENCIES=
 LINK_FLAGS_BUILD=
 
 ifeq ($(OS),Windows_NT)
@@ -50,6 +52,7 @@ else ifeq ($(detected_OS),Windows)
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS+= -D__USE_MINGW_ANSI_STDIO
 	CFLAGS_OPTIM=-O3
+	OTHER_DEPENDENCIES+= res/win/app.coff
 	LDLIBS=-l:libmicrohttpd.a -l:libunistring.a -l:libwinpthread.a -lws2_32 -lgdi32 -lUserenv
 	LINK_FLAGS_BUILD=-no-pie -mwindows
 	PROGRAM_NAME:=$(PROGRAM_NAME).exe
@@ -64,8 +67,21 @@ endif
 CFLAGS+= -DINFO_NAME=\"clip_share\" -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
 CFLAGS_OPTIM+= -Werror
 
+VERSION_FILE=$(SRC_DIR)/res/version
+ifeq (4.2,$(firstword $(sort $(MAKE_VERSION) 4.2)))
+	VERSION_INFO=$(file < $(VERSION_FILE))
+else
+	VERSION_INFO=$(shell cat $(VERSION_FILE))
+endif
+VERSION_MAJOR=$(word 2 ,$(subst =, ,$(filter VERSION_MAJOR=%,$(VERSION_INFO))))
+VERSION_MINOR=$(word 2 ,$(subst =, ,$(filter VERSION_MINOR=%,$(VERSION_INFO))))
+VERSION_PATCH=$(word 2 ,$(subst =, ,$(filter VERSION_PATCH=%,$(VERSION_INFO))))
+VERSION=$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)
+CFLAGS+= -DVERSION=\"$(VERSION)\"
+
 OBJS_C:=$(addprefix $(BUILD_DIR)/,$(OBJS_C))
 OBJS_BIN:=$(addprefix $(BUILD_DIR)/,$(OBJS_BIN))
+OTHER_DEPENDENCIES:=$(addprefix $(BUILD_DIR)/,$(OTHER_DEPENDENCIES))
 
 # append '_debug' to objects for debug executable to prevent overwriting objects for main build
 DEBUG_OBJS_C=$(OBJS_C:.o=_debug.o)
@@ -73,11 +89,11 @@ DEBUG_OBJS_BIN=$(OBJS_BIN:.o=_debug.o)
 DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_BIN)
 
 OBJS=$(OBJS_C) $(OBJS_BIN)
-ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS)
+ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
 DIRS=$(foreach file,$(ALL_DEPENDENCIES),$(dir $(file)))
 DIRS:=$(sort $(DIRS))
 
-$(PROGRAM_NAME): $(OBJS)
+$(PROGRAM_NAME): $(OBJS) $(OTHER_DEPENDENCIES)
 	$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS) -o $@
 
 .SECONDEXPANSION:
@@ -93,18 +109,24 @@ $(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: $(BUILD_DIR)/%_.c
 $(DEBUG_OBJS):
 	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $^ -o $@
 
-$(BUILD_DIR)/blob/page_.c: $(SRC_DIR)/blob/page.html | $(BUILD_DIR)/blob/
+$(BUILD_DIR)/res/page_.c: $(SRC_DIR)/res/page.html | $(BUILD_DIR)/res/
 	xxd -i $< >$@
-	$(SED) -i 's/[a-zA-Z_]*blob_//g' $@
+	$(SED) -i 's/[a-zA-Z_]*res_//g' $@
+
+$(BUILD_DIR)/res/win/app.coff: $(SRC_DIR)/res/win/app_.rc $(SRC_DIR)/res/win/resource.h | $(BUILD_DIR)/res/win/
+	windres -I$(SRC_DIR) $< -O coff -o $@
+
+$(SRC_DIR)/res/win/app_.rc: $(SRC_DIR)/res/win/app.rc $(VERSION_FILE)
+	$(CPP) -I$(SRC_DIR) -P -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) -DVERSION_PATCH=$(VERSION_PATCH) -DVERSION=\"$(VERSION)\" $< -o $@
 
 $(DIRS):
 	mkdir -p $@
 
 .PHONY: clean debug
 
-debug: $(DEBUG_OBJS)
+debug: $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
 	$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
 
 clean:
-	$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES)
+	$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES) $(SRC_DIR)/res/win/app_.rc
 	$(RM) $(PROGRAM_NAME)

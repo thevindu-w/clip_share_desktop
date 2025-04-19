@@ -1,0 +1,31 @@
+#include <res/win/resource.h>
+
+#define MAJOR VERSION_MAJOR
+#define MINOR VERSION_MINOR
+#define PATCH VERSION_PATCH
+#define VERSION_STR VERSION
+
+APP_ICON ICON "clip_share_desktop_icon.ico"
+1 VERSIONINFO
+FILEVERSION     MAJOR,MINOR,PATCH,0
+PRODUCTVERSION  MAJOR,MINOR,PATCH,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "FileDescription", "Clipboard Share Desktop Client"
+      VALUE "FileVersion", VERSION_STR
+      VALUE "InternalName", "clip-share-client"
+      VALUE "LegalCopyright", "H. Thevindu J. Wijesekera"
+      VALUE "OriginalFilename", "clip-share-client.exe"
+      VALUE "ProductName", "ClipShare"
+      VALUE "ProductVersion", VERSION_STR
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x809, 1252
+  END
+END
+1 24 "clip-share-client.exe.manifest"
