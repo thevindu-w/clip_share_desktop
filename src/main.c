@@ -55,6 +55,37 @@ size_t cwd_len = 0;
 static char *get_user_home(void);
 
 /*
+ * Parse command line arguments and set corresponding variables
+ */
+static inline void _parse_args(int argc, char **argv, int *cmd_offset, int *stop_p) {
+    int opt;
+    while ((opt = getopt(argc, argv, "hvsc:")) != -1) {
+        switch (opt) {
+            case 'h': {  // help
+                print_usage(argv[0]);
+                exit(EXIT_SUCCESS);
+            }
+            case 'v': {  // version
+                puts("ClipShare desktop client version " VERSION);
+                exit(EXIT_SUCCESS);
+            }
+            case 's': {  // stop
+                *stop_p = 1;
+                break;
+            }
+            case 'c': {  // restart
+                *cmd_offset = optind - 1;
+                break;
+            }
+            default: {
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+}
+
+/*
  * Set the error_log_file absolute path
  */
 static inline void _set_error_log_file(const char *path) {
@@ -264,6 +295,16 @@ int main(int argc, char **argv) {
     free(conf_path);
     _apply_default_conf();
 
+    int stop = 0;
+    int cmd_offset = 0;
+    // Parse command line arguments
+    _parse_args(argc, argv, &cmd_offset, &stop);
+    if (stop) {
+        kill_other_processes(prog_name);
+        puts("Client Stopped");
+        exit(EXIT_SUCCESS);
+    }
+
     if (configuration.working_dir) _change_working_dir();
     cwd = getcwd_wrapper(0);
     cwd_len = strnlen(cwd, 2048);
@@ -275,8 +316,8 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    if (argc == 2 || argc == 3) {
-        cli_client(argc, argv, prog_name);
+    if (cmd_offset > 0) {
+        cli_client(argc - 2, argv + 2, prog_name);
     } else if (argc == 1) {
 #ifdef __linux__
         if (fork() > 0) return EXIT_SUCCESS;

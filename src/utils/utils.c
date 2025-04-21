@@ -53,10 +53,16 @@ static inline void _wappend(list2 *lst, const wchar_t *wstr);
 #endif
 
 void print_usage(const char *prog_name) {
-    fprintf(stderr, "Usage: %s COMMAND <server-address-ipv4>\n", prog_name);
+    fprintf(stderr, "Usage: %s [OPTION]\n", prog_name);
+    fprintf(stderr, "  or:  %s COMMAND <server-address-ipv4>\n", prog_name);
+    fprintf(stderr,
+            "Options available:\n"
+            "\t-h : Display this help list\n"
+            "\t-s : Stop running instances\n"
+            "\t-v : Print version\n"
+            "\t-c COMMAND [server-address-ipv4]: Run a CLI command. This needs a command\n");
     fprintf(stderr,
             "Commands available:\n"
-            "\th  : Help - server address is not needed\n"
             "\tsc : Scan - server address is not needed\n"
             "\tg  : Get copied text\n"
             "\ts  : Send copied text\n"
@@ -66,11 +72,13 @@ void print_usage(const char *prog_name) {
             "\tic : Get copied image\n"
             "\tis : Get screenshot\n");
     fprintf(stderr,
-            "\nExample: %s g 192.168.21.42\n"
+            "\nExample: %s -c g 192.168.21.42\n"
             "\tThis command gets copied text from the device having IP address 192.168.21.42\n"
-            "\nExample: %s sc\n"
+            "\nExample: %s -c sc\n"
+            "\tThis command scans and outputs the IP addresses of available servers.\n"
+            "\nExample: %s -h\n"
             "\tThis command scans and outputs the IP addresses of available servers.\n\n",
-            prog_name, prog_name);
+            prog_name, prog_name, prog_name);
 }
 
 int snprintf_check(char *dest, size_t size, const char *fmt, ...) {
@@ -134,11 +142,6 @@ static void freeAtomPtr(AtomPtr atomPtr) {
 
 void cleanup(void) {
 #ifdef DEBUG_MODE
-#ifdef _WIN32
-    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-        freopen("CONOUT$", "w", stdout);
-    }
-#endif
     puts("Cleaning up resources before exit");
 #endif
     if (error_log_file) {

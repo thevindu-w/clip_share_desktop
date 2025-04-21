@@ -54,7 +54,7 @@ else ifeq ($(detected_OS),Windows)
 	CFLAGS_OPTIM=-O3
 	OTHER_DEPENDENCIES+= res/win/app.coff
 	LDLIBS=-l:libmicrohttpd.a -l:libunistring.a -l:libwinpthread.a -lws2_32 -lgdi32 -lUserenv
-	LINK_FLAGS_BUILD=-no-pie -mwindows
+	LINK_FLAGS_BUILD=-no-pie
 	PROGRAM_NAME:=$(PROGRAM_NAME).exe
 else ifeq ($(detected_OS),Darwin)
 export CPATH=$(shell brew --prefix)/include
