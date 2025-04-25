@@ -26,6 +26,11 @@
 #include <dirent.h>
 #include <signal.h>
 #include <time.h>
+#elif defined(__APPLE__)
+#include <errno.h>
+#include <libproc.h>
+#include <signal.h>
+#include <sys/sysctl.h>
 #elif defined(_WIN32)
 #include <processthreadsapi.h>
 #include <tlhelp32.h>
@@ -105,6 +110,71 @@ void kill_other_processes(const char *prog_name) {
         nanosleep(&interval, NULL);
     }
     return;
+}
+
+#elif defined(__APPLE__)
+
+void kill_other_processes(const char *prog_name) {
+    struct kinfo_proc *procs = NULL;
+    size_t count = 0;
+    int name[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+    int done = 0;
+    size_t length;
+    int err;
+    do {
+        length = 0;
+        err = sysctl(name, (sizeof(name) / sizeof(*name)) - 1, NULL, &length, NULL, 0);
+        if (err == -1) err = errno;
+        if (err == 0) {
+            length += 4096;
+            procs = malloc(length);
+            if (procs == NULL) {
+                err = ENOMEM;
+            }
+        }
+        if (err == 0) {
+            err = sysctl(name, (sizeof(name) / sizeof(*name)) - 1, procs, &length, NULL, 0);
+            if (err == -1) {
+                err = errno;
+            }
+            if (err == 0) {
+                done = 1;
+            } else if (err == ENOMEM) {
+                if (procs) free(procs);
+                procs = NULL;
+                err = 0;
+            }
+        }
+    } while (err == 0 && !done);
+    if (err == 0) {
+        count = length / sizeof(struct kinfo_proc);
+    } else {
+        if (procs) free(procs);
+        return;
+    }
+
+    pid_t this_pid = getpid();
+    char pname[32];
+    int killed = 0;
+    for (size_t i = 0; i < count; i++) {
+        pid_t pid = procs[i].kp_proc.p_pid;
+        pname[0] = 0;
+        proc_name(pid, pname, sizeof(pname));
+        if (!strncmp(prog_name, pname, 32)) {
+            if (pid != this_pid) {
+#ifdef DEBUG_MODE
+                fprintf(stderr, "killed %i\n", pid);
+#endif
+                kill(pid, SIGTERM);
+                killed = 1;
+            }
+        }
+    }
+    free(procs);
+    if (killed) {
+        struct timespec interval = {.tv_sec = 0, .tv_nsec = 5000000L};
+        nanosleep(&interval, NULL);
+    }
 }
 
 #elif defined(_WIN32)

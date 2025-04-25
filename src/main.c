@@ -33,6 +33,8 @@
 #include <sys/wait.h>
 #elif defined(_WIN32)
 #include <userenv.h>
+#elif defined(__APPLE__)
+#include <pwd.h>
 #endif
 
 // tcp and udp
@@ -319,7 +321,7 @@ int main(int argc, char **argv) {
     if (cmd_offset > 0) {
         cli_client(argc - 2, argv + 2, prog_name);
     } else if (argc == 1) {
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
         if (fork() > 0) return EXIT_SUCCESS;
 #endif
         kill_other_processes(prog_name);

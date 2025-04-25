@@ -32,6 +32,7 @@ CFLAGS_DEBUG=-g -DDEBUG_MODE
 
 OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o
 OBJS_BIN=res/page.o
+OBJS_M=
 
 OTHER_DEPENDENCIES=
 LINK_FLAGS_BUILD=
@@ -57,10 +58,15 @@ else ifeq ($(detected_OS),Windows)
 	LINK_FLAGS_BUILD=-no-pie
 	PROGRAM_NAME:=$(PROGRAM_NAME).exe
 else ifeq ($(detected_OS),Darwin)
-export CPATH=$(shell brew --prefix)/include
-export LIBRARY_PATH=$(shell brew --prefix)/lib
+export CPATH:=$(CPATH):$(shell brew --prefix)/include
+export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
+	OBJS_M=utils/mac_utils.o
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
+	CFLAGS+= -fobjc-arc
+	CFLAGS_OPTIM=-O3
+	LDLIBS=-framework AppKit -lmicrohttpd -lunistring -lobjc
+	SED=gsed
 else
 $(error ClipShare is not supported on this platform!)
 endif
@@ -80,6 +86,7 @@ VERSION=$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)
 CFLAGS+= -DVERSION=\"$(VERSION)\"
 
 OBJS_C:=$(addprefix $(BUILD_DIR)/,$(OBJS_C))
+OBJS_M:=$(addprefix $(BUILD_DIR)/,$(OBJS_M))
 OBJS_BIN:=$(addprefix $(BUILD_DIR)/,$(OBJS_BIN))
 OTHER_DEPENDENCIES:=$(addprefix $(BUILD_DIR)/,$(OTHER_DEPENDENCIES))
 
@@ -88,7 +95,7 @@ DEBUG_OBJS_C=$(OBJS_C:.o=_debug.o)
 DEBUG_OBJS_BIN=$(OBJS_BIN:.o=_debug.o)
 DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_BIN)
 
-OBJS=$(OBJS_C) $(OBJS_BIN)
+OBJS=$(OBJS_C) $(OBJS_M) $(OBJS_BIN)
 ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
 DIRS=$(foreach file,$(ALL_DEPENDENCIES),$(dir $(file)))
 DIRS:=$(sort $(DIRS))
@@ -100,6 +107,7 @@ $(PROGRAM_NAME): $(OBJS) $(OTHER_DEPENDENCIES)
 $(ALL_DEPENDENCIES): %: | $$(dir %)
 
 $(OBJS_C): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJS_M): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.m
 $(OBJS_BIN): $(BUILD_DIR)/%.o: $(BUILD_DIR)/%_.c
 $(OBJS):
 	$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $^ -o $@
