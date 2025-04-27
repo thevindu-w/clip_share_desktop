@@ -32,6 +32,7 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #elif defined(_WIN32)
+#include <res/win/resource.h>
 #include <userenv.h>
 #elif defined(__APPLE__)
 #include <pwd.h>
@@ -166,6 +167,100 @@ static inline void _apply_default_conf(void) {
 }
 
 #ifdef _WIN32
+
+#define TRAY_CB_MSG (WM_USER + 0x100)
+
+static volatile HINSTANCE instance = NULL;
+static volatile HWND hWnd = NULL;
+static volatile GUID guid = {0};
+static volatile char running = 1;
+
+static DWORD WINAPI webThreadFn(void *arg) {
+    (void)arg;
+    start_web();
+    return EXIT_SUCCESS;
+}
+
+static inline void setGUID(void) {
+    char file_path[2048];
+    GetModuleFileName(NULL, (char *)file_path, 2048);
+    size_t size = strnlen(file_path, 2048);
+    uint64_t h = 0xcbf29ce484222325ULL;
+    for (size_t i = 0; i < size; i++) {
+        h ^= (unsigned char)file_path[i];
+        h *= 0x100000001B3ULL;
+    }
+    guid.Data1 = (unsigned long)h;
+    h >>= 32;
+    guid.Data2 = (unsigned short)h;
+    h >>= 16;
+    guid.Data3 = (unsigned short)h;
+
+    h = 0x312bdf6556d47ffdUL;
+    for (size_t i = 0; i < size; i++) {
+        h ^= (unsigned char)file_path[i];
+        h *= 0x100000001B3ULL;
+    }
+    for (unsigned i = 0; i < 8; i++) {
+        guid.Data4[i] = (unsigned char)h;
+        h >>= 8;
+    }
+}
+
+static inline void show_tray_icon(void) {
+    NOTIFYICONDATA notifyIconData = {.hWnd = hWnd,
+                                     .uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE | NIF_GUID,
+                                     .uCallbackMessage = TRAY_CB_MSG,
+                                     .uVersion = NOTIFYICON_VERSION_4,
+                                     .hIcon = LoadIcon(instance, MAKEINTRESOURCE(APP_ICON)),
+                                     .guidItem = guid};
+    notifyIconData.cbSize = sizeof(notifyIconData);
+    snprintf_check(notifyIconData.szTip, 64, "ClipShare Client");
+    Shell_NotifyIcon(NIM_DELETE, &notifyIconData);
+    Shell_NotifyIcon(NIM_ADD, &notifyIconData);
+    Shell_NotifyIcon(NIM_SETVERSION, &notifyIconData);
+}
+
+static inline void remove_tray_icon(void) {
+    NOTIFYICONDATA notifyIconData = {
+        .cbSize = sizeof(NOTIFYICONDATA), .hWnd = NULL, .uFlags = NIF_GUID, .guidItem = guid};
+    Shell_NotifyIcon(NIM_DELETE, &notifyIconData);
+    if (hWnd) DestroyWindow(hWnd);
+}
+
+static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_QUERYENDSESSION:
+        case WM_COMMAND: {
+            remove_tray_icon();
+            running = 0;
+            break;
+        }
+        case TRAY_CB_MSG: {
+            switch (LOWORD(lParam)) {
+                case NIN_SELECT:
+                case NIN_KEYSELECT:
+                case WM_CONTEXTMENU: {
+                    POINT pt;
+                    GetCursorPos(&pt);
+                    HMENU hmenu = CreatePopupMenu();
+                    InsertMenu(hmenu, 0, MF_BYPOSITION | MF_STRING, 100, TEXT("Stop"));
+                    SetForegroundWindow(window);
+                    TrackPopupMenu(hmenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, 0, window,
+                                   NULL);
+                    PostMessage(window, WM_NULL, 0, 50);
+                    return 0;
+                }
+                default:
+                    break;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    return DefWindowProc(window, msg, wParam, lParam);
+}
 
 static char *get_user_home(void) {
     DWORD pid = GetCurrentProcessId();
@@ -302,6 +397,9 @@ int main(int argc, char **argv) {
     // Parse command line arguments
     _parse_args(argc, argv, &cmd_offset, &stop);
     if (stop) {
+#ifdef _WIN32
+        remove_tray_icon();
+#endif
         kill_other_processes(prog_name);
         puts("Client Stopped");
         exit(EXIT_SUCCESS);
@@ -319,13 +417,35 @@ int main(int argc, char **argv) {
 #endif
 
     if (cmd_offset > 0) {
-        cli_client(argc - 2, argv + 2, prog_name);
+        cli_client(argc - cmd_offset, argv + cmd_offset, prog_name);
     } else if (argc == 1) {
+        kill_other_processes(prog_name);
 #if defined(__linux__) || defined(__APPLE__)
         if (fork() > 0) return EXIT_SUCCESS;
-#endif
-        kill_other_processes(prog_name);
         start_web();
+#elif defined(_WIN32)
+        // initialize instance and guid
+        instance = GetModuleHandle(NULL);
+        setGUID();
+
+        HANDLE webThread = CreateThread(NULL, 0, webThreadFn, NULL, 0, NULL);
+
+        char CLASSNAME[] = "clipdesk";
+        WNDCLASS wc = {.lpfnWndProc = (WNDPROC)WindowProc, .hInstance = instance, .lpszClassName = CLASSNAME};
+        RegisterClass(&wc);
+        hWnd = CreateWindowEx(0, CLASSNAME, NULL, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, instance, NULL);
+        show_tray_icon();
+
+        MSG msg = {};
+        while (running && GetMessage(&msg, NULL, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        if (webThread != NULL) TerminateThread(webThread, 0);
+        if (webThread != NULL) WaitForSingleObject(webThread, INFINITE);
+        remove_tray_icon();
+        CloseHandle(instance);
+#endif
     } else {
         print_usage(prog_name);
         return EXIT_FAILURE;
