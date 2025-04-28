@@ -78,6 +78,13 @@ int handle_proto(socket_t *socket, uint8_t method, StatusCallback *callback) {
                 if (callback) callback->function(RESP_PROTO_VERSION_MISMATCH, NULL, 0, callback->params);
                 return EXIT_FAILURE;
             }
+            if (write_sock(socket, (char *)&version, 1) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+                fprintf(stderr, "negotiate protocol version failed\n");
+#endif
+                if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+                return EXIT_FAILURE;
+            }
             break;
         }
 
