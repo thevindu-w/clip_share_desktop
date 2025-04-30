@@ -51,6 +51,25 @@ static inline void trim(char *str) {
     }
 }
 
+#ifdef _WIN32
+/*
+ * str must be a valid and null-terminated string
+ * conf_ptr must be a valid pointer to a char
+ * Sets the value pointed by conf_ptr to 1 if the string is "true" or "1".
+ * Sets the value pointed by conf_ptr to 0 if the string is "false" or "0".
+ * Otherwise, does not change the value pointed by conf_ptr
+ */
+static inline void set_is_true(const char *str, int8_t *conf_ptr) {
+    if (!strcasecmp("true", str) || !strcmp("1", str)) {
+        *conf_ptr = 1;
+    } else if (!strcasecmp("false", str) || !strcmp("0", str)) {
+        *conf_ptr = 0;
+    } else {
+        error_exit("Error: invalid boolean config value");
+    }
+}
+#endif
+
 /*
  * str must be a valid and null-terminated string
  * conf_ptr must be a valid pointer to an unsigned 64-bit long integer
@@ -189,6 +208,10 @@ static void parse_line(char *line, config *cfg) {
         set_uint16(value, &(cfg->min_proto_version));
     } else if (!strcmp("max_proto_version", key)) {
         set_uint16(value, &(cfg->max_proto_version));
+#ifdef _WIN32
+    } else if (!strcmp("tray_icon", key)) {
+        set_is_true(value, &(cfg->tray_icon));
+#endif
 #ifdef DEBUG_MODE
     } else {
         printf("Unknown key \"%s\"\n", key);
@@ -204,6 +227,9 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->max_file_size = 0;
     cfg->min_proto_version = 0;
     cfg->max_proto_version = 0;
+#ifdef _WIN32
+    cfg->tray_icon = -1;
+#endif
 
     if (!file_name) {
 #ifdef DEBUG_MODE

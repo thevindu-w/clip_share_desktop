@@ -164,6 +164,9 @@ static inline void _apply_default_conf(void) {
     if (configuration.max_proto_version < configuration.min_proto_version ||
         configuration.max_proto_version > PROTOCOL_MAX)
         configuration.max_proto_version = PROTOCOL_MAX;
+#ifdef _WIN32
+    if (configuration.tray_icon < 0) configuration.tray_icon = 1;
+#endif
 }
 
 #ifdef _WIN32
@@ -208,17 +211,19 @@ static inline void setGUID(void) {
 }
 
 static inline void show_tray_icon(void) {
-    NOTIFYICONDATA notifyIconData = {.hWnd = hWnd,
-                                     .uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE | NIF_GUID,
-                                     .uCallbackMessage = TRAY_CB_MSG,
-                                     .uVersion = NOTIFYICON_VERSION_4,
-                                     .hIcon = LoadIcon(instance, MAKEINTRESOURCE(APP_ICON)),
-                                     .guidItem = guid};
-    notifyIconData.cbSize = sizeof(notifyIconData);
-    snprintf_check(notifyIconData.szTip, 64, "ClipShare Client");
-    Shell_NotifyIcon(NIM_DELETE, &notifyIconData);
-    Shell_NotifyIcon(NIM_ADD, &notifyIconData);
-    Shell_NotifyIcon(NIM_SETVERSION, &notifyIconData);
+    if (configuration.tray_icon) {
+        NOTIFYICONDATA notifyIconData = {.hWnd = hWnd,
+                                         .uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_MESSAGE | NIF_GUID,
+                                         .uCallbackMessage = TRAY_CB_MSG,
+                                         .uVersion = NOTIFYICON_VERSION_4,
+                                         .hIcon = LoadIcon(instance, MAKEINTRESOURCE(APP_ICON)),
+                                         .guidItem = guid};
+        notifyIconData.cbSize = sizeof(notifyIconData);
+        snprintf_check(notifyIconData.szTip, 64, "ClipShare Client");
+        Shell_NotifyIcon(NIM_DELETE, &notifyIconData);
+        Shell_NotifyIcon(NIM_ADD, &notifyIconData);
+        Shell_NotifyIcon(NIM_SETVERSION, &notifyIconData);
+    }
 }
 
 static inline void remove_tray_icon(void) {
@@ -430,19 +435,22 @@ int main(int argc, char **argv) {
 
         HANDLE webThread = CreateThread(NULL, 0, webThreadFn, NULL, 0, NULL);
 
-        char CLASSNAME[] = "clipdesk";
-        WNDCLASS wc = {.lpfnWndProc = (WNDPROC)WindowProc, .hInstance = instance, .lpszClassName = CLASSNAME};
-        RegisterClass(&wc);
-        hWnd = CreateWindowEx(0, CLASSNAME, NULL, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, instance, NULL);
-        show_tray_icon();
+        if (configuration.tray_icon) {
+            char CLASSNAME[] = "clipdesk";
+            WNDCLASS wc = {.lpfnWndProc = (WNDPROC)WindowProc, .hInstance = instance, .lpszClassName = CLASSNAME};
+            RegisterClass(&wc);
+            hWnd = CreateWindowEx(0, CLASSNAME, NULL, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, instance, NULL);
+            show_tray_icon();
 
-        MSG msg = {};
-        while (running && GetMessage(&msg, NULL, 0, 0)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            MSG msg = {};
+            while (running && GetMessage(&msg, NULL, 0, 0)) {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+            if (webThread != NULL) TerminateThread(webThread, 0);
         }
-        if (webThread != NULL) TerminateThread(webThread, 0);
         if (webThread != NULL) WaitForSingleObject(webThread, INFINITE);
+
         remove_tray_icon();
         CloseHandle(instance);
 #endif

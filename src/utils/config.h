@@ -30,6 +30,9 @@ typedef struct _config {
     int64_t max_file_size;
     uint16_t min_proto_version;
     uint16_t max_proto_version;
+#ifdef _WIN32
+    int8_t tray_icon;
+#endif
 } config;
 
 /*
