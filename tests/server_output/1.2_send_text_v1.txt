@@ -1,0 +1,5 @@
+Client version 3 is unknown
+Client accepted version 1
+Using protocol version 1
+Client requested method 2
+Received text: Sample text for send text

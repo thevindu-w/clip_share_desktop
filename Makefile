@@ -130,10 +130,15 @@ $(SRC_DIR)/res/win/app_.rc: $(SRC_DIR)/res/win/app.rc $(VERSION_FILE)
 $(DIRS):
 	mkdir -p $@
 
-.PHONY: clean debug
+.PHONY: clean debug test check
 
 debug: $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
 	$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
+
+test: $(PROGRAM_NAME)
+	@chmod +x tests/run.sh && cd tests && ./run.sh $(PROGRAM_NAME)
+
+check: test
 
 clean:
 	$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES) $(SRC_DIR)/res/win/app_.rc
