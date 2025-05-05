@@ -27,7 +27,7 @@ jobs:
     - name: Install tools
       run: |
         echo "set man-db/auto-update false" | sudo debconf-communicate && sudo dpkg-reconfigure man-db -f noninteractive
-        sudo apt-get update && sudo apt-get install -y --no-install-recommends cpplint yamllint clang-format
+        sudo apt-get update && sudo apt-get install -y --no-install-recommends cpplint shfmt yamllint clang-format
 
     - name: Set environment
       run: |
@@ -43,11 +43,16 @@ jobs:
         cpplint --linelength=120 --filter=-runtime/int,-runtime/arrays,-readability/casting,-legal/copyright \
         --extensions=c,h,m,cc,hh,cpp,hpp,c++,h++,cxx,hxx --root=src --exclude='build/' --recursive .
 
-    - name: Format C code
+    - name: Check shell script style
+      if: ${{ success() || failure() }}
+      run: find . -type f -name '*.sh' -print0 | xargs -0 shfmt -d -s -i 4 -ci
+
+    - name: Format C code and bash scripts
       if: ${{ (env.EVENT == 'push') && (success() || failure()) }}
       run: |
         find . -type f \( -name '*.c' -o -name '*.h' -o -name '*.m' \) -print0 | \
         xargs -0 clang-format -i --Wno-error=unknown
+        find . -type f -name '*.sh' -print0 | xargs -0 shfmt -w -s -i 4 -ci
 
     - name: Creat pull request
       if: ${{ (env.EVENT == 'push') && (success() || failure()) }}
