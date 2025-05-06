@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# Allow
+!/Makefile
+!/src
+!/tests
+!/docker/*.sh
