@@ -237,11 +237,7 @@ int xclip_util(int io, const char *atom_name, uint32_t *len_ptr, char **buf_ptr)
     if (exit_code != EXIT_SUCCESS || len >= 0xFFFFFFFFUL || !*buf_ptr) {
         exit_code = EXIT_FAILURE;
     }
-    if ((exit_code != EXIT_SUCCESS) ||
-        (atom_name && !strcmp(atom_name, "image/png") &&
-         (len < 8 || memcmp(*buf_ptr, "\x89PNG\r\n\x1a\n", 8))) ||  // invalid png
-        (atom_name && !strcmp(atom_name, "image/jpeg") &&
-         (len < 3 || memcmp(*buf_ptr, "\xff\xd8\xff", 3)))) {  // invalid jpeg
+    if (exit_code != EXIT_SUCCESS) {
         *len_ptr = 0;
         exit_code = EXIT_FAILURE;
     }
