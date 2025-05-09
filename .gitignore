@@ -9,7 +9,7 @@ src/res/**/*_.*
 /*.conf
 TODO
 dist/
-build*
+/build*
 .vscode/
 .trash/
 .DS_Store
