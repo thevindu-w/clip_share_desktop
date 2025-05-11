@@ -1,0 +1,12 @@
+* text=auto
+
+*.ico -merge -text
+*.png -merge -text
+
+*.[pP][sS]1 text eol=crlf
+*.[cC][mM][dD] text eol=crlf
+*.[bB][aA][tT] text eol=crlf
+*.[iI][cC][sS] text eol=crlf
+
+*.sh text eol=lf
+*.html text eol=lf
