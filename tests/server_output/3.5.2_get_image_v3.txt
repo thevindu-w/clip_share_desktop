@@ -1,0 +1,4 @@
+Client version 3 is supported
+Using protocol version 3
+Client requested method 5
+Sent screenshot image
