@@ -5,14 +5,38 @@ on:
   push:
     branches:
     - master
+    paths:
+    - 'src/**'
+    - '!src/res/**'
+    - 'src/res/**/*.c'
+    - 'src/res/**/*.h'
+    - 'tests/**'
+    - 'Makefile'
+    - 'docker/*'
+    - '.github/workflows/build-test.yml'
   pull_request:
     branches:
     - master
+  workflow_call:
+    inputs:
+      trigger:
+        type: string
+        required: false
+        default: workflow_call
 
 jobs:
+  Style-Check:
+    uses: ./.github/workflows/check-style.yml
+    with:
+      trigger: "${{ inputs.trigger || github.event_name }}"
+    permissions:
+      contents: write
+      pull-requests: write
+
   Test-on-Linux:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: Style-Check
 
     strategy:
       matrix:
@@ -20,6 +44,9 @@ jobs:
         - ubuntu
         - fedora
         - arch
+        exclude:
+        - distro: ${{ (github.event_name == 'push') && (inputs.trigger != 'workflow_call') && 'fedora' }}
+        - distro: ${{ (github.event_name == 'push') && (inputs.trigger != 'workflow_call') && 'arch' }}
 
     steps:
     - name: Check out repository code

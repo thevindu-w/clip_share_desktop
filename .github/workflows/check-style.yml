@@ -5,9 +5,19 @@ on:
   push:
     branches:
     - master
-  pull_request:
-    branches:
-    - master
+    paths:
+    - 'docker/release/**'
+    - 'helper_tools/**'
+    - '.github/**'
+    - '!.github/workflows/resources/*'
+    - '!.github/workflows/build-test.yml'
+    - '.clang-format'
+    - '.yamllint'
+  workflow_call:
+    inputs:
+      trigger:
+        type: string
+        required: false
 
 jobs:
   Style-Check:
