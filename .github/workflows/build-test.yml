@@ -59,3 +59,61 @@ jobs:
 
     - name: Test
       run: docker run clipshare
+
+  Test-on-Windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    needs: Style-Check
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: false
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-libunistring
+          make
+          python
+          diffutils
+          sed
+          vim
+          unzip
+
+    - name: Set libmicrohttpd path
+      run: |
+        LIBMICROHTTPD_PATH=/c/msys64/libmicrohttpd-x86_64
+        echo LIBMICROHTTPD_PATH="$LIBMICROHTTPD_PATH" >> "$GITHUB_ENV"
+        echo CPATH="${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+        echo LIBRARY_PATH="${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+
+    - name: Setup libmicrohttpd
+      id: cache-libmicrohttpd
+      uses: actions/cache@v4
+      with:
+        path: C:\msys64\libmicrohttpd-x86_64
+        key: libmicrohttpd-windows-x86_64
+
+    - name: Download libmicrohttpd
+      if: ${{ steps.cache-libmicrohttpd.outputs.cache-hit != 'true' }}
+      run: |
+        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip
+        unzip libmicrohttpd-latest-w32-bin.zip
+        mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/mingw64 "$LIBMICROHTTPD_PATH"
+        rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
+
+    - name: Check out repository code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Build
+      run: make
+
+    - name: Test
+      run: make test
