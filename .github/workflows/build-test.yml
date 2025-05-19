@@ -117,3 +117,69 @@ jobs:
 
     - name: Test
       run: make test
+
+  Test-on-macOS:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    needs: Style-Check
+
+    strategy:
+      matrix:
+        os:
+        - macos-latest
+        - macos-13
+        exclude:
+        - os: ${{ (github.event_name == 'push') && (inputs.trigger != 'workflow_call') && 'macos-13' }}
+
+    steps:
+    - name: Install build dependencies
+      run: |
+        brew install libunistring coreutils gnu-sed
+        echo "$(brew --prefix coreutils)"'/libexec/gnubin' >> $GITHUB_PATH
+        echo "$(brew --prefix gnu-sed)"'/libexec/gnubin' >> $GITHUB_PATH
+
+    - name: Set libmicrohttpd path
+      run: |
+        ARCH_SUFFIX="$(uname -a | grep -q x86_64 && echo x86_64 || echo arm64)"
+        LIBMICROHTTPD_PATH=~/libmicrohttpd-$ARCH_SUFFIX
+        echo ARCH_SUFFIX="$ARCH_SUFFIX" >> "$GITHUB_ENV"
+        echo LIBMICROHTTPD_PATH="$LIBMICROHTTPD_PATH" >> "$GITHUB_ENV"
+        echo CPATH="${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+        echo LIBRARY_PATH="${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+
+    - name: Setup libmicrohttpd
+      id: cache-libmicrohttpd
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.LIBMICROHTTPD_PATH }}
+        key: libmicrohttpd-macos-${{ env.ARCH_SUFFIX }}
+
+    - name: Build libmicrohttpd
+      if: ${{ steps.cache-libmicrohttpd.outputs.cache-hit != 'true' }}
+      run: |
+        mkdir libmicrohttpd
+        cd libmicrohttpd
+        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz
+        tar -xzf libmicrohttpd-latest.tar.gz
+        rm libmicrohttpd-latest.tar.gz
+        cd libmicrohttpd*
+        mkdir "$LIBMICROHTTPD_PATH"
+        ./configure --without-gnutls --prefix="$LIBMICROHTTPD_PATH"
+        make -j4
+        make install
+        rm "${LIBMICROHTTPD_PATH}"/lib/libmicrohttpd*.dylib # avoid dynamic linking
+        cd ../..
+        rm -r libmicrohttpd
+
+    - name: Check out repository code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Build
+      run: make
+
+    - name: Test
+      run: |
+        export TERM=xterm-256color
+        make test
