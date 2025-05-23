@@ -1,0 +1,366 @@
+name: Create-Release
+run-name: Create Release ${{github.ref_name}}
+
+on:
+  push:
+    tags:
+    - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  Checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set version
+      run: |
+        echo VERSION="$(echo '${{github.ref_name}}' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')" >> $GITHUB_ENV
+
+    - name: Check resources version
+      run: |
+        cd src/res
+        major="$(grep MAJOR version | grep -oE '[0-9]+')"
+        minor="$(grep MINOR version | grep -oE '[0-9]+')"
+        patch="$(grep PATCH version | grep -oE '[0-9]+')"
+        test "${major}.${minor}.${patch}" = "${{env.VERSION}}"
+
+    - name: Check release_notes.md version
+      run: |
+        for v in $(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' .github/workflows/resources/release_notes.md); do \
+        grep -qF "${{env.VERSION}}" <<<"$v"; \
+        done
+
+  Build-and-Test:
+    uses: ./.github/workflows/build-test.yml
+    permissions:
+      contents: write
+      pull-requests: write
+      security-events: write
+    needs: Checks
+
+  Linux-x86_64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+    - Checks
+    - Build-and-Test
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set version
+      run: |
+        version="$(echo '${{github.ref_name}}' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+        archive="clip_share_client-${version}-linux-x86_64"
+        echo ARCHIVE_NAME_NO_EXT="${archive}" >> $GITHUB_ENV
+        echo ARCHIVE_NAME="${archive}.tar.gz" >> $GITHUB_ENV
+
+    - name: Build on Ubuntu 18
+      run: |
+        docker buildx build -t clipshare:ubuntu18 -f docker/release/Dockerfile \
+        --build-arg 'DISTRO=ubuntu' --build-arg 'VERSION=bionic' .
+
+    - name: Build on Ubuntu 20
+      run: |
+        docker buildx build -t clipshare:ubuntu20 -f docker/release/Dockerfile \
+        --build-arg 'DISTRO=ubuntu' --build-arg 'VERSION=focal' .
+
+    - name: Build on Ubuntu 22
+      run: |
+        docker buildx build -t clipshare:ubuntu22 -f docker/release/Dockerfile \
+        --build-arg 'DISTRO=ubuntu' --build-arg 'VERSION=jammy' .
+
+    - name: Build on Ubuntu 24
+      run: |
+        docker buildx build -t clipshare:ubuntu24 -f docker/release/Dockerfile \
+        --build-arg 'DISTRO=ubuntu' --build-arg 'VERSION=noble' .
+
+    - name: Build on Arch Linux
+      run: docker buildx build -t clipshare:arch -f docker/release/Dockerfile --build-arg 'DISTRO=arch' .
+
+    - name: Build on Fedora
+      run: docker buildx build -t clipshare:fedora -f docker/release/Dockerfile --build-arg 'DISTRO=arch' .
+
+    - name: Copy binaries
+      run: |
+        mkdir dist
+        chmod 777 dist
+        docker run -v './dist:/home/user/src/dist' clipshare:ubuntu18
+        docker run -v './dist:/home/user/src/dist' clipshare:ubuntu20
+        docker run -v './dist:/home/user/src/dist' clipshare:ubuntu22
+        docker run -v './dist:/home/user/src/dist' clipshare:ubuntu24
+        docker run -v './dist:/home/user/src/dist' clipshare:arch
+        docker run -v './dist:/home/user/src/dist' clipshare:fedora
+        sudo chmod +x dist/*
+        cd dist
+        sha256sum -b * >SHA2-256SUM
+        cd ..
+        mv dist "${{env.ARCHIVE_NAME_NO_EXT}}"
+        tar -cf - --sort=name --owner=root:0 --group=root:0 --no-same-owner "${{env.ARCHIVE_NAME_NO_EXT}}" | \
+        gzip -9 >"${{env.ARCHIVE_NAME}}"
+
+    - name: Upload Linux version
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{env.ARCHIVE_NAME}}"
+        path: "${{env.ARCHIVE_NAME}}"
+        retention-days: 3
+        if-no-files-found: error
+        compression-level: 0
+
+  Windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    needs:
+    - Checks
+    - Build-and-Test
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: false
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-libunistring
+          sed
+          vim
+          make
+          zip
+          unzip
+
+    - name: Set variables
+      run: |
+        LIBMICROHTTPD_PATH=/c/msys64/libmicrohttpd-x86_64
+        echo LIBMICROHTTPD_PATH="$LIBMICROHTTPD_PATH" >> "$GITHUB_ENV"
+        echo CPATH="${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+        echo LIBRARY_PATH="${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        version="$(echo '${{github.ref_name}}' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+        echo VERSION="$version" >> $GITHUB_ENV
+        echo FILE_NAME="clip-share-client.exe" >> $GITHUB_ENV
+        suffix="${version}-windows-x86_64.zip"
+        echo ARCHIVE_NAME="clip_share_client-${suffix}" >> $GITHUB_ENV
+
+    - name: Setup libmicrohttpd
+      id: cache-libmicrohttpd
+      uses: actions/cache@v4
+      with:
+        path: C:\msys64\libmicrohttpd-x86_64
+        key: libmicrohttpd-windows-x86_64
+
+    - name: Download libmicrohttpd
+      if: ${{ steps.cache-libmicrohttpd.outputs.cache-hit != 'true' }}
+      run: |
+        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip
+        unzip libmicrohttpd-latest-w32-bin.zip
+        mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/mingw64 "$LIBMICROHTTPD_PATH"
+        rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
+
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Build
+      run: |
+        make
+        mkdir dist
+        mv clip-share-client*.exe "dist/${{env.FILE_NAME}}"
+        cd dist
+        zip -9 "../${{env.ARCHIVE_NAME}}" *
+
+    - name: Upload Windows version
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{env.ARCHIVE_NAME}}"
+        path: "${{env.ARCHIVE_NAME}}"
+        retention-days: 3
+        if-no-files-found: error
+        compression-level: 9
+
+  macOS:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    needs:
+    - Checks
+    - Build-and-Test
+
+    strategy:
+      matrix:
+        os:
+        - macos-latest
+        - macos-13
+
+    steps:
+    - name: Install build dependencies
+      run: |
+        brew install libunistring coreutils gnu-sed
+        echo "$(brew --prefix coreutils)"'/libexec/gnubin' >> $GITHUB_PATH
+        echo "$(brew --prefix gnu-sed)"'/libexec/gnubin' >> $GITHUB_PATH
+
+    - name: Set libmicrohttpd path
+      run: |
+        ARCH_SUFFIX="$(uname -a | grep -q x86_64 && echo x86_64 || echo arm64)"
+        LIBMICROHTTPD_PATH=~/libmicrohttpd-$ARCH_SUFFIX
+        echo ARCH_SUFFIX="$ARCH_SUFFIX" >> "$GITHUB_ENV"
+        echo LIBMICROHTTPD_PATH="$LIBMICROHTTPD_PATH" >> "$GITHUB_ENV"
+        echo CPATH="${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+        echo LIBRARY_PATH="${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+
+    - name: Setup libmicrohttpd
+      id: cache-libmicrohttpd
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.LIBMICROHTTPD_PATH }}
+        key: libmicrohttpd-macos-${{ env.ARCH_SUFFIX }}
+
+    - name: Build libmicrohttpd
+      if: ${{ steps.cache-libmicrohttpd.outputs.cache-hit != 'true' }}
+      run: |
+        mkdir libmicrohttpd
+        cd libmicrohttpd
+        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz
+        tar -xzf libmicrohttpd-latest.tar.gz
+        rm libmicrohttpd-latest.tar.gz
+        cd libmicrohttpd*
+        mkdir "$LIBMICROHTTPD_PATH"
+        ./configure --without-gnutls --prefix="$LIBMICROHTTPD_PATH"
+        make -j4
+        make install
+        rm "${LIBMICROHTTPD_PATH}"/lib/libmicrohttpd*.dylib # avoid dynamic linking
+        cd ../..
+        rm -r libmicrohttpd
+
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set version
+      run: |
+        arch_suffix="$(uname -a | grep -q x86_64 && echo x86_64 || echo arm64)"
+        filename="clip-share-client-${arch_suffix}"
+        echo FILE_NAME="$filename" >> $GITHUB_ENV
+
+    - name: Build
+      run: |
+        make
+        mv 'clip-share-client' "${{env.FILE_NAME}}"
+
+    - name: Upload macOS binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{env.FILE_NAME}}"
+        path: "${{env.FILE_NAME}}"
+        retention-days: 1
+        if-no-files-found: error
+        compression-level: 9
+
+  macOS-all:
+    needs: macOS
+    runs-on: macos-latest
+    timeout-minutes: 5
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set version
+      run: |
+        version="$(echo '${{github.ref_name}}' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+        archive_name="clip_share_client-${version}-macos.zip"
+        echo ARCHIVE_NAME="$archive_name" >> $GITHUB_ENV
+        echo FILE_INTEL="clip-share-client-x86_64" >> $GITHUB_ENV
+        echo FILE_ARM="clip-share-client-arm64" >> $GITHUB_ENV
+
+    - name: Download macOS x86_64 version
+      uses: actions/download-artifact@v4
+      with:
+        name: "${{env.FILE_INTEL}}"
+        path: "${{env.FILE_INTEL}}"
+
+    - name: Download macOS ARM64 version
+      uses: actions/download-artifact@v4
+      with:
+        name: "${{env.FILE_ARM}}"
+        path: "${{env.FILE_ARM}}"
+
+    - name: Archive
+      run: |
+        mkdir dist
+        mv "${{env.FILE_INTEL}}/${{env.FILE_INTEL}}" "${{env.FILE_ARM}}/${{env.FILE_ARM}}" dist/
+        chmod +x dist/*
+        cd dist
+        rm -f .DS_Store
+        zip -9 "../${{env.ARCHIVE_NAME}}" *
+
+    - name: Upload macOS version
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{env.ARCHIVE_NAME}}"
+        path: "${{env.ARCHIVE_NAME}}"
+        retention-days: 3
+        if-no-files-found: error
+        compression-level: 0
+
+  Create-Release:
+    needs:
+    - Linux-x86_64
+    - Windows
+    - macOS-all
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set variables
+      run: |
+        version="$(echo '${{github.ref_name}}' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+        echo VERSION="$version" >> $GITHUB_ENV
+        echo TAG="v${version}" >> $GITHUB_ENV
+        echo TITLE="Version ${version}" >> $GITHUB_ENV
+        echo FILE_LINUX_AMD64="clip_share_client-${version}-linux-x86_64.tar.gz" >> $GITHUB_ENV
+        echo FILE_WINDOWS64="clip_share_client-${version}-windows-x86_64.zip" >> $GITHUB_ENV
+        echo FILE_MACOS="clip_share_client-${version}-macos.zip" >> $GITHUB_ENV
+
+    - name: Download builds
+      uses: actions/download-artifact@v4
+      with:
+        pattern: clip_share_client-*
+        path: ${{ github.workspace }}
+        merge-multiple: true
+
+    - name: Prepare assets
+      run: |
+        mkdir release
+        mv "${{env.FILE_LINUX_AMD64}}" "${{env.FILE_WINDOWS64}}" "${{env.FILE_MACOS}}" release/
+        mv .github/workflows/resources/clipshare-desktop.conf release/
+        cd release
+        sha256sum -b * >SHA2-256SUM
+
+    - name: Generate artifact attestation
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: "release/SHA2-256SUM"
+
+    - name: Create release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        sed -i "s/<VERSION>/${{env.VERSION}}/g" .github/workflows/resources/release_notes.md
+        sed -i "s/<FILE_LINUX_AMD64>/${{env.FILE_LINUX_AMD64}}/g" .github/workflows/resources/release_notes.md
+        sed -i "s/<FILE_MACOS>/${{env.FILE_MACOS}}/g" .github/workflows/resources/release_notes.md
+        cd release
+        gh release create "${{env.TAG}}" --latest --verify-tag \
+        --notes-file ../.github/workflows/resources/release_notes.md \
+        --title "${{env.TITLE}}" *
