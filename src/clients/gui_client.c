@@ -68,7 +68,7 @@ static void callback_fn(unsigned int status, const char *msg, size_t len, status
     MHD_destroy_response(response);
 }
 
-static void handle_method(struct MHD_Connection *connection, const char *address, uint8_t method) {
+static void handle_method(struct MHD_Connection *connection, const char *address, uint8_t method, MethodArgs *args) {
     status_callback_params params = {.called = 0, .connection = connection};
     uint32_t server_addr;
     if (ipv4_aton(address, &server_addr) != EXIT_SUCCESS) {
@@ -82,7 +82,7 @@ static void handle_method(struct MHD_Connection *connection, const char *address
         return;
     }
     StatusCallback callback = {.function = &callback_fn, .params = &params};
-    handle_proto(&sock, method, &callback);
+    handle_proto(&sock, method, args, &callback);
     close_socket_no_wait(&sock);
     callback_fn(RESP_LOCAL_ERROR, NULL, 0, &params);
 }
@@ -162,19 +162,19 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_BAD_REQUEST;
         } else if (!strcmp(url, "/get/text")) {
-            handle_method(connection, query.server, METHOD_GET_TEXT);
+            handle_method(connection, query.server, METHOD_GET_TEXT, NULL);
             handled = 1;
         } else if (!strcmp(url, "/get/file")) {
-            handle_method(connection, query.server, METHOD_GET_FILE);
+            handle_method(connection, query.server, METHOD_GET_FILE, NULL);
             handled = 1;
         } else if (!strcmp(url, "/get/image")) {
-            handle_method(connection, query.server, METHOD_GET_IMAGE);
+            handle_method(connection, query.server, METHOD_GET_IMAGE, NULL);
             handled = 1;
         } else if (!strcmp(url, "/send/text")) {
-            handle_method(connection, query.server, METHOD_SEND_TEXT);
+            handle_method(connection, query.server, METHOD_SEND_TEXT, NULL);
             handled = 1;
         } else if (!strcmp(url, "/send/file")) {
-            handle_method(connection, query.server, METHOD_SEND_FILE);
+            handle_method(connection, query.server, METHOD_SEND_FILE, NULL);
             handled = 1;
         } else {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);

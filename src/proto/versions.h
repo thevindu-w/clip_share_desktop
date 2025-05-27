@@ -44,7 +44,7 @@ extern int version_2(socket_t *socket, uint8_t method, StatusCallback *callback)
  * Accepts a socket connection and method code after the protocol version 3 is selected after the negotiation phase.
  * Negotiate the method code with the server and pass the control to the respective method handler.
  */
-extern int version_3(socket_t *socket, uint8_t method, StatusCallback *callback);
+extern int version_3(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallback *callback);
 #endif
 
 #endif  // PROTO_VERSIONS_H_

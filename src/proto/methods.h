@@ -47,7 +47,7 @@ extern int send_files_v2(socket_t *socket, StatusCallback *callback);
 extern int get_files_v3(socket_t *socket, StatusCallback *callback);
 extern int send_files_v3(socket_t *socket, StatusCallback *callback);
 extern int get_copied_image_v3(socket_t *socket, StatusCallback *callback);
-extern int get_screenshot_v3(socket_t *socket, StatusCallback *callback);
+extern int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callback);
 #endif
 
 #endif  // PROTO_METHODS_H_

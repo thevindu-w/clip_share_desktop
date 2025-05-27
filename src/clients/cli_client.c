@@ -36,21 +36,21 @@
 #define COMMAND_GET_COPIED_IMAGE 6
 #define COMMAND_GET_SCREENSHOT 7
 
-static int _invoke_method(uint32_t server_addr, unsigned char method) {
+static int _invoke_method(uint32_t server_addr, unsigned char method, MethodArgs *args) {
     socket_t sock;
     connect_server(server_addr, configuration.app_port, &sock);
     if (IS_NULL_SOCK(sock.type)) {
         puts("Couldn't connect");
         return EXIT_FAILURE;
     }
-    int ret = handle_proto(&sock, method, NULL);
+    int ret = handle_proto(&sock, method, args, NULL);
     close_socket_no_wait(&sock);
     return ret;
 }
 
 static inline void _get_text(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_GET_TEXT) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_TEXT, NULL) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
@@ -59,7 +59,7 @@ static inline void _get_text(uint32_t server_addr) {
 
 static inline void _send_text(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_SEND_TEXT) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_SEND_TEXT, NULL) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
@@ -68,7 +68,7 @@ static inline void _send_text(uint32_t server_addr) {
 
 static inline void _get_files(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_GET_FILE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_FILE, NULL) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
@@ -77,7 +77,7 @@ static inline void _get_files(uint32_t server_addr) {
 
 static inline void _send_files(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_SEND_FILE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_SEND_FILE, NULL) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
@@ -86,7 +86,7 @@ static inline void _send_files(uint32_t server_addr) {
 
 static inline void _get_image(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_GET_IMAGE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_IMAGE, NULL) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
@@ -95,16 +95,16 @@ static inline void _get_image(uint32_t server_addr) {
 
 static inline void _get_copied_image(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_GET_COPIED_IMAGE) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_COPIED_IMAGE, NULL) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Get copied image %s\n", msg_suffix);
 }
 
-static inline void _get_screenshot(uint32_t server_addr) {
+static inline void _get_screenshot(uint32_t server_addr, MethodArgs *args) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_GET_SCREENSHOT) == EXIT_SUCCESS)
+    if (_invoke_method(server_addr, METHOD_GET_SCREENSHOT, args) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
@@ -114,7 +114,7 @@ static inline void _get_screenshot(uint32_t server_addr) {
 /*
  * Parse command line arguments and set corresponding variables
  */
-static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_t *server_addr_p) {
+static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_t *server_addr_p, MethodArgs *args) {
     char cmd[4];
     strncpy(cmd, argv[0], 3);
     cmd[3] = 0;
@@ -148,13 +148,26 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_
     if (ipv4_aton(argv[1], server_addr_p) != EXIT_SUCCESS) {
         fprintf(stderr, "Invalid server address %s\n\n", argv[1]);
         *command_p = 0;
+        return;
+    }
+    if (argc < 3) return;
+    if (*command_p == COMMAND_GET_SCREENSHOT && argv[2] && argv[2][0]) {
+        char *end_ptr = NULL;
+        unsigned long long disp64 = strtoull(argv[2], &end_ptr, 10);
+        if (!end_ptr || *end_ptr || disp64 >= 65536) {
+            fprintf(stderr, "Invalid display value %s\n\n", argv[2]);
+            *command_p = 0;
+            return;
+        }
+        args->display = (uint16_t)disp64;
     }
 }
 
 void cli_client(int argc, char **argv, const char *prog_name) {
     int8_t command;
     uint32_t server_addr;
-    _parse_args(argc, argv, &command, &server_addr);
+    MethodArgs args = {.display = 0};
+    _parse_args(argc, argv, &command, &server_addr, &args);
 
     switch (command) {
         case COMMAND_SCAN: {
@@ -186,7 +199,7 @@ void cli_client(int argc, char **argv, const char *prog_name) {
             break;
         }
         case COMMAND_GET_SCREENSHOT: {
-            _get_screenshot(server_addr);
+            _get_screenshot(server_addr, &args);
             break;
         }
         default: {

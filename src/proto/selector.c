@@ -30,7 +30,7 @@
 #define PROTOCOL_OBSOLETE 2
 #define PROTOCOL_UNKNOWN 3
 
-int handle_proto(socket_t *socket, uint8_t method, StatusCallback *callback) {
+int handle_proto(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallback *callback) {
     const uint16_t min_version = configuration.min_proto_version;
     const uint16_t max_version = configuration.max_proto_version;
     uint8_t version = (uint8_t)max_version;
@@ -110,7 +110,7 @@ int handle_proto(socket_t *socket, uint8_t method, StatusCallback *callback) {
 #endif
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
         case 3: {
-            return version_3(socket, method, callback);
+            return version_3(socket, method, args, callback);
             break;
         }
 #endif
@@ -121,4 +121,7 @@ int handle_proto(socket_t *socket, uint8_t method, StatusCallback *callback) {
         }
             return EXIT_FAILURE;
     }
+#if (PROTOCOL_MIN > 3) || (3 > PROTOCOL_MAX)
+    (void)args;
+#endif
 }

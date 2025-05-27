@@ -33,11 +33,15 @@
 #define METHOD_GET_SCREENSHOT 7
 #define METHOD_INFO 125
 
+typedef union {
+    uint16_t display;
+} MethodArgs;
+
 /*
  * Runs the protocol client after the socket connection is established.
  * Accepts a socket, negotiates the protocol version, and passes the control
  * to the respective version handler.
  */
-extern int handle_proto(socket_t *socket, uint8_t method, StatusCallback *callback);
+extern int handle_proto(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallback *callback);
 
 #endif  // PROTO_SELECTOR_H_

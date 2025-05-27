@@ -164,7 +164,7 @@ int version_2(socket_t *socket, uint8_t method, StatusCallback *callback) {
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
 
-int version_3(socket_t *socket, uint8_t method, StatusCallback *callback) {
+int version_3(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -206,7 +206,8 @@ int version_3(socket_t *socket, uint8_t method, StatusCallback *callback) {
             return get_copied_image_v3(socket, callback);
         }
         case METHOD_GET_SCREENSHOT: {
-            return get_screenshot_v3(socket, callback);
+            uint16_t display = args->display;
+            return get_screenshot_v3(socket, display, callback);
         }
         case METHOD_INFO: {
             return info_v1(socket);

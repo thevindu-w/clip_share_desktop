@@ -53,8 +53,8 @@ static inline void _wappend(list2 *lst, const wchar_t *wstr);
 #endif
 
 void print_usage(const char *prog_name) {
-    fprintf(stderr, "Usage: %s [OPTION]\n", prog_name);
-    fprintf(stderr, "  or:  %s COMMAND <server-address-ipv4>\n", prog_name);
+    fprintf(stderr, "\nUsage: %s [OPTION]\n", prog_name);
+    fprintf(stderr, "  or:  %s -c COMMAND <server-address-ipv4> [optional args]\n", prog_name);
     fprintf(stderr,
             "Options available:\n"
             "\t-h : Display this help list\n"
@@ -70,15 +70,17 @@ void print_usage(const char *prog_name) {
             "\tfs : Send copied files\n"
             "\ti  : Get image\n"
             "\tic : Get copied image\n"
-            "\tis : Get screenshot\n");
+            "\tis : Get screenshot - Display number can be used as an optional arg.\n");
     fprintf(stderr,
             "\nExample: %s -c g 192.168.21.42\n"
             "\tThis command gets copied text from the device having IP address 192.168.21.42\n"
+            "\nExample: %s -c is 192.168.21.42 1\n"
+            "\tThis command gets a screenshot of screen number 1 from the device having IP address 192.168.21.42\n"
             "\nExample: %s -c sc\n"
             "\tThis command scans and outputs the IP addresses of available servers.\n"
             "\nExample: %s -h\n"
             "\tThis command scans and outputs the IP addresses of available servers.\n\n",
-            prog_name, prog_name, prog_name);
+            prog_name, prog_name, prog_name, prog_name);
 }
 
 int snprintf_check(char *dest, size_t size, const char *fmt, ...) {

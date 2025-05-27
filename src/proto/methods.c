@@ -633,8 +633,8 @@ int get_files_v2(socket_t *socket, StatusCallback *callback) { return _get_files
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
 int get_copied_image_v3(socket_t *socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
 
-int get_screenshot_v3(socket_t *socket, StatusCallback *callback) {
-    if (send_size(socket, 0) != EXIT_SUCCESS) {  // TODO(thevindu-w): let user select the display number
+int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callback) {
+    if (send_size(socket, (int32_t)display) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
