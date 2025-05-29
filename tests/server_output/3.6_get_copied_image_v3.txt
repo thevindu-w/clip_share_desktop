@@ -1,0 +1,4 @@
+Client version 3 is supported
+Using protocol version 3
+Client requested method 6
+Sent copied image

@@ -67,6 +67,7 @@ def read_data(sock: socket.socket) -> bytes:
 def handle_get_text(sock: socket.socket) -> None:
     if COPIED_TEXT == None:
         sock.sendall(STATUS_NO_DATA)
+        print("No copied text")
         return
     sock.sendall(STATUS_OK)
     data = COPIED_TEXT.encode('utf-8')
@@ -98,10 +99,30 @@ def handle_send_file(sock: socket.socket):
     sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
 
 def handle_get_copied_image(sock: socket.socket) -> None:
-    sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
+    if IMAGE != 'copied':
+        sock.sendall(STATUS_NO_DATA)
+        print("No copied image")
+        return
+    sock.sendall(STATUS_OK)
+    img_file = os.path.join(SERVER_DIR, '../files/image.png')
+    with open(img_file, 'rb') as img:
+        data = img.read()
+    send_data(sock, data)
+    print('Sent copied image')
 
 def handle_get_screenshot(sock: socket.socket) -> None:
-    sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
+    sock.sendall(STATUS_OK)
+    disp = read_int(sock)
+    if disp not in (0, 1):
+        sock.sendall(STATUS_NO_DATA)
+        print(f"Not existing display: {disp}")
+        return
+    sock.sendall(STATUS_OK)
+    img_file = os.path.join(SERVER_DIR, '../files/screen.png')
+    with open(img_file, 'rb') as img:
+        data = img.read()
+    send_data(sock, data)
+    print(f'Sent screenshot of display {disp}')
 
 def handle_info(sock: socket.socket) -> None:
     sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
