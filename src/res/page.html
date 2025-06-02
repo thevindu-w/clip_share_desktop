@@ -37,7 +37,7 @@
 
         .header label {
             flex: 0.22;
-            font-size: 21px;
+            font-size: 16pt;
             text-align: right;
             margin-right: 5px;
         }
@@ -47,7 +47,7 @@
             height: 100%;
             padding-left: 4px;
             margin-right: 15px;
-            font-size: 18px;
+            font-size: 14pt;
             border-radius: 10px;
             border-style: ridge;
         }
@@ -57,16 +57,22 @@
             height: 100%;
             background-color: #5555FF;
             color: white;
-            font-size: 18px;
+            font-size: 14pt;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        .header label {
+            margin-right: 10px;
+            font-weight: bolder;
+            color: #666;
         }
 
         .output {
             flex: 1;
             margin: 12px 10px 0;
             padding: 10px;
-            font-size: 14px;
+            font-size: 10pt;
             white-space: pre-wrap;
             overflow-y: auto;
             line-height: 1.5;
@@ -77,6 +83,7 @@
 
         button {
             border-radius: 10px;
+            text-align: center;
         }
 
         .btn-row {
@@ -88,7 +95,7 @@
 
         .btn-row button {
             height: 100%;
-            font-size: 20px;
+            font-size: 15pt;
             font-weight: bold;
             color: white;
             cursor: pointer;
@@ -104,15 +111,104 @@
             background-color: green;
         }
 
+        .btn-row .split-btn {
+            background-color: green;
+            border: none;
+            border-radius: 10px;
+            font-size: 0;
+            display: flex;
+        }
+
+        .btn-row .split-btn button {
+            background-color: green;
+        }
+
+        .btn-row .split-btn button:nth-child(1) {
+            flex: 1;
+            border-right: none;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-right: 0;
+        }
+
+        .btn-row .split-btn button:nth-child(2) {
+            border-left: 1px solid lightgray;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            margin-left: 0;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            font-size: 16pt;
+        }
+
         .bottom-row {
             margin-top: 6px;
             margin-bottom: 18px;
         }
 
-        #server-label {
+        #overlay {
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-color: #4449;
+            padding-bottom: 10vh;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #popup {
+            background-color: white;
+            padding: 2%;
+            border-radius: 10px;
+        }
+
+        #popup div.display {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #popup div.display label {
             margin-right: 10px;
-            font-weight: bolder;
-            color: #666;
+            font-size: 14pt;
+            font-weight: bold;
+            color: black;
+        }
+
+        #popup div.display input {
+            font-size: 13pt;
+            padding: 3px;
+        }
+
+        #popup div.buttons {
+            margin: 0;
+            padding: 0;
+            margin-top: 5%;
+            white-space: nowrap;
+            font-size: 2em;
+        }
+
+        #popup div.buttons button {
+            width: 10em;
+            color: white;
+            font-size: 14pt;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 3%;
+            white-space: nowrap;
+        }
+
+        #popup div.buttons button.copied-img {
+            background-color: #5A0;
+        }
+
+        #popup div.buttons button.screenshot {
+            background-color: #087;
         }
     </style>
 </head>
@@ -120,7 +216,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <label id="server-label" for="server">SERVER</label>
+            <label for="server">SERVER</label>
             <input type="text" id="server" placeholder="192.168.1.2">
             <button onclick="onScan()">SCAN</button>
         </div>
@@ -135,13 +231,32 @@
 
         <div class="btn-row bottom-row">
             <button class="btn-get" onclick="onGetTxt()">GET TEXT</button>
-            <button class="btn-get" onclick="onGetImg()">GET IMAGE</button>
+            <div class="split-btn btn-get">
+                <button onclick="onGetImg()">GET IMAGE</button>
+                <button onclick="onGetImgOptions()">&#9650</button>
+            </div>
             <button class="btn-get" onclick="onGetFile()">GET FILE</button>
         </div>
     </div>
+    <div id="overlay">
+        <div id="popup">
+            <div class="display">
+                <label for="server">Display</label>
+                <input type="number" id="display" placeholder="1" min="0" max="65535">
+            </div>
+            <div class="buttons">
+                <button class="copied-img" onclick="onGetCopiedImg()">Copied Image</button>
+                <button class="screenshot" onclick="onGetScreenshot()">Screenshot</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const serverInput = document.getElementById('server');
         const outputTxt = document.getElementById('output');
+        const overlay = document.getElementById('overlay');
+        const popup = document.getElementById('popup');
+        const displayInput = document.getElementById('display');
 
         function getStateChangeFn(xhr, successMsgPrefix, failureMsg) {
             return function () {
@@ -176,14 +291,18 @@
             };
         };
 
-        function sendRequest(path) {
+        function sendRequest(path, additionalParams = {}) {
             const server = serverInput.value;
             if (!/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/.test(server)) {
                 alert('Invalid server address');
                 return null;
             }
             const xhr = new XMLHttpRequest();
-            xhr.open("POST", path + '?server=' + serverInput.value, true);
+            const queryList = ['server=' + encodeURI(server)];
+            for (const [key, value] of Object.entries(additionalParams)) {
+                queryList.push(encodeURI(key) + '=' + encodeURI(value));
+            }
+            xhr.open("POST", path + '?' + queryList.join('&'), true);
             xhr.send();
             return xhr;
         }
@@ -196,6 +315,37 @@
         function onGetImg() {
             const xhr = sendRequest('/get/image');
             if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Saved image to ', { no_data: 'No image copied!', general: 'Get image failed!' });
+        }
+
+        function onGetCopiedImg() {
+            const xhr = sendRequest('/get/copied-image');
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Saved image to ', { no_data: 'No image copied!', general: 'Get image failed!' });
+            overlay.click();
+        }
+
+        function getDisplay() {
+            const displayStr = displayInput.value;
+            if (isNaN(displayStr)) return -1;
+            const display = parseFloat(displayStr);
+            if (isNaN(display)) return -1;
+            if (!Number.isInteger(display)) return -1;
+            if (display < 0 || display >= 65536) return -1;
+            return display;
+        }
+
+        function onGetScreenshot() {
+            const display = getDisplay();
+            if (display === -1) {
+                alert('Invalid display value');
+                return;
+            }
+            const xhr = sendRequest('/get/screenshot', { display });
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Saved image to ', { no_data: 'Invalid display!', general: 'Get image failed!' });
+            overlay.click();
+        }
+
+        function onGetImgOptions() {
+            overlay.style.display = 'flex';
         }
 
         function onGetFile() {
@@ -233,6 +383,15 @@
                     alert("Scan failed");
                 }
             }
+        }
+
+        overlay.onclick = function (e) {
+            overlay.style.display = 'none';
+            e.stopPropagation();
+        }
+
+        popup.onclick = function (e) {
+            e.stopPropagation();
         }
     </script>
 </body>

@@ -47,6 +47,7 @@ static const char *CONTENT_TYPE_HTML = "text/html";
 
 typedef struct _get_query_params {
     char *server;
+    uint16_t display;
 } get_query_params;
 
 #ifdef MHD_YES
@@ -131,6 +132,14 @@ static MHD_Result_t extract_query_params(void *cls, enum MHD_ValueKind kind, con
 #endif
     if (!strcmp(key, "server") && strnlen(value, 17) < 16) {
         query->server = strdup(value);
+    } else if (!strcmp(key, "display") && value && *value && strnlen(value, 7) < 6) {
+        char *end_ptr = NULL;
+        unsigned long long disp64 = strtoull(value, &end_ptr, 10);
+        if (end_ptr && !*end_ptr && disp64 < 65536) query->display = (uint16_t)disp64;
+#ifdef DEBUG_MODE
+        else
+            printf("Invalid display %s\n", value);
+#endif
     }
     return MHD_YES;
 }
@@ -152,7 +161,7 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
         response = MHD_create_response_from_buffer(page_html_len, (void *)page_html, MHD_RESPMEM_PERSISTENT);
         MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_HTML);
     } else if (!strcmp(method, MHD_HTTP_METHOD_POST)) {
-        get_query_params query = {.server = NULL};
+        get_query_params query = {.server = NULL, .display = 0};
         MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, extract_query_params, &query);
         char handled = 0;
         if (!strcmp(url, "/scan")) {
@@ -169,6 +178,13 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             handled = 1;
         } else if (!strcmp(url, "/get/image")) {
             handle_method(connection, query.server, METHOD_GET_IMAGE, NULL);
+            handled = 1;
+        } else if (!strcmp(url, "/get/copied-image")) {
+            handle_method(connection, query.server, METHOD_GET_COPIED_IMAGE, NULL);
+            handled = 1;
+        } else if (!strcmp(url, "/get/screenshot")) {
+            MethodArgs args = {.display = query.display};
+            handle_method(connection, query.server, METHOD_GET_SCREENSHOT, &args);
             handled = 1;
         } else if (!strcmp(url, "/send/text")) {
             handle_method(connection, query.server, METHOD_SEND_TEXT, NULL);
