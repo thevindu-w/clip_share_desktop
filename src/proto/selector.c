@@ -90,7 +90,7 @@ int handle_proto(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallb
 
         default: {
             error("Server sent invalid protocol version status");
-            if (callback) callback->function(RESP_PROTO_VERSION_MISMATCH, NULL, 0, callback->params);
+            if (callback) callback->function(RESP_SERVER_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }

@@ -47,7 +47,7 @@ static const char *CONTENT_TYPE_HTML = "text/html";
 
 typedef struct _get_query_params {
     char *server;
-    uint16_t display;
+    int32_t display;
 } get_query_params;
 
 #ifdef MHD_YES
@@ -135,11 +135,14 @@ static MHD_Result_t extract_query_params(void *cls, enum MHD_ValueKind kind, con
     } else if (!strcmp(key, "display") && value && *value && strnlen(value, 7) < 6) {
         char *end_ptr = NULL;
         unsigned long long disp64 = strtoull(value, &end_ptr, 10);
-        if (end_ptr && !*end_ptr && disp64 < 65536) query->display = (uint16_t)disp64;
+        if (end_ptr && !*end_ptr && disp64 < 65536) {
+            query->display = (int32_t)disp64;
+        } else {
+            query->display = -1;
 #ifdef DEBUG_MODE
-        else
             printf("Invalid display %s\n", value);
 #endif
+        }
     }
     return MHD_YES;
 }
@@ -167,7 +170,7 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
         if (!strcmp(url, "/scan")) {
             handle_scan(connection);
             handled = 1;
-        } else if (!query.server) {
+        } else if (!query.server || query.display < 0) {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_BAD_REQUEST;
         } else if (!strcmp(url, "/get/text")) {
@@ -183,7 +186,7 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             handle_method(connection, query.server, METHOD_GET_COPIED_IMAGE, NULL);
             handled = 1;
         } else if (!strcmp(url, "/get/screenshot")) {
-            MethodArgs args = {.display = query.display};
+            MethodArgs args = {.display = (uint16_t)query.display};
             handle_method(connection, query.server, METHOD_GET_SCREENSHOT, &args);
             handled = 1;
         } else if (!strcmp(url, "/send/text")) {

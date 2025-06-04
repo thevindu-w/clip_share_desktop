@@ -54,12 +54,12 @@ static inline int method_request(socket_t *socket, uint8_t method, StatusCallbac
 
         case STATUS_METHOD_NOT_IMPLEMENTED:
         case STATUS_UNKNOWN_METHOD: {
-            if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
+            if (callback) callback->function(RESP_METHOD_NOT_ALLOWED, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
 
         default: {
-            if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+            if (callback) callback->function(RESP_SERVER_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }
@@ -156,6 +156,7 @@ int version_2(socket_t *socket, uint8_t method, StatusCallback *callback) {
             return info_v1(socket);
         }
         default: {  // unknown method
+            if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }
@@ -213,6 +214,7 @@ int version_3(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallback
             return info_v1(socket);
         }
         default: {  // unknown method
+            if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
             return EXIT_FAILURE;
         }
     }

@@ -23,15 +23,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define RESP_OK MHD_HTTP_OK
-#define RESP_NO_DATA MHD_HTTP_NOT_FOUND
-#define RESP_PROTO_METHOD_ERROR MHD_HTTP_BAD_GATEWAY
-#define RESP_PROTO_VERSION_MISMATCH MHD_HTTP_BAD_GATEWAY
-#define RESP_DATA_ERROR MHD_HTTP_BAD_GATEWAY
-#define RESP_COMMUNICATION_FAILURE MHD_HTTP_GATEWAY_TIMEOUT
-#define RESP_CONNECTION_FAILURE MHD_HTTP_SERVICE_UNAVAILABLE
-#define RESP_INVALID_ADDRESS MHD_HTTP_BAD_REQUEST
-#define RESP_LOCAL_ERROR MHD_HTTP_INTERNAL_SERVER_ERROR
+#define RESP_OK MHD_HTTP_OK                                   // Method action is successfully completed
+#define RESP_NO_DATA MHD_HTTP_NOT_FOUND                       // Requested data is not available on the server
+#define RESP_DATA_ERROR MHD_HTTP_BAD_GATEWAY                  // Received data is not acceptable
+#define RESP_METHOD_NOT_ALLOWED MHD_HTTP_FORBIDDEN            // Server doesn't allow this method
+#define RESP_PROTO_METHOD_ERROR MHD_HTTP_BAD_REQUEST          // Method code is not valid for the server
+#define RESP_PROTO_VERSION_MISMATCH MHD_HTTP_BAD_GATEWAY      // Could not agree on a protocol version with the server
+#define RESP_SERVER_ERROR MHD_HTTP_BAD_GATEWAY                // Server response is invalid
+#define RESP_COMMUNICATION_FAILURE MHD_HTTP_GATEWAY_TIMEOUT   // Error occurred while communicating with the server
+#define RESP_CONNECTION_FAILURE MHD_HTTP_SERVICE_UNAVAILABLE  // Connecting to the server failed
+#define RESP_INVALID_ADDRESS MHD_HTTP_BAD_REQUEST             // Server address (format) is invalid
+#define RESP_LOCAL_ERROR MHD_HTTP_INTERNAL_SERVER_ERROR       // Desktop client (bridge) ran into an error
 
 typedef struct _status_callback_params {
     int8_t called;
