@@ -113,7 +113,7 @@ int send_text_v1(socket_t *socket, StatusCallback *callback) {
     }
 #endif
     int64_t new_len = convert_eol(&buf, 1);
-    if (new_len <= 0) {
+    if (new_len <= 0 || !buf) {
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
@@ -144,11 +144,11 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
     }
 
     char *data = malloc((size_t)length + 1);
-    if (read_sock(socket, data, (uint64_t)length) != EXIT_SUCCESS) {
+    if (!data || read_sock(socket, data, (uint64_t)length) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
         fputs("Read data failed\n", stderr);
 #endif
-        free(data);
+        if (data) free(data);
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
@@ -166,7 +166,7 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
 #endif
     if (callback) callback->function(RESP_OK, data, (size_t)length, callback->params);
     length = convert_eol(&data, 0);
-    if (length <= 0) return EXIT_FAILURE;
+    if (length <= 0 || !data) return EXIT_FAILURE;
     close_socket_no_wait(socket);
     put_clipboard_text(data, (uint32_t)length);
     free(data);
@@ -289,7 +289,6 @@ static int _transfer_single_file(int version, socket_t *socket, const char *file
 static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len,
                               StatusCallback *callback) {
     if (!file_list || file_list->len == 0 || file_list->len >= 0xFFFFFFFFUL) {
-        if (file_list) free_list(file_list);
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
@@ -316,11 +315,9 @@ static int _send_files_common(int version, socket_t *socket, list2 *file_list, s
 #ifdef DEBUG_MODE
             puts("Transfer failed");
 #endif
-            free_list(file_list);
             return EXIT_FAILURE;
         }
     }
-    free_list(file_list);
     if (callback) callback->function(RESP_OK, NULL, 0, callback->params);
     close_socket(socket);
     return EXIT_SUCCESS;
@@ -416,7 +413,9 @@ static inline int _get_base_name(char *file_name, size_t name_length) {
 
 int send_file_v1(socket_t *socket, StatusCallback *callback) {
     list2 *file_list = get_copied_files();
-    return _send_files_common(1, socket, file_list, 0, callback);
+    int ret = _send_files_common(1, socket, file_list, 0, callback);
+    if (file_list) free_list(file_list);
+    return ret;
 }
 
 int get_files_v1(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(1, socket, callback); }
@@ -624,7 +623,9 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
 int send_files_v2(socket_t *socket, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 0);
-    return _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
+    int ret = _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
+    if (copied_dir_files.lst) free_list(copied_dir_files.lst);
+    return ret;
 }
 
 int get_files_v2(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(2, socket, callback); }
@@ -656,7 +657,9 @@ int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callba
 int send_files_v3(socket_t *socket, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 1);
-    return _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
+    int ret = _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
+    if (copied_dir_files.lst) free_list(copied_dir_files.lst);
+    return ret;
 }
 
 int get_files_v3(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(3, socket, callback); }

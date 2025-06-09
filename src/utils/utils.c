@@ -177,6 +177,15 @@ int file_exists(const char *file_name) {
     return f_ok == 0;
 }
 
+void *realloc_or_free(void *ptr, size_t size) {
+    void *tmp = realloc(ptr, size);
+    if (!tmp) {
+        if (ptr) free(ptr);
+        error("realloc failed");
+    }
+    return tmp;
+}
+
 int64_t get_file_size(FILE *fp) {
     struct stat statbuf;
     if (fstat(fileno(fp), &statbuf)) {
@@ -227,9 +236,9 @@ int is_directory(const char *path, int follow_symlinks) {
 /*
  * Allocate the required capacity for the string with EOL=CRLF including the terminating '\0'.
  * Assign the realloced string to *str_p and the length after conversion to *len_p without the terminating '\0'.
- * Returns 0 if all \n are preceded by \r (i.e. no conversion needed).
+ * Returns 0 if all LF are preceded by CR (i.e. no conversion needed).
  * Returns 1 if conversion is needed and it will increase the length.
- * Returns -1 if realloc failed.
+ * Returns -1 if realloc failed, and free() the *str_p.
  */
 static inline int _realloc_for_crlf(char **str_p, uint64_t *len_p) {
     char *str = *str_p;
@@ -251,13 +260,8 @@ static inline int _realloc_for_crlf(char **str_p, uint64_t *len_p) {
         error("realloc size too large");
         return -1;
     }
-    char *re_str = realloc(str, req_len + 1);  // +1 for terminating '\0'
-    if (!re_str) {
-        free(str);
-        error("realloc failed");
-        return -1;
-    }
-    *str_p = re_str;
+    *str_p = realloc_or_free(str, req_len + 1);  // +1 for terminating '\0'
+    if (!*str_p) return -1;
     *len_p = req_len;
     return 1;
 }
@@ -294,16 +298,15 @@ static inline int64_t _convert_to_lf(char *str) {
 }
 
 int64_t convert_eol(char **str_p, int force_lf) {
-    int crlf;
-#if defined(__linux__) || defined(__APPLE__)
-    crlf = 0;
-#elif defined(_WIN32)
-    crlf = 1;
+    int crlf = 0;
+#ifdef _WIN32
+    if (!force_lf) crlf = 1;
+#else
+    (void)force_lf;
 #endif
-    if (force_lf) crlf = 0;
-    // realloc if available capacity is not enough
     if (crlf) {
-        uint64_t new_len;
+        size_t new_len;
+        // realloc if available capacity is not enough
         int status = _realloc_for_crlf(str_p, &new_len);
         if (status == 0) return (int64_t)new_len;  // no conversion needed
         if (status < 0 || !*str_p) return -1;      // realloc failed
@@ -895,14 +898,13 @@ char *get_copied_files_as_str(int *offset) {
             break;
         }
     }
+    free(targets);
     if (!found) {
 #ifdef DEBUG_MODE
         puts("No copied files");
 #endif
-        free(targets);
         return NULL;
     }
-    free(targets);
 
     char *fnames;
     uint32_t fname_len;
@@ -995,7 +997,7 @@ char *getcwd_wrapper(int len) {
         return NULL;
     }
     free(wcwd);
-    if ((int)alloc_len < len) utf8path = realloc(utf8path, (size_t)len);
+    if ((int)alloc_len < len) utf8path = realloc_or_free(utf8path, (size_t)len);
     return utf8path;
 }
 
