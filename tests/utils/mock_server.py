@@ -9,9 +9,10 @@ BIND_ADDR = '127.0.0.1'
 PORT = 4337
 DISABLED_METHODS = []
 COPIED_TEXT = None
+FILES_COPIED = False
 IMAGE = None
 
-options, _ = getopt.getopt(sys.argv[1:], "", ['proto-min=', 'proto-max=', 'bind=', 'port=', 'disabled-methods=', 'text=', 'image='])
+options, _ = getopt.getopt(sys.argv[1:], "", ['proto-min=', 'proto-max=', 'bind=', 'port=', 'disabled-methods=', 'text=', 'image=', 'files='])
 for opt, arg in options:
     arg = arg.strip()
     if opt in ('--proto-min'):
@@ -28,8 +29,10 @@ for opt, arg in options:
         COPIED_TEXT = arg
     elif opt in ('--image'):
         IMAGE = arg
+    elif opt in ('--files'):
+        FILES_COPIED = True
 
-SERVER_DIR = os.path.dirname(__file__)
+FILES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'files'))
 
 PROTO_OK = b'\x01'
 PROTO_OBSOLETE = b'\x02'
@@ -64,6 +67,18 @@ def read_data(sock: socket.socket) -> bytes:
     assert len(data) == size
     return data
 
+def send_file(sock: socket.socket, path: str) -> None:
+    path = os.path.relpath(path, '.')
+    print(f'Sending {path}')
+    send_data(sock, path.encode('utf-8'))
+    if os.path.isdir(path):
+        send_int(sock, (2**64)-1)
+        print('Sent dir')
+        return
+    with open(path, 'rb') as f:
+        send_data(sock, f.read())
+    print('Sent file')
+
 def handle_get_text(sock: socket.socket) -> None:
     if COPIED_TEXT == None:
         sock.sendall(STATUS_NO_DATA)
@@ -86,14 +101,37 @@ def handle_get_image(sock: socket.socket) -> None:
         img_file = 'image.png'
     else:
         img_file = 'screen.png'
-    img_file = os.path.join(SERVER_DIR, '../files', img_file)
+    img_file = os.path.join(FILES_DIR, img_file)
     with open(img_file, 'rb') as img:
         data = img.read()
     send_data(sock, data)
     print(f'Sent {IMAGE} image')
 
-def handle_get_file(sock: socket.socket) -> None:
-    sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
+def handle_get_file(sock: socket.socket, version: int) -> None:
+    if not FILES_COPIED:
+        sock.sendall(STATUS_NO_DATA)
+        print("No copied files")
+        return
+    sock.sendall(STATUS_OK)
+    if version == 1:
+        path = 'files_v1'
+    elif version == 2:
+        path = 'files_v2'
+    elif version == 3:
+        path = 'files_v3'
+    os.chdir(os.path.join(FILES_DIR, path))
+    file_cnt = 0
+    for _, dirs, files in os.walk('.'):
+        file_cnt += len(files)
+        if version == 3 and len(files) == 0 and len(dirs) == 0:
+            file_cnt += 1
+    print(f'Sending {file_cnt} files')
+    send_int(sock, file_cnt)
+    for root, dirs, files in os.walk('.'):
+        for f in files:
+            send_file(sock, os.path.join(root, f))
+        if version == 3 and len(files) == 0 and len(dirs) == 0:
+            send_file(sock, root)
 
 def handle_send_file(sock: socket.socket):
     sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
@@ -104,7 +142,7 @@ def handle_get_copied_image(sock: socket.socket) -> None:
         print("No copied image")
         return
     sock.sendall(STATUS_OK)
-    img_file = os.path.join(SERVER_DIR, '../files/image.png')
+    img_file = os.path.join(FILES_DIR, 'image.png')
     with open(img_file, 'rb') as img:
         data = img.read()
     send_data(sock, data)
@@ -118,7 +156,7 @@ def handle_get_screenshot(sock: socket.socket) -> None:
         print(f"Not existing display: {disp}")
         return
     sock.sendall(STATUS_OK)
-    img_file = os.path.join(SERVER_DIR, '../files/screen.png')
+    img_file = os.path.join(FILES_DIR, 'screen.png')
     with open(img_file, 'rb') as img:
         data = img.read()
     send_data(sock, data)

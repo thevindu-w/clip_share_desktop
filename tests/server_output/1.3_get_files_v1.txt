@@ -1,0 +1,9 @@
+Client version 3 is unknown
+Client accepted version 1
+Using protocol version 1
+Client requested method 3
+Sending 2 files
+Sending file.txt
+Sent file
+Sending test.txt
+Sent file
