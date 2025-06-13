@@ -122,12 +122,16 @@ def handle_get_file(sock: socket.socket, version: int) -> None:
     os.chdir(os.path.join(FILES_DIR, path))
     file_cnt = 0
     for _, dirs, files in os.walk('.'):
+        files = list(filter(lambda f: f[0] != '.', files))
         file_cnt += len(files)
         if version == 3 and len(files) == 0 and len(dirs) == 0:
             file_cnt += 1
     print(f'Sending {file_cnt} files')
     send_int(sock, file_cnt)
     for root, dirs, files in os.walk('.'):
+        files = list(filter(lambda f: f[0] != '.', files))
+        files.sort()
+        dirs.sort()
         for f in files:
             send_file(sock, os.path.join(root, f))
         if version == 3 and len(files) == 0 and len(dirs) == 0:
