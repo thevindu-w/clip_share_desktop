@@ -26,6 +26,7 @@ typedef struct _config {
     uint16_t app_port;
     uint16_t web_port;
     char *working_dir;
+    uint32_t bind_addr;
     uint32_t max_text_length;
     int64_t max_file_size;
     uint16_t min_proto_version;

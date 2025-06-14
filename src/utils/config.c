@@ -23,6 +23,12 @@
 #include <utils/net_utils.h>
 #include <utils/utils.h>
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <arpa/inet.h>
+#elif defined(_WIN32)
+#include <winsock2.h>
+#endif
+
 #define LINE_MAX_LEN 2047
 
 /*
@@ -200,6 +206,12 @@ static void parse_line(char *line, config *cfg) {
     } else if (!strcmp("working_dir", key)) {
         if (cfg->working_dir) free(cfg->working_dir);
         cfg->working_dir = strdup(value);
+    } else if (!strcmp("bind_address", key)) {
+        if (ipv4_aton(value, &(cfg->bind_addr)) != EXIT_SUCCESS) {
+            char msg[64];
+            snprintf_check(msg, 64, "Error: Invalid bind address %s", value);
+            error_exit(msg);
+        }
     } else if (!strcmp("max_text_length", key)) {
         set_uint32(value, &(cfg->max_text_length));
     } else if (!strcmp("max_file_size", key)) {
@@ -230,6 +242,7 @@ void parse_conf(config *cfg, const char *file_name) {
 #ifdef _WIN32
     cfg->tray_icon = -1;
 #endif
+    cfg->bind_addr = htonl(INADDR_LOOPBACK);
 
     if (!file_name) {
 #ifdef DEBUG_MODE
