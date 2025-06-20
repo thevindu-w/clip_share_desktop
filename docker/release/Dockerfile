@@ -31,7 +31,7 @@ WORKDIR "$HOME/src"
 
 # Copy the source files
 COPY Makefile ./
-COPY ./src src
+COPY --chown=user ./src src
 
 # Build
 RUN make clean && make
