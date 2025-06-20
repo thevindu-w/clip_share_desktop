@@ -26,7 +26,6 @@ MAX_PROTO=3
 
 CC=gcc
 CPP=cpp
-SED=sed
 CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
@@ -66,7 +65,6 @@ export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
 	LDLIBS=-framework AppKit -lmicrohttpd -lunistring -lobjc
-	SED=gsed
 else
 $(error ClipShare is not supported on this platform!)
 endif
@@ -96,7 +94,7 @@ DEBUG_OBJS_BIN=$(OBJS_BIN:.o=_debug.o)
 DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_BIN)
 
 OBJS=$(OBJS_C) $(OBJS_M) $(OBJS_BIN)
-ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
+ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS) $(OTHER_DEPENDENCIES) $(OBJS_BIN:$(BUILD_DIR)/%.o=$(SRC_DIR)/%_.c)
 DIRS=$(foreach file,$(ALL_DEPENDENCIES),$(dir $(file)))
 DIRS:=$(sort $(DIRS))
 
@@ -108,20 +106,20 @@ $(ALL_DEPENDENCIES): %: | $$(dir %)
 
 $(OBJS_C): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 $(OBJS_M): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.m
-$(OBJS_BIN): $(BUILD_DIR)/%.o: $(BUILD_DIR)/%_.c
+$(OBJS_BIN): $(BUILD_DIR)/%.o: $(SRC_DIR)/%_.c
 $(OBJS):
 	$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $^ -o $@
 
 $(DEBUG_OBJS_C): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%.c
-$(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: $(BUILD_DIR)/%_.c
+$(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%_.c
 $(DEBUG_OBJS):
 	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $^ -o $@
 
-$(BUILD_DIR)/res/page_.c: $(SRC_DIR)/res/page.html | $(BUILD_DIR)/res/
-	xxd -i $< >$@
-	$(SED) -i 's/[a-zA-Z_]*res_//g' $@
+$(SRC_DIR)/res/page_.c: $(SRC_DIR)/res/page.html
+	cd $(dir $<) && \
+	xxd -i $(notdir $<) >$(notdir $@)
 
-$(BUILD_DIR)/res/win/app.coff: $(SRC_DIR)/res/win/app_.rc $(SRC_DIR)/res/win/resource.h | $(BUILD_DIR)/res/win/
+$(BUILD_DIR)/res/win/app.coff: $(SRC_DIR)/res/win/app_.rc $(SRC_DIR)/res/win/resource.h
 	windres -I$(SRC_DIR) $< -O coff -o $@
 
 $(SRC_DIR)/res/win/app_.rc: $(SRC_DIR)/res/win/app.rc $(VERSION_FILE)

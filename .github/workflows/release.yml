@@ -131,7 +131,6 @@ jobs:
         install: >-
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-libunistring
-          sed
           vim
           make
           zip
