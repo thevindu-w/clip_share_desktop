@@ -121,7 +121,7 @@ static inline void _set_error_log_file(const char *path) {
  * Change working directory to the directory specified in the configuration
  */
 static inline void _change_working_dir(void) {
-    if (!is_directory(configuration.working_dir, 1)) {
+    if (is_directory(configuration.working_dir, 1) != 1) {
         char err[3072];
         snprintf_check(err, 3072, "Error: Not existing working directory \'%s\'", configuration.working_dir);
         fprintf(stderr, "%s\n", err);

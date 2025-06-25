@@ -207,10 +207,10 @@ int64_t get_file_size(FILE *fp) {
 }
 
 int is_directory(const char *path, int follow_symlinks) {
-    if (path[0] == 0) return 0;  // empty path
-    struct stat sb;
+    if (path[0] == 0) return -1;  // empty path
     int stat_result;
 #if defined(__linux__) || defined(__APPLE__)
+    struct stat sb;
     if (follow_symlinks) {
         stat_result = stat(path, &sb);
     } else {
@@ -218,6 +218,7 @@ int is_directory(const char *path, int follow_symlinks) {
     }
 #elif defined(_WIN32)
     (void)follow_symlinks;
+    struct _stat64 sb;
     wchar_t *wpath;
     if (utf8_to_wchar_str(path, &wpath, NULL) != EXIT_SUCCESS) return -1;
     stat_result = _wstat64(wpath, &sb);
@@ -230,7 +231,7 @@ int is_directory(const char *path, int follow_symlinks) {
             return 0;
         }
     }
-    return 0;
+    return -1;
 }
 
 #ifdef _WIN32
@@ -441,7 +442,7 @@ list2 *get_copied_files(void) {
  */
 static int _mkdir_check(const char *path) {
     if (file_exists(path)) {
-        if (!is_directory(path, 0)) return EXIT_FAILURE;
+        if (is_directory(path, 0) != 1) return EXIT_FAILURE;
     } else {
         int status;  // success=0 and failure=non-zero
 #if defined(__linux__) || defined(__APPLE__)
@@ -469,7 +470,7 @@ int mkdirs(const char *dir_path) {
     if (dir_path[0] != '.') return EXIT_FAILURE;  // path must be relative and start with .
 
     if (file_exists(dir_path)) {
-        if (is_directory(dir_path, 0))
+        if (is_directory(dir_path, 0) == 1)
             return EXIT_SUCCESS;
         else
             return EXIT_FAILURE;
@@ -694,7 +695,7 @@ static void _process_path(const wchar_t *path, list2 *lst, int depth, int includ
 static void _recurse_dir(const wchar_t *_path, list2 *lst, int depth, int include_leaf_dirs);
 
 static void _process_path(const wchar_t *path, list2 *lst, int depth, int include_leaf_dirs) {
-    struct stat sb;
+    struct _stat64 sb;
     if (_wstat64(path, &sb) != 0) return;
     if (S_ISDIR(sb.st_mode)) {
         _recurse_dir(path, lst, depth + 1, include_leaf_dirs);
