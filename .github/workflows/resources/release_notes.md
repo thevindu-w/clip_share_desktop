@@ -10,6 +10,9 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
   - For Intel-based Mac, use `clip-share-client-x86_64`.
 
 **Changes:**
-- Add tray icon to Windows
-- Bug fixes
-- Code quality improvements.
+- Enable selecting display to get screenshots.
+- Add new options in version 3 to web interface.
+- Add config option to change bind address of web interface.
+- Add ~/.config/ to the configuration file search path on Linux and macOS.
+- Fix potential bugs.
+- Code improvements.
