@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>
@@ -422,9 +423,9 @@ int get_files_v1(socket_t *socket, StatusCallback *callback) { return _get_files
 #endif
 
 static inline int _save_image_common(socket_t *socket, StatusCallback *callback) {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    uint64_t millis = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000L;
+    struct timeval ts;
+    gettimeofday(&ts, NULL);
+    uint64_t millis = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_usec / 1000L;
     char file_name[40];
     if (snprintf_check(file_name, sizeof(file_name), "%" PRIx64 ".png", millis)) return EXIT_FAILURE;
     int status = _save_file_common(1, socket, file_name, callback);
