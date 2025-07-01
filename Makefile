@@ -14,7 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-MAKEFLAGS += -j4
+MAKEFLAGS+= -j4 --warn-undefined-variables --no-builtin-rules
+
+SHELL:=/bin/bash
+.SHELLFLAGS:=-eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
 
 PROGRAM_NAME=clip-share-client
 
@@ -99,7 +104,8 @@ DIRS=$(foreach file,$(ALL_DEPENDENCIES),$(dir $(file)))
 DIRS:=$(sort $(DIRS))
 
 $(PROGRAM_NAME): $(OBJS) $(OTHER_DEPENDENCIES)
-	$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS) -o $@
+	@echo CCLD $$'\t' $@
+	@$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS) -o $@
 
 .SECONDEXPANSION:
 $(ALL_DEPENDENCIES): %: | $$(dir %)
@@ -108,22 +114,27 @@ $(OBJS_C): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 $(OBJS_M): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.m
 $(OBJS_BIN): $(BUILD_DIR)/%.o: $(SRC_DIR)/%_.c
 $(OBJS):
-	$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $^ -o $@
+	@echo CC $$'\t' $@
+	@$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $< -o $@
 
 $(DEBUG_OBJS_C): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%.c
 $(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%_.c
 $(DEBUG_OBJS):
-	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $^ -o $@
+	@echo CC $$'\t' $@
+	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $< -o $@
 
 $(SRC_DIR)/res/page_.c: $(SRC_DIR)/res/page.html
-	cd $(dir $<) && \
+	@echo generate $$'\t' $@
+	@cd $(dir $@) && \
 	xxd -i $(notdir $<) >$(notdir $@)
 
 $(BUILD_DIR)/res/win/app.coff: $(SRC_DIR)/res/win/app_.rc $(SRC_DIR)/res/win/resource.h
-	windres -I$(SRC_DIR) $< -O coff -o $@
+	@echo windres $$'\t' $@
+	@windres -I$(SRC_DIR) $< -O coff -o $@
 
 $(SRC_DIR)/res/win/app_.rc: $(SRC_DIR)/res/win/app.rc $(VERSION_FILE)
-	$(CPP) -I$(SRC_DIR) -P -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) -DVERSION_PATCH=$(VERSION_PATCH) -DVERSION=\"$(VERSION)\" $< -o $@
+	@echo CPP $$'\t' $@
+	@$(CPP) -I$(SRC_DIR) -P -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) -DVERSION_PATCH=$(VERSION_PATCH) -DVERSION=\"$(VERSION)\" $< -o $@
 
 $(DIRS):
 	mkdir -p $@
@@ -131,7 +142,8 @@ $(DIRS):
 .PHONY: clean debug test check
 
 debug: $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
-	$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
+	@echo CCLD $$'\t' $@
+	@$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
 
 test: $(PROGRAM_NAME)
 	@chmod +x tests/run.sh && cd tests && ./run.sh $(PROGRAM_NAME)
@@ -139,5 +151,6 @@ test: $(PROGRAM_NAME)
 check: test
 
 clean:
-	$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES) $(SRC_DIR)/res/win/app_.rc
-	$(RM) $(PROGRAM_NAME)
+	@echo RM
+	@$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES) $(SRC_DIR)/res/win/app_.rc
+	@$(RM) $(PROGRAM_NAME)
