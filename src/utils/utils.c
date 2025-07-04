@@ -230,6 +230,7 @@ int is_directory(const char *path, int follow_symlinks) {
         stat_result = lstat(path, &sb);
     }
 #elif defined(_WIN32)
+    struct _stat64 sb;
     (void)follow_symlinks;
     struct _stat64 sb;
     wchar_t *wpath;

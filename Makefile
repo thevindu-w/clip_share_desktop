@@ -47,6 +47,8 @@ else
     detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
 endif
 
+ARCH?=x86_64
+
 ifeq ($(detected_OS),Linux)
 	OBJS_C+= xclip/xclip.o xclip/xclib.o
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
@@ -54,12 +56,18 @@ ifeq ($(detected_OS),Linux)
 	LDLIBS=-lmicrohttpd -lunistring -lX11 -lXmu -lXt
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
-	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
-	CFLAGS+= -D__USE_MINGW_ANSI_STDIO
+	CFLAGS+= -Wformat-signedness
 	CFLAGS_OPTIM=-O3
 	OTHER_DEPENDENCIES+= res/win/app.coff
 	LDLIBS=-l:libmicrohttpd.a -l:libunistring.a -lws2_32 -lgdi32 -lUserenv
-	LINK_FLAGS_BUILD=-no-pie
+	LINK_FLAGS_BUILD=
+	ifeq ($(ARCH),x86_64)
+		CC=clang
+	else
+		CFLAGS+= -ftree-vrp -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
+		CFLAGS+= -D__USE_MINGW_ANSI_STDIO
+		LINK_FLAGS_BUILD+= -no-pie
+	endif
 	PROGRAM_NAME:=$(PROGRAM_NAME).exe
 else ifeq ($(detected_OS),Darwin)
 export CPATH:=$(CPATH):$(shell brew --prefix)/include

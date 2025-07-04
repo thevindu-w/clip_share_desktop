@@ -46,7 +46,7 @@ extern void print_usage(const char *prog_name);
  * returns 0 otherwise
  */
 int snprintf_check(char *dest, size_t size, const char *fmt, ...)
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__clang__)
     __attribute__((__format__(gnu_printf, 3, 4)));
 #else
     __attribute__((__format__(printf, 3, 4)));
