@@ -40,6 +40,9 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <windows.h>
+#ifdef _WIN64
+#include <utils/win_load_lib.h>
+#endif
 #endif
 
 #define MAX_RECURSE_DEPTH 256
@@ -173,6 +176,9 @@ void cleanup(void) {
     if (_XA_UTF8_STRING) freeAtomPtr(_XA_UTF8_STRING);
 #elif defined(_WIN32)
     WSACleanup();
+#ifdef _WIN64
+    cleanup_libs();
+#endif
 #endif
 }
 
@@ -230,7 +236,6 @@ int is_directory(const char *path, int follow_symlinks) {
         stat_result = lstat(path, &sb);
     }
 #elif defined(_WIN32)
-    struct _stat64 sb;
     (void)follow_symlinks;
     struct _stat64 sb;
     wchar_t *wpath;
@@ -410,7 +415,7 @@ list2 *get_copied_files(void) {
         return NULL;
     }
 
-    size_t file_cnt = DragQueryFile(hDrop, (UINT)(-1), NULL, MAX_PATH);
+    size_t file_cnt = DragQueryFileW(hDrop, (UINT)(-1), NULL, MAX_PATH);
 
     if (file_cnt <= 0 || file_cnt >= 0xFFFFFFFFUL) {
         GlobalUnlock(hGlobal);
@@ -784,7 +789,7 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
         return;
     }
 
-    size_t file_cnt = DragQueryFile(hDrop, (UINT)(-1), NULL, MAX_PATH);
+    size_t file_cnt = DragQueryFileW(hDrop, (UINT)(-1), NULL, MAX_PATH);
 
     if (file_cnt <= 0 || file_cnt >= 0xFFFFFFFFUL) {
         GlobalUnlock(hGlobal);
