@@ -73,11 +73,11 @@ jobs:
     - name: Setup MSYS2
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: false
         install: >-
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-libunistring
+          mingw-w64-clang-x86_64-clang
+          mingw-w64-clang-x86_64-libunistring
           make
           python
           diffutils
@@ -104,7 +104,7 @@ jobs:
       run: |
         curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip
         unzip libmicrohttpd-latest-w32-bin.zip
-        mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/mingw64 "$LIBMICROHTTPD_PATH"
+        mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/clang64 "$LIBMICROHTTPD_PATH"
         rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
 
     - name: Check out repository code
