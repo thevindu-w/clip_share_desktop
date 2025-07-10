@@ -83,7 +83,7 @@ jobs:
       run: docker buildx build -t clipshare:arch -f docker/release/Dockerfile --build-arg 'DISTRO=arch' .
 
     - name: Build on Fedora
-      run: docker buildx build -t clipshare:fedora -f docker/release/Dockerfile --build-arg 'DISTRO=arch' .
+      run: docker buildx build -t clipshare:fedora -f docker/release/Dockerfile --build-arg 'DISTRO=fedora' .
 
     - name: Copy binaries
       run: |
