@@ -31,6 +31,7 @@
 #ifdef __linux__
 #include <pwd.h>
 #include <sys/wait.h>
+#include <utils/clipboard_listener.h>
 #elif defined(_WIN32)
 #include <res/win/resource.h>
 #include <userenv.h>
@@ -452,8 +453,15 @@ int main(int argc, char **argv) {
     } else if (argc == 1) {
         kill_other_processes(prog_name);
 #if defined(__linux__) || defined(__APPLE__)
-        if (fork() > 0) return EXIT_SUCCESS;
-        start_web();
+        if (fork() == 0) {
+            start_web();
+            return EXIT_SUCCESS;
+        }
+
+        if (fork() == 0) {
+            return start_clipboard_listener();
+        }
+
 #elif defined(_WIN32)
         // initialize instance and guid
         instance = GetModuleHandle(NULL);

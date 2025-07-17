@@ -32,10 +32,14 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#include <utils/clipboard_listener.h>
 #include <utils/utils.h>
 #ifdef __linux__
 #include <X11/Xmu/Atoms.h>
 #include <xclip/xclip.h>
+#endif
+#if defined(__linux__) || defined(__APPLE__)
+#include <fcntl.h>
 #endif
 #ifdef _WIN32
 #include <direct.h>
@@ -48,6 +52,9 @@
 #define MAX_RECURSE_DEPTH 256
 
 #if defined(__linux__) || defined(__APPLE__)
+
+#define TEMP_FILE "/tmp/clipshare-copied"
+
 static inline int8_t hex2char(char h);
 static int url_decode(char *, uint32_t *len_p);
 #elif defined(_WIN32)
@@ -162,6 +169,7 @@ void cleanup(void) {
 #ifdef DEBUG_MODE
     puts("Cleaning up resources before exit");
 #endif
+    cleanup_listener();
     if (error_log_file) {
         free(error_log_file);
         error_log_file = NULL;
@@ -837,6 +845,20 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
 
 #if defined(__linux__) || defined(__APPLE__)
 
+void create_temp_file(void) {
+    int fd = open(TEMP_FILE, O_CREAT, 0666);
+    close(fd);
+}
+
+int check_and_delete_temp_file(void) {
+    int exists = file_exists(TEMP_FILE);
+    if (!exists) {
+        return 0;
+    }
+    remove(TEMP_FILE);
+    return 1;
+}
+
 static inline int8_t hex2char(char h) {
     if ('0' <= h && h <= '9') return (int8_t)((int)h - '0');
     if ('A' <= h && h <= 'F') return (int8_t)((int)h - 'A' + 10);
@@ -894,6 +916,7 @@ int get_clipboard_text(char **buf_ptr, uint32_t *len_ptr) {
 
 int put_clipboard_text(char *data, uint32_t len) {
     if (fork() > 0) return EXIT_SUCCESS;  // prevent caller from hanging
+    create_temp_file();
     if (xclip_util(XCLIP_IN, NULL, &len, &data) != EXIT_SUCCESS) {
         if (data) free(data);
         error_exit("Failed to write to clipboard");

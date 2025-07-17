@@ -34,7 +34,7 @@ CPP=cpp
 CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 
-OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o
+OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o utils/clipboard_listener.o
 OBJS_BIN=res/page.o
 OBJS_M=
 
@@ -50,12 +50,13 @@ endif
 ARCH?=x86_64
 
 ifeq ($(detected_OS),Linux)
-	OBJS_C+= xclip/xclip.o xclip/xclib.o
+	OBJS_C+= utils/listener_linux.o xclip/xclip.o xclip/xclib.o
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS_OPTIM=-Os
-	LDLIBS=-lmicrohttpd -lunistring -lX11 -lXmu -lXt
+	LDLIBS=-lmicrohttpd -lunistring -lX11 -lXmu -lXt -lXfixes
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
+	OBJS_C+= utils/listener_windows.o
 	CFLAGS+= -Wformat-signedness
 	CFLAGS_OPTIM=-O3
 	OTHER_DEPENDENCIES+= res/win/app.coff
@@ -74,7 +75,7 @@ else ifeq ($(detected_OS),Windows)
 else ifeq ($(detected_OS),Darwin)
 export CPATH:=$(CPATH):$(shell brew --prefix)/include
 export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
-	OBJS_M=utils/mac_utils.o
+	OBJS_M= utils/listener_macos.o utils/mac_utils.o
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
 	CFLAGS+= -fobjc-arc
