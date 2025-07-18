@@ -3,7 +3,7 @@ ARG DISTRO
 FROM ubuntu:noble AS ubuntu_builder
 
 # Install build dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libunistring-dev libmicrohttpd-dev xxd
+RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev xxd
 
 # Install test dependencies
 RUN apt-get install --no-install-recommends -y xclip python3-minimal diffutils coreutils sed libpng16-16
@@ -16,7 +16,7 @@ RUN dpkg --force-depends -i ./*.deb 2>/dev/null && apt-get clean -y
 FROM fedora:42 AS fedora_builder
 
 # Install build dependencies
-RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libunistring-devel libmicrohttpd-devel xxd
+RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel xxd
 
 # Install test dependencies
 RUN dnf install --setopt=install_weak_deps=False -y xorg-x11-server-Xvfb xclip python3 diffutils coreutils sed libpng && dnf clean all
@@ -25,7 +25,7 @@ FROM archlinux:base AS arch_builder
 
 # Install build dependencies
 RUN pacman -Sy && \
-    pacman -S --needed --noconfirm gcc make glibc libx11 libxmu libunistring libmicrohttpd tinyxxd
+    pacman -S --needed --noconfirm gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd tinyxxd
 
 # Install test dependencies
 RUN pacman -S --needed --noconfirm coreutils diffutils python xclip sed libpng

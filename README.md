@@ -136,17 +136,17 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 
 * On Debian-based or Ubuntu-based distros,
   ```bash
-  sudo apt-get install libc6-dev libx11-dev libxmu-dev libunistring-dev libmicrohttpd-dev
+  sudo apt-get install libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev
   ```
 
 * On Redhat-based or Fedora-based distros,
   ```bash
-  sudo yum install glibc-devel libX11-devel libXmu-devel libunistring-devel libmicrohttpd-devel
+  sudo yum install glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel
   ```
 
 * On Arch-based distros,
   ```bash
-  sudo pacman -S libx11 libxmu libunistring libmicrohttpd
+  sudo pacman -S libx11 libxmu libxfixes libunistring libmicrohttpd
   ```
 
   glibc should already be available on Arch distros. But you may need to upgrade it with the following command. (You need to do this only if the build fails)

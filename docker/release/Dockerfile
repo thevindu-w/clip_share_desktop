@@ -5,19 +5,19 @@ FROM ubuntu:${VERSION} AS ubuntu_builder
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libunistring-dev libmicrohttpd-dev xxd && \
+    apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev xxd && \
     apt-get clean -y
 
 FROM fedora:42 AS fedora_builder
 
 # Install dependencies
-RUN dnf install --setopt=install_weak_deps=False -y coreutils gcc make glibc-devel libX11-devel libXmu-devel libunistring-devel libmicrohttpd-devel xxd
+RUN dnf install --setopt=install_weak_deps=False -y coreutils gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel xxd
 
 FROM archlinux:base AS arch_builder
 
 # Install dependencies
 RUN pacman -Sy && \
-    pacman -S --needed --noconfirm coreutils gcc make glibc libx11 libxmu libunistring libmicrohttpd tinyxxd
+    pacman -S --needed --noconfirm coreutils gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd tinyxxd
 
 # hadolint ignore=DL3006
 FROM ${DISTRO}_builder
