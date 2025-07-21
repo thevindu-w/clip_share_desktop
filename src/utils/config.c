@@ -57,7 +57,6 @@ static inline void trim(char *str) {
     }
 }
 
-#ifdef _WIN32
 /*
  * str must be a valid and null-terminated string
  * conf_ptr must be a valid pointer to a char
@@ -74,7 +73,6 @@ static inline void set_is_true(const char *str, int8_t *conf_ptr) {
         error_exit("Error: invalid boolean config value");
     }
 }
-#endif
 
 /*
  * str must be a valid and null-terminated string
@@ -220,6 +218,8 @@ static void parse_line(char *line, config *cfg) {
         set_uint16(value, &(cfg->min_proto_version));
     } else if (!strcmp("max_proto_version", key)) {
         set_uint16(value, &(cfg->max_proto_version));
+    } else if (!strcmp("auto_send_text", key)) {
+        set_is_true(value, &(cfg->auto_send_text));
 #ifdef _WIN32
     } else if (!strcmp("tray_icon", key)) {
         set_is_true(value, &(cfg->tray_icon));
@@ -239,6 +239,7 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->max_file_size = 0;
     cfg->min_proto_version = 0;
     cfg->max_proto_version = 0;
+    cfg->auto_send_text = -1;
 #ifdef _WIN32
     cfg->tray_icon = -1;
 #endif

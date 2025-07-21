@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <utils/clipboard_listener.h>
 #include <utils/kill_others.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>
@@ -31,7 +32,6 @@
 #ifdef __linux__
 #include <pwd.h>
 #include <sys/wait.h>
-#include <utils/clipboard_listener.h>
 #elif defined(_WIN32)
 #include <res/win/resource.h>
 #include <userenv.h>
@@ -168,6 +168,7 @@ static inline void _apply_default_conf(void) {
     if (configuration.max_proto_version < configuration.min_proto_version ||
         configuration.max_proto_version > PROTOCOL_MAX)
         configuration.max_proto_version = PROTOCOL_MAX;
+    if (configuration.auto_send_text < 0) configuration.auto_send_text = 0;
 #ifdef _WIN32
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
 #endif
@@ -458,8 +459,11 @@ int main(int argc, char **argv) {
             return EXIT_SUCCESS;
         }
 
-        if (fork() == 0) {
-            return start_clipboard_listener();
+        if (configuration.auto_send_text) {
+            // auto-send text when copied
+            if (fork() == 0) {
+                return start_clipboard_listener();
+            }
         }
 
 #elif defined(_WIN32)
