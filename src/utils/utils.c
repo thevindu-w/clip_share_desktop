@@ -24,6 +24,7 @@
 #endif
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <globals.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -37,9 +38,6 @@
 #ifdef __linux__
 #include <X11/Xmu/Atoms.h>
 #include <xclip/xclip.h>
-#endif
-#if defined(__linux__) || defined(__APPLE__)
-#include <fcntl.h>
 #endif
 #ifdef _WIN32
 #include <direct.h>
@@ -58,6 +56,8 @@
 static inline int8_t hex2char(char h);
 static int url_decode(char *, uint32_t *len_p);
 #elif defined(_WIN32)
+static wchar_t *temp_file = NULL;
+
 static int utf8_to_wchar_str(const char *utf8str, wchar_t **wstr_p, uint32_t *wlen_p);
 static inline void _wappend(list2 *lst, const wchar_t *wstr);
 #endif
@@ -185,6 +185,10 @@ void cleanup(void) {
 #elif defined(_WIN32)
     WSACleanup();
 #ifdef _WIN64
+    if (temp_file) {
+        free(temp_file);
+        temp_file = NULL;
+    }
     cleanup_libs();
 #endif
 #endif
@@ -979,6 +983,49 @@ char *get_copied_files_as_str(int *offset) {
 }
 
 #elif defined(_WIN32)
+static int set_temp_file(void) {
+    if (!temp_file) {
+        const char *tmp_dir = getenv("TEMP");
+        if (!tmp_dir) {
+#ifdef DEBUG_MODE
+            puts("getting TEMP failed");
+#endif
+            return EXIT_FAILURE;
+        }
+        char tmp_path[1024];
+        if (snprintf_check(tmp_path, sizeof(tmp_path), "%s%c%s", tmp_dir, PATH_SEP, "clipshare-copied")) {
+#ifdef DEBUG_MODE
+            puts("TEMP too long");
+#endif
+            return EXIT_FAILURE;
+        }
+        tmp_path[1023] = 0;
+        if ((utf8_to_wchar_str(tmp_path, &temp_file, NULL) != EXIT_SUCCESS) || !temp_file) {
+            return EXIT_FAILURE;
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
+void create_temp_file(void) {
+    if (set_temp_file() != EXIT_SUCCESS) {
+        return;
+    }
+    int fd = _wopen(temp_file, O_CREAT, _S_IWRITE);
+    close(fd);
+}
+
+int check_and_delete_temp_file(void) {
+    if (set_temp_file() != EXIT_SUCCESS) {
+        return 0;
+    }
+    int f_ok = _waccess(temp_file, F_OK);
+    if (f_ok != 0) {
+        return 0;
+    }
+    _wremove(temp_file);
+    return 1;
+}
 
 int rename_file(const char *old_name, const char *new_name) {
     wchar_t *wold;
@@ -1086,8 +1133,13 @@ static inline void _wappend(list2 *lst, const wchar_t *wstr) {
 }
 
 int get_clipboard_text(char **bufptr, uint32_t *lenptr) {
-    if (!OpenClipboard(0)) return EXIT_FAILURE;
-    if (!IsClipboardFormatAvailable(CF_TEXT)) {
+    if (!OpenClipboard(0)) {
+        Sleep(10);  // retry after a short delay
+        if (!OpenClipboard(0)) {
+            return EXIT_FAILURE;
+        }
+    }
+    if (!IsClipboardFormatAvailable(CF_UNICODETEXT)) {
         CloseClipboard();
         return EXIT_FAILURE;
     }
@@ -1129,6 +1181,7 @@ int put_clipboard_text(char *data, uint32_t len) {
     wcscpy_s(GlobalLock(hMem), (rsize_t)(wlen + 1), wstr);
     GlobalUnlock(hMem);
     free(wstr);
+    create_temp_file();
     EmptyClipboard();
     HANDLE res = SetClipboardData(CF_UNICODETEXT, hMem);
     CloseClipboard();

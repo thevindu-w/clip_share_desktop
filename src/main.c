@@ -189,6 +189,12 @@ static DWORD WINAPI webThreadFn(void *arg) {
     return EXIT_SUCCESS;
 }
 
+static DWORD WINAPI listenerThreadFn(void *arg) {
+    (void)arg;
+    start_clipboard_listener();
+    return EXIT_SUCCESS;
+}
+
 static inline void setGUID(void) {
     char file_path[2048];
     GetModuleFileName(NULL, (char *)file_path, 2048);
@@ -472,6 +478,10 @@ int main(int argc, char **argv) {
         setGUID();
 
         HANDLE webThread = CreateThread(NULL, 0, webThreadFn, NULL, 0, NULL);
+
+        if (configuration.auto_send_text) {
+            CreateThread(NULL, 0, listenerThreadFn, NULL, 0, NULL);
+        }
 
         if (configuration.tray_icon) {
             char CLASSNAME[] = "clipdesk";
