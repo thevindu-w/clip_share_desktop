@@ -18,14 +18,80 @@
 
 #ifdef __APPLE__
 
-#include <stdlib.h>
-#include <utils/clipboard_listener.h>
-#include <utils/utils.h>
+#import <Cocoa/Cocoa.h>
+#import <stdlib.h>
+#import <utils/clipboard_listener.h>
+#import <utils/utils.h>
+
+#if !__has_feature(objc_arc)
+#error This file must be compiled with ARC.
+#endif
+
+ListenerCallback clip_callback = NULL;
+
+@interface ClipboardListener : NSObject
+@property NSPasteboard *pasteboard;
+@property NSInteger changeCount;
+@property NSArray *classes;
+@property NSDictionary *options;
+@end
+
+@implementation ClipboardListener
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        self.pasteboard = [NSPasteboard generalPasteboard];
+        self.changeCount = [self.pasteboard changeCount];
+        self.classes = [NSArray arrayWithObject:[NSURL class]];
+        self.options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
+                                                   forKey:NSPasteboardURLReadingFileURLsOnlyKey];
+        [NSTimer scheduledTimerWithTimeInterval:0.2
+                                         target:self
+                                       selector:@selector(checkClipboard)
+                                       userInfo:nil
+                                        repeats:YES];
+    }
+    return self;
+}
+
+- (void)checkClipboard {
+    if (self.pasteboard.changeCount == self.changeCount) {
+        return;
+    }
+    self.changeCount = self.pasteboard.changeCount;
+
+    if (check_and_delete_temp_file()) {
+        return;
+    }
+
+    @autoreleasepool {
+        NSString *text = [self.pasteboard stringForType:NSPasteboardTypeString];
+        if (!text) {
+            return;
+        }
+        NSArray *fileURLs = [self.pasteboard readObjectsForClasses:self.classes options:self.options];
+        if (fileURLs && [fileURLs count]) {
+            return;
+        }
+        NSImage *img = [[NSImage alloc] initWithPasteboard:self.pasteboard];
+        if (img) {
+            return;
+        }
+    }
+    clip_callback();
+}
+
+@end
 
 int clipboard_listen(ListenerCallback callback) {
-    (void)callback;
-    error("Clipboard listener is not implemented on macOS");
-    return EXIT_FAILURE;
+    clip_callback = callback;
+    @autoreleasepool {
+        ClipboardListener *listener = [[ClipboardListener alloc] init];
+        (void)listener;
+        [[NSRunLoop currentRunLoop] run];
+    }
+    return EXIT_SUCCESS;
 }
 
 void cleanup_listener(void) {}
