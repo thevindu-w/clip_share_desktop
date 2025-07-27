@@ -10,5 +10,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
   - For Intel-based Mac, use `clip-share-client-x86_64`.
 
 **Changes:**
-- Fix DLL search order hijacking vulnerability in Windows build.
-- Code improvements.
+- Add a new feature to auto-send text when copied.
+- Add a new configuration option `auto_send_text` to enable/disable the feature.
