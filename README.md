@@ -1,7 +1,14 @@
 # ClipShare - Desktop
 ### Share Clipboard and Files. Copy on one device. Paste on another device.
 
-ClipShare is a lightweight and cross-platform tool for clipboard sharing. ClipShare enables copying text, files, and images on one device and pasted on another. ClipShare is simple and easy to use while being highly configurable. This is the desktop client of ClipShare that connects to a server running on the other machine to share copied text, files, and images.
+![Build and Test](https://github.com/thevindu-w/clip_share_desktop/actions/workflows/build-test.yml/badge.svg?branch=master)
+[![Last commit](https://img.shields.io/github/last-commit/thevindu-w/clip_share_desktop.svg?color=yellow)](https://github.com/thevindu-w/clip_share_desktop/commits/master)
+[![License](https://img.shields.io/github/license/thevindu-w/clip_share_desktop.svg?color=blue)](https://www.gnu.org/licenses/gpl-3.0.en.html#license-text)
+[![Latest release](https://img.shields.io/github/v/release/thevindu-w/clip_share_desktop?color=teal)](https://github.com/thevindu-w/clip_share_desktop/releases)
+
+<br>
+
+ClipShare is a lightweight and cross-platform tool for clipboard sharing. ClipShare enables copying text, files, and images on one device and pasting on another. ClipShare is simple and easy to use while being highly configurable. This is the desktop client of ClipShare that connects to a server running on the other machine to share copied text, files, and images.
 
 ## Download
 
@@ -29,8 +36,7 @@ Download the server from <a href="https://github.com/thevindu-w/clip_share_serve
 <tr>
 <td align="center">
 <a href="https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" width="250"/></a><br>
-Download the Android client app
-from <a href="https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare">apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare</a>.<br>
+Download the Android client app from <a href="https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare">apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare</a><br>
 or from <a href="https://github.com/thevindu-w/clip_share_client/releases">GitHub Releases</a>.
 </td>
 <td align="center">
@@ -66,6 +72,63 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 - To use the desktop client to receive copied text, image, or files, copy the text or files on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server). Then press the correct Get button on the web app (either `Get Text`, `Get Image`, or `Get File`). Then you can paste them on the machine that runs the client.
 - If something goes wrong, it will create a `client_err.log` file. That file will contain what went wrong.
 
+### Configuration
+
+The ClipShare desktop client can be configured using a configuration file. The configuration file should be named `clipshare-desktop.conf`.
+The application searches for the configuration file in the following paths in the same order until it finds one.
+1. Current working directory where the application was started.
+1. `$XDG_CONFIG_HOME` directory if the variable is set to an existing directory (on Linux and macOS only).
+1. `~/.config/` directory if the directory exists (on Linux and macOS only).
+1. Current user's home directory (also called user profile directory on Windows).
+
+If it can't find a configuration file in any of the above directories, it will use the default values specified in the table below.
+
+To customize the client, create a file named &nbsp; `clipshare-desktop.conf` &nbsp; in any of the directories mentioned above and add the following lines to that configuration file. You may omit some lines to keep the default values.
+<details>
+  <summary>Sample configuration file</summary>
+
+```properties
+app_port=4337
+web_port=8888
+
+working_dir=./path/to/work_dir
+bind_address=127.0.0.1
+max_text_length=4194304
+max_file_size=68719476736
+min_proto_version=1
+max_proto_version=3
+auto_send_text=false
+
+# Windows only
+tray_icon=true
+```
+</details>
+
+Note that all the lines in the configuration file are optional. You may omit some lines if they need to get their default values.
+<br>
+<details>
+  <summary>Configuration options</summary>
+
+| Property | Description | Accepted values | Default |
+|  :----:  | :--------   | :------------   |  :---:  |
+| `app_port` | The TCP port on which the server listens for unencrypted TCP connections. (Refer to the corresponding configuration value of the server) | TCP port number used for the server (1 - 65535) | `4337` |
+| `web_port` | The TCP port on which the application listens for connections from the web browser. This setting is used only for the GUI client. (Values below 1024 may require superuser/admin privileges) | Any valid, unused TCP port number (1 - 65535) | `8888` |
+| `working_dir` | The working directory where the application should run. All the files and images, that are fetched from the server, will be saved in this directory. It will follow symlinks if this is a path to a symlink. The user running this application should have write access to the directory | Absolute or relative path to an existing directory | `.` (i.e. Current directory) |
+| `bind_address` | The address of the interface to which the application should bind when listening for connections from the web browser in the GUI mode. It will listen on all interfaces if this is set to `0.0.0.0`. (Usually, this should have the loopback address `127.0.0.1` except for some rare cases) | IP address of an interface or wildcard address. IPv4 dot-decimal notation (ex: `192.168.37.5`) or `0.0.0.0` | `127.0.0.1` |
+| `max_text_length` | The maximum length of text that can be transferred. This is the number of bytes of the text encoded in UTF-8. | Any integer between 1 and 4294967295 (nearly 4 GiB) inclusive. Suffixes K, M, and G (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, and x10<sup>9</sup>, respectively. | 4194304 (i.e. 4 MiB) |
+| `max_file_size` | The maximum size of a single file in bytes that can be transferred. | Any integer between 1 and 9223372036854775807 (nearly 8 EiB) inclusive. Suffixes K, M, G, and T (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, x10<sup>9</sup>, and x10<sup>12</sup>, respectively. | 68719476736 (i.e. 64 GiB) |
+| `min_proto_version` | The minimum protocol version the client should accept from a server after negotiation. | Any protocol version number greater than or equal to the minimum protocol version the client has implemented. (ex: `1`) | The minimum protocol version the client has implemented |
+| `max_proto_version` | The maximum protocol version the client should accept from a server after negotiation. | Any protocol version number less than or equal to the maximum protocol version the client has implemented. (ex: `3`) | The maximum protocol version the client has implemented |
+| `auto_send_text` | Whether the application should auto-send the text when copied. The values `true` or `1` will enable auto-sending copied text, while `false` or `0` will disable the feature. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
+| `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. This option is available only on Windows. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
+
+<br>
+<br>
+
+</details>
+
+If you changed the configuration file, you must restart the server to apply the changes.
+<br>
 <br>
 
 ## Build from Source
@@ -76,7 +139,7 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 
   Compiling ClipShare Desktop needs the following tools,
 
-* gcc
+* gcc (or clang on Windows)
 * make
 * xxd
 
@@ -104,10 +167,9 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 <details>
   <summary>Windows</summary>
 
-  On Windows, these tools can be installed with [MinGW](https://www.mingw-w64.org/).<br>
-  In an [MSYS2](https://www.msys2.org/) environment, these tools can be installed using pacman with the following command:
+  On Windows, these tools can be installed with [MSYS2](https://www.msys2.org/) using pacman with the following command:
   ```bash
-  pacman -S mingw-w64-x86_64-gcc make vim
+  pacman -S mingw-w64-clang-x86_64-clang make vim
   ```
 </details>
 
@@ -163,11 +225,11 @@ The GUI client provides a web interface similar to the mobile client app. The cl
   The following development libraries are required.
 
 * [libmicrohttpd](https://ftpmirror.gnu.org/libmicrohttpd/)
-* [libunistring](https://packages.msys2.org/package/mingw-w64-x86_64-libunistring?repo=mingw64)
+* [libunistring](https://packages.msys2.org/package/mingw-w64-clang-x86_64-libunistring?repo=clang64)
 
 In an [MSYS2](https://www.msys2.org/) environment, these libraries can be installed using pacman with the following command:
 ```bash
-pacman -S mingw-w64-x86_64-libunistring
+pacman -S mingw-w64-clang-x86_64-libunistring
 ```
 
 However, installing libmicrohttpd from GNU is recommended. You can download the library from [ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip](https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip) and extract the files in it to the correct include and library directories in the MSYS2 environment. Alternatively, you may extract the library to a separate directory and set the `CPATH` and `LIBRARY_PATH` environment variables to the include and link-library paths, respectively.
