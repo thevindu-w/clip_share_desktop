@@ -71,6 +71,8 @@ void print_usage(const char *prog_name) {
             "\t-h : Display this help list\n"
             "\t-s : Stop running instances\n"
             "\t-v : Print version\n"
+            "\t-d : Daemonize (default) - Run the web client in background and exit the main process\n"
+            "\t-D : No-Daemonize - Run the web client in the main process\n"
             "\t-c COMMAND [server-address-ipv4]: Run a CLI command. This needs a command\n");
     fprintf(stderr,
             "Commands available:\n"

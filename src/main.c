@@ -64,9 +64,9 @@ static char *get_user_home(void);
 /*
  * Parse command line arguments and set corresponding variables
  */
-static inline void _parse_args(int argc, char **argv, int *cmd_offset, int *stop_p) {
+static inline void _parse_args(int argc, char **argv, int *cmd_offset, int8_t *stop_p, int8_t *daemonize_p) {
     int opt;
-    while ((opt = getopt(argc, argv, "hvsc:")) != -1) {
+    while ((opt = getopt(argc, argv, "hvsdDc:")) != -1) {
         switch (opt) {
             case 'h': {  // help
                 print_usage(argv[0]);
@@ -78,6 +78,14 @@ static inline void _parse_args(int argc, char **argv, int *cmd_offset, int *stop
             }
             case 's': {  // stop
                 *stop_p = 1;
+                break;
+            }
+            case 'd': {  // daemonize
+                *daemonize_p = 1;
+                break;
+            }
+            case 'D': {  // no-daemonize
+                *daemonize_p = 0;
                 break;
             }
             case 'c': {  // restart
@@ -431,10 +439,11 @@ int main(int argc, char **argv) {
     free(conf_path);
     _apply_default_conf();
 
-    int stop = 0;
+    int8_t stop = 0;
+    int8_t daemonize = 1;
     int cmd_offset = 0;
     // Parse command line arguments
-    _parse_args(argc, argv, &cmd_offset, &stop);
+    _parse_args(argc, argv, &cmd_offset, &stop, &daemonize);
     if (stop) {
 #ifdef _WIN32
         remove_tray_icon();
@@ -457,12 +466,16 @@ int main(int argc, char **argv) {
 
     if (cmd_offset > 0) {
         cli_client(argc - cmd_offset, argv + cmd_offset, prog_name);
-    } else if (argc == 1) {
+    } else {
         kill_other_processes(prog_name);
 #if defined(__linux__) || defined(__APPLE__)
-        if (fork() == 0) {
-            start_web();
-            return EXIT_SUCCESS;
+        if (daemonize) {
+            pid_t pid = fork();
+            if (pid > 0) {
+                return EXIT_SUCCESS;
+            } else if (pid < 0) {
+                error_exit("Daemon creation failed");
+            }
         }
 
         if (configuration.auto_send_text) {
@@ -472,6 +485,7 @@ int main(int argc, char **argv) {
             }
         }
 
+        start_web();
 #elif defined(_WIN32)
         // initialize instance and guid
         instance = GetModuleHandle(NULL);
@@ -502,9 +516,6 @@ int main(int argc, char **argv) {
         remove_tray_icon();
         CloseHandle(instance);
 #endif
-    } else {
-        print_usage(prog_name);
-        return EXIT_FAILURE;
     }
 
     return 0;
