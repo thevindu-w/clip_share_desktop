@@ -1,0 +1,141 @@
+#!/bin/bash
+
+set -e
+
+if [ "$(id -u)" = 0 ]; then
+    echo 'Do not run install with sudo.'
+    echo 'Aborted.'
+    exit 1
+fi
+
+echo 'This will install ClipShare-desktop to run on startup.'
+read -p 'Proceed? [y/N] ' confirm
+if [ "${confirm::1}" != 'y' ] && [ "${confirm::1}" != 'Y' ]; then
+    echo 'Aborted.'
+    echo 'You can still use clip-share-client by manually running the executable.'
+    exit 0
+fi
+
+exec_names=(
+    clip-share-client
+    clip-share-client_GLIBC*
+)
+
+IFS=$'\n' exec_names=($(sort -r <<<"${exec_names[*]}"))
+unset IFS
+
+ldd_output="$(ldd --version | head -n 1 || true)"
+GLIBC_VER=$(echo -n "${ldd_output##* }" | grep -oE '[0-9]+\.[0-9]+' | head -n 1 || true)
+
+verlte() {
+    printf '%s\n' "$1" "$2" | sort -C -V
+}
+
+get_missing_lib() {
+    local exec_name="$1"
+    exec_glibc_ver="$(echo "$exec_name" | grep -oE 'GLIBC-[0-9.]+' | grep -oE '[0-9.]+')"
+    verlte "$exec_glibc_ver" "$GLIBC_VER" || return # this executable requires a newer GLIBC version
+    echo "$( (sh -c "./$exec_name -h 2>&1" 2>/dev/null || true) | grep -oE 'lib[a-zA-Z0-9.-]+\.so' | grep -oE 'lib[a-zA-Z0-9-]+' | head -n 1)"
+}
+
+exec_path=~/.local/bin/clip-share-client
+exec_not_found=1
+for exec_name in "${exec_names[@]}"; do
+    if [ -f "$exec_name" ]; then
+        chmod +x "$exec_name"
+        if ! sh -c "./$exec_name -h 2>&1" &>/dev/null; then
+            [ -n "$missingLib" ] && continue
+            missing="$(get_missing_lib "$exec_name")" || true
+            [ -n "$missing" ] && missingLib="$missing"
+            continue
+        fi
+        exec_not_found=0
+        mkdir -p ~/.local/bin/
+        mv "$exec_name" "$exec_path"
+        chmod +x "$exec_path"
+        echo Moved "$exec_name" to "$exec_path"
+        break
+    fi
+done
+
+if [ "$exec_not_found" = 1 ]; then
+    if [ -n "$missingLib" ]; then
+        echo "Error: The ${missingLib} library is not installed. Please install ${missingLib} and run the installer again."
+    else
+        echo "Error: 'clip-share-client' program was not found in the current directory"
+    fi
+    exit 1
+fi
+
+cd
+export HOME="$(pwd)"
+mkdir -p .config
+
+CONF_PATHS=("$XDG_CONFIG_HOME" "${HOME}/.config" "$HOME")
+for directory in "${CONF_PATHS[@]}"; do
+    [ -d "$directory" ] || continue
+    conf_path="${directory}/clipshare-desktop.conf"
+    if [ -f "$conf_path" ] && [ -r "$conf_path" ]; then
+        CONF_DIR="$directory"
+        break
+    fi
+done
+for directory in "${CONF_PATHS[@]}"; do
+    [ -n "$CONF_DIR" ] && break
+    if [ -d "$directory" ] && [ -w "$directory" ]; then
+        CONF_DIR="$directory"
+    fi
+done
+if [ -z "$CONF_DIR" ]; then
+    echo "Error: Could not find a directory for the configuration file!"
+    exit 1
+fi
+CONF_FILE="${CONF_DIR}/clipshare-desktop.conf"
+
+if [ ! -f "$CONF_FILE" ]; then
+    mkdir -p Downloads
+    echo "working_dir=${HOME}/Downloads" >"$CONF_FILE"
+    echo "Created a new configuration file $CONF_FILE"
+fi
+
+mkdir -p .config/systemd/user
+
+if [ -f .config/systemd/user/clipshare-desktop.service ]; then
+    echo
+    echo 'A previous installation of ClipShare-desktop is available.'
+    read -p 'Update? [y/N] ' confirm_update
+    if [ "${confirm_update,,}" != 'y' ] && [ "${confirm_update,,}" != 'yes' ]; then
+        echo 'Aborted.'
+        exit 0
+    fi
+fi
+
+if [ -z "$DISPLAY" ]; then
+    export DISPLAY=:0
+fi
+
+cat >.config/systemd/user/clipshare-desktop.service <<EOF
+[Unit]
+Description=ClipShare-desktop
+
+[Service]
+Type=forking
+Environment="XDG_CONFIG_HOME=$CONF_DIR"
+ExecStart=$exec_path
+ExecStop=$exec_path -s
+Restart=no
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl --user daemon-reload
+systemctl --user enable clipshare-desktop.service >/dev/null
+echo 'Installed ClipShare-desktop to run on startup. This takes effect from the next login.'
+
+echo
+read -p 'Start ClipShare-desktop now? [y/N] ' start_now
+if [ "${start_now,,}" = 'y' ] || [ "${start_now,,}" = 'yes' ]; then
+    systemctl --user start clipshare-desktop.service
+    echo 'Started ClipShare-desktop.'
+fi

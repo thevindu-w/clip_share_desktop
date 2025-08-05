@@ -161,6 +161,10 @@ test: $(PROGRAM_NAME)
 
 check: test
 
+install: $(PROGRAM_NAME) helper_tools/install.sh
+	@echo
+	@chmod +x helper_tools/install.sh && helper_tools/install.sh
+
 clean:
 	@echo RM
 	@$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES) $(SRC_DIR)/res/win/app_.rc
