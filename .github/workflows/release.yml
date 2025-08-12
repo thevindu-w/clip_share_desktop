@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set version
       run: |
@@ -50,7 +50,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set version
       run: |
@@ -164,7 +164,7 @@ jobs:
         rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
 
     - name: Check out repository code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Build
       run: |
@@ -237,7 +237,7 @@ jobs:
         rm -r libmicrohttpd
 
     - name: Check out repository code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set version
       run: |
@@ -266,7 +266,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set version
       run: |
@@ -277,13 +277,13 @@ jobs:
         echo FILE_ARM="clip-share-client-arm64" >> $GITHUB_ENV
 
     - name: Download macOS x86_64 version
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: "${{env.FILE_INTEL}}"
         path: "${{env.FILE_INTEL}}"
 
     - name: Download macOS ARM64 version
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: "${{env.FILE_ARM}}"
         path: "${{env.FILE_ARM}}"
@@ -320,7 +320,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set variables
       run: |
@@ -333,7 +333,7 @@ jobs:
         echo FILE_MACOS="clip_share_client-${version}-macos.zip" >> $GITHUB_ENV
 
     - name: Download builds
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         pattern: clip_share_client-*
         path: ${{ github.workspace }}
