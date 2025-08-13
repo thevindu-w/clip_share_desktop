@@ -52,6 +52,7 @@ Download the desktop client from <a href="https://github.com/thevindu-w/clip_sha
 
 - [How to Use](#how-to-use)
   - [GUI client](#gui-client)
+  - [Installation](#installation)
 - [Build from Source](#build-from-source)
   - [Build tools](#build-tools)
   - [Dependencies](#dependencies)
@@ -71,6 +72,42 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 - To use the desktop client to send copied text or files, copy the text or files you want to send (just like you would copy them to paste somewhere else). Then press the correct Send button on the web app (either `Send Text` or `Send File`). Then you can paste them on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server).
 - To use the desktop client to receive copied text, image, or files, copy the text or files on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server). Then press the correct Get button on the web app (either `Get Text`, `Get Image`, or `Get File`). Then you can paste them on the machine that runs the client.
 - If something goes wrong, it will create a `client_err.log` file. That file will contain what went wrong.
+
+<br>
+
+### Installation
+
+**Note:** This section is optional if you prefer manually starting the server over automatically starting on login/reboot.
+
+Installer scripts are available in the archives (`zip` for Windows and macOS, and `tar.gz` for Linux) attached to releases on GitHub. They are also available in the [helper_tools/](https://github.com/thevindu-w/clip_share_desktop/tree/master/helper_tools) directory. You must have the `clip-share-client` (or `clip-share-client.exe` on Windows) executable in the current working directory to run the installer. If you download the archive from releases and extract it, you will have the executable, along with the installer script. Run the interactive script and follow the instructions to install ClipShare.
+
+**Note:** These installers do NOT need admin or superuser privileges to run. Therefore, do not run them with elevated privileges.
+
+<details>
+  <summary>Linux and macOS</summary>
+
+1. Open a terminal in the directory where the `clip-share-client` executable is available (the executable name may have suffixes like `_GLIBC*` on Linux or `arm64` or `x86_64` on macOS).
+1. Run the install script as shown below, and follow the instructions of it.
+```bash
+# on Linux
+chmod +x install-linux.sh
+./install-linux.sh
+```
+```bash
+# on macOS
+chmod +x install-mac.sh
+./install-mac.sh
+```
+</details>
+
+<details>
+  <summary>Windows</summary>
+
+1. Place the `install-windows.bat` file and the `clip-share-client.exe` executable in the same folder. (the executable name may have suffixes)
+1. Double-click on the `install-windows.bat` installer script to run it. It will open a Command Prompt window. Follow the instructions on it to install ClipShare. (If double-clicking did not run the installer, right-click on it and select Run)
+</details>
+
+<br>
 
 ### Configuration
 
