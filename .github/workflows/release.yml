@@ -95,6 +95,7 @@ jobs:
         docker run -v './dist:/home/user/src/dist' clipshare:ubuntu24
         docker run -v './dist:/home/user/src/dist' clipshare:arch
         docker run -v './dist:/home/user/src/dist' clipshare:fedora
+        [ -f helper_tools/install-linux.sh ] && cp helper_tools/install-linux.sh dist/
         sudo chmod +x dist/*
         cd dist
         sha256sum -b * >SHA2-256SUM
@@ -171,6 +172,7 @@ jobs:
         make
         mkdir dist
         mv clip-share-client*.exe "dist/${{env.FILE_NAME}}"
+        [ -f helper_tools/install-windows.bat ] && cp helper_tools/install-windows.bat dist/
         cd dist
         zip -9 "../${{env.ARCHIVE_NAME}}" *
 
@@ -292,6 +294,7 @@ jobs:
       run: |
         mkdir dist
         mv "${{env.FILE_INTEL}}/${{env.FILE_INTEL}}" "${{env.FILE_ARM}}/${{env.FILE_ARM}}" dist/
+        [ -f helper_tools/install-mac.sh ] && cp helper_tools/install-mac.sh dist/
         chmod +x dist/*
         cd dist
         rm -f .DS_Store
