@@ -1,6 +1,6 @@
 /*
- * globals.h - header containing global variables
- * Copyright (C) 2024-2025 H. Thevindu J. Wijesekera
+ * utils/mac_menu.h - header for mac_menu.c
+ * Copyright (C) 2024 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,23 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef GLOBALS_H_
-#define GLOBALS_H_
-
-#include <microhttpd.h>
-#include <utils/config.h>
-
-#define CONFIG_FILE "clipshare-desktop.conf"
-
-extern config configuration;
-extern char *error_log_file;
-extern char *cwd;
-extern size_t cwd_len;
-
+#ifndef UTILS_MAC_MENU_H_
+#define UTILS_MAC_MENU_H_
 #ifdef __APPLE__
-extern const char *global_prog_name;
+
+extern void show_menu_icon(void);
+
 #endif
-
-extern struct MHD_Daemon *http_daemon;
-
-#endif  // GLOBALS_H_
+#endif  // UTILS_MAC_MENU_H_

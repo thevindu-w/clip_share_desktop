@@ -75,7 +75,8 @@ else ifeq ($(detected_OS),Windows)
 else ifeq ($(detected_OS),Darwin)
 export CPATH:=$(CPATH):$(shell brew --prefix)/include
 export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
-	OBJS_M= utils/listener_macos.o utils/mac_utils.o
+	OBJS_M= utils/listener_macos.o utils/mac_menu.o utils/mac_utils.o
+	OBJS_BIN+= res/mac/icon.o
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
 	CFLAGS+= -fobjc-arc
@@ -146,6 +147,11 @@ $(BUILD_DIR)/res/win/app.coff: $(SRC_DIR)/res/win/app_.rc $(SRC_DIR)/res/win/res
 $(SRC_DIR)/res/win/app_.rc: $(SRC_DIR)/res/win/app.rc $(VERSION_FILE)
 	@echo CPP $$'\t' $@
 	@$(CPP) -I$(SRC_DIR) -P -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) -DVERSION_PATCH=$(VERSION_PATCH) -DVERSION=\"$(VERSION)\" $< -o $@
+
+$(SRC_DIR)/res/mac/icon_.c: $(SRC_DIR)/res/mac/icon.png
+	@echo generate $$'\t' $@
+	@cd $(dir $@) && \
+	xxd -i $(notdir $<) >$(notdir $@)
 
 $(DIRS):
 	mkdir -p $@
