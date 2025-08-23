@@ -182,7 +182,7 @@ static inline void _apply_default_conf(void) {
         configuration.max_proto_version > PROTOCOL_MAX)
         configuration.max_proto_version = PROTOCOL_MAX;
     if (configuration.auto_send_text < 0) configuration.auto_send_text = 0;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
 #endif
 }
@@ -494,12 +494,14 @@ int main(int argc, char **argv) {
         }
 
 #ifdef __APPLE__
-        fflush(stdout);
-        fflush(stderr);
-        pid_t p_menu = fork();
-        if (p_menu == 0) {
-            show_menu_icon();
-            exit(EXIT_SUCCESS);
+        if (configuration.tray_icon) {
+            fflush(stdout);
+            fflush(stderr);
+            pid_t p_menu = fork();
+            if (p_menu == 0) {
+                show_menu_icon();
+                exit(EXIT_SUCCESS);
+            }
         }
 #endif
 

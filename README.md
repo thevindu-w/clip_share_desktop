@@ -136,7 +136,7 @@ min_proto_version=1
 max_proto_version=3
 auto_send_text=false
 
-# Windows only
+# Windows and macOS only
 tray_icon=true
 ```
 </details>
@@ -157,7 +157,7 @@ Note that all the lines in the configuration file are optional. You may omit som
 | `min_proto_version` | The minimum protocol version the client should accept from a server after negotiation. | Any protocol version number greater than or equal to the minimum protocol version the client has implemented. (ex: `1`) | The minimum protocol version the client has implemented |
 | `max_proto_version` | The maximum protocol version the client should accept from a server after negotiation. | Any protocol version number less than or equal to the maximum protocol version the client has implemented. (ex: `3`) | The maximum protocol version the client has implemented |
 | `auto_send_text` | Whether the application should auto-send the text when copied. The values `true` or `1` will enable auto-sending copied text, while `false` or `0` will disable the feature. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
-| `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. This option is available only on Windows. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
+| `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. This option is available only on Windows and macOS. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
 
 <br>
 <br>
