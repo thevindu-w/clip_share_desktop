@@ -15,6 +15,7 @@ dependencies=(
     sleep
     timeout
     diff
+    find
     python3
     sed
 )
@@ -157,6 +158,33 @@ get_copied_text() {
     fi
 }
 
+# Copy a list of files, given by file names, to clipboard
+copy_files() {
+    local files=("$@")
+    if [ "$DETECTED_OS" = 'Linux' ]; then
+        local urls=''
+        for f in "${files[@]}"; do
+            local absPath="$(realpath "$f")"
+            local fPathUrl="$(python3 -c 'from urllib import parse;print(parse.quote(input()))' <<<"$absPath")"
+            urls+=$'\n'"file://$fPathUrl"
+        done
+        echo -n "copy${urls}" | xclip -in -sel clip -t x-special/gnome-copied-files &>/dev/null
+    elif [ "$DETECTED_OS" = 'Windows' ]; then
+        local files_str="$(printf ", '%s'" "${files[@]}")"
+        powershell -c "Set-Clipboard -Path ${files_str:2}"
+    elif [ "$DETECTED_OS" = 'macOS' ]; then
+        local absFiles=()
+        for f in "${files[@]}"; do
+            local absPath="$(realpath "$f")"
+            absFiles+=("$absPath")
+        done
+        osascript "${TESTS_DIR}/utils/setcopiedfiles.applescript" "${absFiles[@]}" >/dev/null
+    else
+        echo "Copy files is not available for OS: $DETECTED_OS"
+        exit 1
+    fi
+}
+
 # Clear the content of clipboard
 clear_clipboard() {
     if [ "$DETECTED_OS" = 'Linux' ]; then
@@ -189,7 +217,7 @@ check_logs() {
     fi
 }
 
-export -f setColor showStatus copy_text get_copied_text clear_clipboard run_server check_logs
+export -f setColor showStatus copy_text get_copied_text copy_files clear_clipboard run_server check_logs
 
 exitCode=0
 passCnt=0

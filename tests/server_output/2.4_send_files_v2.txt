@@ -1,0 +1,12 @@
+Client version 3 is unknown
+Client accepted version 2
+Using protocol version 2
+Client requested method 4
+Received file name dir1/file.txt
+Received file size 19
+Received file name dir2/file.txt
+Received file size 19
+Received file name dir2/sub/test.txt
+Received file size 23
+Received file name test.txt
+Received file size 11

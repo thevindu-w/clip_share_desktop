@@ -1,0 +1,6 @@
+Client version 3 is unknown
+Client accepted version 1
+Using protocol version 1
+Client requested method 4
+Received file name file.txt
+Received file size 12

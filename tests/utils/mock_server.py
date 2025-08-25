@@ -55,14 +55,17 @@ def send_int(sock: socket.socket, value: int) -> None:
 def read_int(sock: socket.socket) -> int:
     b = sock.recv(8)
     assert len(b) == 8
-    return int.from_bytes(b, 'big')
+    val = int.from_bytes(b, 'big')
+    if val >= 1<<32: val -= 1<<64
+    return val
 
 def send_data(sock: socket.socket, data: bytes) -> None:
     send_int(sock, len(data))
     sock.sendall(data)
 
-def read_data(sock: socket.socket) -> bytes:
-    size = read_int(sock)
+def read_data(sock: socket.socket, size: int = None) -> bytes:
+    if size == None:
+        size = read_int(sock)
     data = sock.recv(size)
     assert len(data) == size
     return data
@@ -137,8 +140,37 @@ def handle_get_file(sock: socket.socket, version: int) -> None:
         if version == 3 and len(files) == 0 and len(dirs) == 0:
             send_file(sock, root)
 
-def handle_send_file(sock: socket.socket):
-    sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
+def handle_send_file(sock: socket.socket, version: int) -> None:
+    sock.sendall(STATUS_OK)
+    if version == 1:
+        file_cnt = 1
+    else:
+        file_cnt = read_int(sock)
+    if file_cnt <= 0:
+        print(f'Invalid file count {file_cnt}')
+        return
+    received_list = []
+    for _ in range(file_cnt):
+        received_list.append([])
+        fname = read_data(sock).decode('utf-8')
+        received_list[-1].append(f'Received file name {fname}')
+        file_sz = read_int(sock)
+        received_list[-1].append(f'Received file size {file_sz}')
+        if version < 3 and file_sz < 0:
+            received_list[-1].append(f'Invalid file size {file_sz}')
+            break
+        if file_sz == -1:
+            os.makedirs(fname)
+            continue
+        parent = os.path.dirname(fname)
+        if parent:
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
+        with open(fname, 'xb') as f:
+            f.write(read_data(sock, file_sz))
+    received_list.sort() # to keep the same order to compare with the expected output
+    for messages in received_list:
+        for message in messages:
+            print(message)
 
 def handle_get_copied_image(sock: socket.socket) -> None:
     if IMAGE != 'copied':

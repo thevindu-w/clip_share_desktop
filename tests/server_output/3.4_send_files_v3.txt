@@ -1,0 +1,15 @@
+Client version 3 is supported
+Using protocol version 3
+Client requested method 4
+Received file name dir1/file.txt
+Received file size 19
+Received file name dir2/file.txt
+Received file size 19
+Received file name dir2/sub/empty2
+Received file size -1
+Received file name dir2/sub/test.txt
+Received file size 23
+Received file name empty
+Received file size -1
+Received file name test.txt
+Received file size 11

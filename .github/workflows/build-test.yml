@@ -81,6 +81,7 @@ jobs:
           make
           python
           diffutils
+          findutils
           sed
           vim
           unzip
