@@ -11,5 +11,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Add a command line switch to (no-)daemonize.
-- Add installer scripts.
+- Show a menu icon when running in the background.
+- Use the config option `tray_icon` to enable/disable showing the menu icon.
