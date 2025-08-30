@@ -95,6 +95,12 @@ extern int get_clipboard_text(char **bufptr, uint32_t *lenptr);
 extern int put_clipboard_text(char *data, uint32_t len);
 
 /*
+ * Cut the files given by paths to clipboard. Another application may paste them.
+ * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
+ */
+extern int set_clipboard_cut_files(const list2 *paths);
+
+/*
  * Get the file size of the file from the given file pointer fp.
  * returns the file size on success and -1 on failure.
  */

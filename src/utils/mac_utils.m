@@ -102,4 +102,19 @@ char *get_copied_files_as_str(int *offset) {
     return all_files;
 }
 
+int set_clipboard_cut_files(const list2 *paths) {
+    NSMutableArray *fileURLsMutable = [[NSMutableArray alloc] init];
+    for (size_t i = 0; i < paths->len; i++) {
+        const char *fname = (char *)(paths->array[i]);
+        NSURL *file_url = [NSURL fileURLWithPath:@(fname)];
+        [fileURLsMutable addObject:file_url];
+    }
+    NSMutableArray *fileURLs = [fileURLsMutable copy];
+    create_temp_file();
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    [pasteboard clearContents];
+    [pasteboard writeObjects:fileURLs];
+    return EXIT_SUCCESS;
+}
+
 #endif

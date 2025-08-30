@@ -41,6 +41,7 @@
 #endif
 #ifdef _WIN32
 #include <direct.h>
+#include <shlobj.h>
 #include <windows.h>
 #ifdef _WIN64
 #include <utils/win_load_lib.h>
@@ -984,6 +985,94 @@ char *get_copied_files_as_str(int *offset) {
     return fnames;
 }
 
+static unsigned int url_encode(char *str, char **url_p) {
+    unsigned int url_len = 1;  // 1 for null terminator
+    char *p = str;
+    while (*p) {
+        if (('a' <= *p && *p <= 'z') || ('@' <= *p && *p <= 'Z') || ('&' <= *p && *p <= ':') || *p == '_' ||
+            *p == '=' || *p == '!' || *p == '~') {
+            url_len++;
+        } else {
+            url_len += 3;
+        }
+        p++;
+    }
+    char *url = (char *)malloc(url_len);
+    if (!url) return 0;
+    p = url;
+    while (*str) {
+        if (('a' <= *str && *str <= 'z') || ('@' <= *str && *str <= 'Z') || ('&' <= *str && *str <= ':') ||
+            *str == '_' || *str == '=' || *str == '!' || *str == '~') {
+            *p++ = *str;
+        } else {
+            *p++ = '%';
+            unsigned char c = *(unsigned char *)str;
+            unsigned a = c >> 4;  // first 4 bits
+            if (a < 10)
+                a += '0';
+            else
+                a += 55;  // 55 is 'A' - 10;
+            *p++ = (char)a;
+            a = c & 0xf;  // last 4 bits
+            if (a < 10)
+                a += '0';
+            else
+                a += 55;  // 55 is 'A' - 10;
+            *p++ = (char)a;
+        }
+        str++;
+    }
+    *p = 0;
+    *url_p = url;
+    return url_len - 1;  // without null terminator
+}
+
+int set_clipboard_cut_files(const list2 *paths) {
+    list2 *lst_url = init_list(paths->len);
+    size_t tot_len = 4;  // "cut" + null terminator
+    for (size_t i = 0; i < paths->len; i++) {
+        char *url = NULL;
+        unsigned int len = url_encode((char *)(paths->array[i]), &url);
+        if (len == 0) {
+            if (url) free(url);
+            continue;
+        }
+        tot_len += len + 8;  // 1 for \n and 7 for "file://"
+        append(lst_url, url);
+    }
+    if (tot_len >= 0xFFFFFFFFUL) return EXIT_FAILURE;
+    char *buf = (char *)malloc(tot_len);
+    if (!buf) {
+        free_list(lst_url);
+        return EXIT_FAILURE;
+    }
+    strncpy(buf, "cut", 4);
+    char *p = buf + 3;
+    for (size_t i = 0; i < lst_url->len; i++) {
+        strncpy(p, "\nfile://", 9);
+        p += 8;
+        const char *url = lst_url->array[i];
+        size_t len = strnlen(url, 4096);
+        strncpy(p, url, len + 1);
+        p += len;
+    }
+    *p = 0;
+    free_list(lst_url);
+    uint32_t len32 = (uint32_t)tot_len;
+    if (fork() > 0) {  // prevent caller from hanging
+        free(buf);
+        return EXIT_SUCCESS;
+    }
+    create_temp_file();
+    if (xclip_util(XCLIP_IN, "x-special/gnome-copied-files", &len32, &buf) != EXIT_SUCCESS) {
+        if (buf) free(buf);
+        error("Failed to copy files to clipboard");
+        return EXIT_FAILURE;
+    }
+    if (buf) free(buf);
+    return EXIT_SUCCESS;
+}
+
 #elif defined(_WIN32)
 static int set_temp_file(void) {
     if (!temp_file) {
@@ -1188,5 +1277,85 @@ int put_clipboard_text(char *data, uint32_t len) {
     HANDLE res = SetClipboardData(CF_UNICODETEXT, hMem);
     CloseClipboard();
     return (res == NULL ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
+int set_clipboard_cut_files(const list2 *paths) {
+    if (paths->len == 0) return EXIT_SUCCESS;
+
+    list2 *wpaths = init_list(paths->len);
+    if (!wpaths) return EXIT_FAILURE;
+
+    // convert paths to wchar*
+    size_t tot_sz = sizeof(DROPFILES) + sizeof(wchar_t);  // +sizeof(wchar_t) for the additional null terminator
+    for (size_t i = 0; i < paths->len; i++) {
+        wchar_t *wpath;
+        uint32_t wlen;
+        if (utf8_to_wchar_str(paths->array[i], &wpath, &wlen) || wlen <= 0) return EXIT_FAILURE;
+        append(wpaths, wpath);
+        tot_sz += ((size_t)wlen + 1) * sizeof(wchar_t);
+    }
+
+    HGLOBAL hGlobal = GlobalAlloc(GHND | GMEM_SHARE, tot_sz);
+    if (!hGlobal) {
+        free_list(wpaths);
+        return EXIT_FAILURE;
+    }
+    char *pGlobal = (char *)GlobalLock(hGlobal);
+    if (!pGlobal) {
+        GlobalFree(hGlobal);
+        free_list(wpaths);
+        return EXIT_FAILURE;
+    }
+
+    DROPFILES *dropFiles = (DROPFILES *)pGlobal;
+    dropFiles->pFiles = sizeof(DROPFILES);
+    dropFiles->pt.x = 0;
+    dropFiles->pt.y = 0;
+    dropFiles->fNC = 0;
+    dropFiles->fWide = 1;  // for wchar_t
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-align"
+#endif
+    wchar_t *pFiles = (wchar_t *)(pGlobal + sizeof(DROPFILES));
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+    for (size_t i = 0; i < wpaths->len; i++) {
+        size_t len = wcsnlen(wpaths->array[i], 2048);
+        memcpy(pFiles, wpaths->array[i], len * sizeof(wchar_t));
+        pFiles += len;
+        *pFiles++ = '\0';
+    }
+    *pFiles = '\0';  // additional null terminator
+    GlobalUnlock(hGlobal);
+    free_list(wpaths);
+
+    HGLOBAL hGlobalEffect = GlobalAlloc(GHND | GMEM_SHARE, sizeof(DWORD));
+    if (!hGlobalEffect) {
+        GlobalFree(hGlobal);
+        return EXIT_FAILURE;
+    }
+    DWORD *pDropEffect = (DWORD *)GlobalLock(hGlobalEffect);
+    if (!pDropEffect) {
+        GlobalFree(hGlobal);
+        GlobalFree(hGlobalEffect);
+        return EXIT_FAILURE;
+    }
+    *pDropEffect = DROPEFFECT_MOVE;
+    GlobalUnlock(hGlobalEffect);
+
+    create_temp_file();
+    if (!OpenClipboard(NULL)) {
+        GlobalFree(hGlobal);
+        GlobalFree(hGlobalEffect);
+        return EXIT_FAILURE;
+    }
+    EmptyClipboard();
+    SetClipboardData(CF_HDROP, hGlobal);
+    SetClipboardData(RegisterClipboardFormat(CFSTR_PREFERREDDROPEFFECT), hGlobalEffect);
+    CloseClipboard();
+    return EXIT_SUCCESS;
 }
 #endif

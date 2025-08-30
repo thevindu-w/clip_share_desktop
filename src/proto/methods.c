@@ -398,6 +398,17 @@ static inline int _is_valid_fname(const char *fname, size_t name_length) {
     return EXIT_SUCCESS;
 }
 
+static char *get_abs_path(const char *rel_path, size_t rel_path_max_len) {
+    char *path = (char *)malloc(cwd_len + rel_path_max_len + 2);  // for PATH_SEP and null terminator
+    if (!path) return NULL;
+    strncpy(path, cwd, cwd_len);
+    size_t p_len = cwd_len;
+    path[p_len++] = PATH_SEP;
+    strncpy(path + p_len, rel_path, rel_path_max_len);
+    path[cwd_len + rel_path_max_len + 1] = 0;  // +1 for PATH_SEP
+    return path;
+}
+
 #if PROTOCOL_MIN <= 1
 /*
  * Get only the base name.
@@ -429,9 +440,25 @@ static inline int _save_image_common(socket_t *socket, StatusCallback *callback)
     char file_name[40];
     if (snprintf_check(file_name, sizeof(file_name), "%" PRIx64 ".png", millis)) return EXIT_FAILURE;
     int status = _save_file_common(1, socket, file_name, callback);
-    if (status == EXIT_SUCCESS && callback) {
-        callback->function(RESP_OK, file_name, strnlen(file_name, sizeof(file_name) - 1), callback->params);
+    if (callback) {
+        if (status == EXIT_SUCCESS) {
+            callback->function(RESP_OK, file_name, strnlen(file_name, sizeof(file_name) - 1), callback->params);
+        } else {
+            callback->function(RESP_LOCAL_ERROR, NULL, 0, callback->params);
+        }
     }
+
+    if (status != EXIT_SUCCESS) return EXIT_FAILURE;
+    list2 *dest_files = init_list(1);
+    if (!dest_files) return EXIT_FAILURE;
+    char *abs_path = get_abs_path(file_name, 40);
+    if (!abs_path) {
+        free_list(dest_files);
+        return EXIT_FAILURE;
+    }
+    append(dest_files, abs_path);
+    if (set_clipboard_cut_files(dest_files) != EXIT_SUCCESS) status = EXIT_FAILURE;
+    free_list(dest_files);
     return status;
 }
 
@@ -567,12 +594,7 @@ static char *_check_and_rename(const char *filename, const char *dirname) {
         return NULL;
     }
 
-    char *path = (char *)malloc(cwd_len + name_max_len + 2);  // for PATH_SEP and null terminator
-    strncpy(path, cwd, cwd_len + 1);
-    size_t p_len = cwd_len;
-    path[p_len++] = PATH_SEP;
-    strncpy(path + p_len, new_path + 2, name_max_len + 1);  // +2 for ./ (new_path always starts with ./)
-    path[cwd_len + name_max_len + 1] = 0;
+    char *path = get_abs_path(new_path + 2, name_max_len);  // +2 for ./ (new_path always starts with ./)
     return path;
 }
 
@@ -605,6 +627,11 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
     list2 *files = list_dir(dirname);
     if (!files) return EXIT_FAILURE;
     int status = EXIT_SUCCESS;
+    list2 *dest_files = init_list(files->len);
+    if (!dest_files) {
+        free_list(files);
+        return EXIT_FAILURE;
+    }
     for (uint32_t i = 0; i < files->len; i++) {
         const char *filename = files->array[i];
         char *new_path = _check_and_rename(filename, dirname);
@@ -612,11 +639,13 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
             status = EXIT_FAILURE;
             continue;
         }
-        free(new_path);
+        append(dest_files, new_path);
     }
     free_list(files);
     if (status == EXIT_SUCCESS && remove_directory(dirname)) status = EXIT_FAILURE;
     if (callback) callback->function(RESP_OK, NULL, 0, callback->params);
+    if (status == EXIT_SUCCESS && set_clipboard_cut_files(dest_files) != EXIT_SUCCESS) status = EXIT_FAILURE;
+    free_list(dest_files);
     return status;
 }
 
