@@ -448,7 +448,7 @@ static inline int _save_image_common(socket_t *socket, StatusCallback *callback)
         }
     }
 
-    if (status != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (status != EXIT_SUCCESS || !configuration.cut_received_files) return status;
     list2 *dest_files = init_list(1);
     if (!dest_files) return EXIT_FAILURE;
     char *abs_path = get_abs_path(file_name, 40);
@@ -644,7 +644,9 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
     free_list(files);
     if (status == EXIT_SUCCESS && remove_directory(dirname)) status = EXIT_FAILURE;
     if (callback) callback->function(RESP_OK, NULL, 0, callback->params);
-    if (status == EXIT_SUCCESS && set_clipboard_cut_files(dest_files) != EXIT_SUCCESS) status = EXIT_FAILURE;
+    if (configuration.cut_received_files && status == EXIT_SUCCESS &&
+        set_clipboard_cut_files(dest_files) != EXIT_SUCCESS)
+        status = EXIT_FAILURE;
     free_list(dest_files);
     return status;
 }

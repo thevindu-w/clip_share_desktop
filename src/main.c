@@ -176,6 +176,7 @@ static inline void _apply_default_conf(void) {
     if (configuration.web_port <= 0) configuration.web_port = WEB_PORT;
     if (configuration.max_text_length <= 0) configuration.max_text_length = MAX_TEXT_LENGTH;
     if (configuration.max_file_size <= 0) configuration.max_file_size = MAX_FILE_SIZE;
+    if (configuration.cut_received_files < 0) configuration.cut_received_files = 0;
     if (configuration.min_proto_version < PROTOCOL_MIN) configuration.min_proto_version = PROTOCOL_MIN;
     if (configuration.min_proto_version > PROTOCOL_MAX) configuration.min_proto_version = PROTOCOL_MAX;
     if (configuration.max_proto_version < configuration.min_proto_version ||

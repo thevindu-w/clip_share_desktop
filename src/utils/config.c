@@ -214,6 +214,8 @@ static void parse_line(char *line, config *cfg) {
         set_uint32(value, &(cfg->max_text_length));
     } else if (!strcmp("max_file_size", key)) {
         set_int64(value, &(cfg->max_file_size));
+    } else if (!strcmp("cut_received_files", key)) {
+        set_is_true(value, &(cfg->cut_received_files));
     } else if (!strcmp("min_proto_version", key)) {
         set_uint16(value, &(cfg->min_proto_version));
     } else if (!strcmp("max_proto_version", key)) {
@@ -237,6 +239,7 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->working_dir = NULL;
     cfg->max_text_length = 0;
     cfg->max_file_size = 0;
+    cfg->cut_received_files = -1;
     cfg->min_proto_version = 0;
     cfg->max_proto_version = 0;
     cfg->auto_send_text = -1;

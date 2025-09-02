@@ -29,6 +29,7 @@ typedef struct _config {
     uint32_t bind_addr;
     uint32_t max_text_length;
     int64_t max_file_size;
+    int8_t cut_received_files;
     uint16_t min_proto_version;
     uint16_t max_proto_version;
     int8_t auto_send_text;
