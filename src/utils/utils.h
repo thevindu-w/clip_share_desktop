@@ -76,6 +76,10 @@ extern int check_and_delete_temp_file(void);
  */
 extern void *realloc_or_free(void *ptr, size_t size) __attribute__((__malloc__));
 
+#ifdef __linux__
+extern void set_pending_clipboard_item(void);
+#endif
+
 /*
  * Get copied text from clipboard.
  * Places the text in a buffer and sets the bufptr to point the buffer.

@@ -20,6 +20,7 @@
 #define GLOBALS_H_
 
 #include <microhttpd.h>
+#include <stdint.h>
 #include <utils/config.h>
 
 #define CONFIG_FILE "clipshare-desktop.conf"
@@ -28,6 +29,10 @@ extern config configuration;
 extern char *error_log_file;
 extern char *cwd;
 extern size_t cwd_len;
+
+#ifdef __linux__
+extern char *pending_data;
+#endif
 
 #ifdef __APPLE__
 extern const char *global_prog_name;

@@ -28,6 +28,11 @@
 #include <string.h>
 #include <utils/net_utils.h>
 
+#ifdef __linux__
+#include <pthread.h>
+#include <utils/utils.h>
+#endif
+
 #if defined(__linux__) || defined(__APPLE__)
 #include <arpa/inet.h>
 #include <sys/select.h>
@@ -54,6 +59,14 @@ typedef struct _get_query_params {
 typedef int MHD_Result_t;
 #else
 typedef enum MHD_Result MHD_Result_t;
+#endif
+
+#ifdef __linux__
+static void *set_clipboard_thread_fn(void *args) {
+    (void)args;
+    set_pending_clipboard_item();
+    return NULL;
+}
 #endif
 
 static void callback_fn(unsigned int status, const char *msg, size_t len, status_callback_params *params) {
@@ -200,6 +213,12 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             res_status = MHD_HTTP_NOT_FOUND;
         }
         if (query.server) free(query.server);
+#ifdef __linux__
+        if (pending_data) {
+            pthread_t pt;
+            pthread_create(&pt, NULL, &set_clipboard_thread_fn, NULL);
+        }
+#endif
         if (handled) return MHD_YES;
     } else {
         response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);

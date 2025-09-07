@@ -207,6 +207,10 @@ void cli_client(int argc, char **argv, const char *prog_name) {
             exit(EXIT_FAILURE);
         }
     }
+#ifdef __linux__
+    if (!pending_data || fork() > 0) return;
+    set_pending_clipboard_item();
+#endif
 }
 
 void net_scan(void) {

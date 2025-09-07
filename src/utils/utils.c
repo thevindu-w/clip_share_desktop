@@ -64,6 +64,16 @@ static inline void _wappend(list2 *lst, const wchar_t *wstr);
 #endif
 static inline int milli_sleep(unsigned int millis);
 
+#ifdef __linux__
+#define PENDING_TEXT 1
+#define PENDING_FILES 2
+
+static uint32_t pending_len;
+static int pending_type;
+
+char *pending_data = NULL;
+#endif
+
 void print_usage(const char *prog_name) {
     fprintf(stderr, "\nUsage: %s [OPTION]\n", prog_name);
     fprintf(stderr, "  or:  %s -c COMMAND <server-address-ipv4> [optional args]\n", prog_name);
@@ -922,14 +932,13 @@ int get_clipboard_text(char **buf_ptr, uint32_t *len_ptr) {
 }
 
 int put_clipboard_text(char *data, uint32_t len) {
-    if (fork() > 0) return EXIT_SUCCESS;  // prevent caller from hanging
-    create_temp_file();
-    if (xclip_util(XCLIP_IN, NULL, &len, &data) != EXIT_SUCCESS) {
-        if (data) free(data);
-        error_exit("Failed to write to clipboard");
-    }
-    if (data) free(data);
-    exit(EXIT_SUCCESS);
+    char *copy = strndup(data, len);
+    if (!copy) return EXIT_FAILURE;
+    if (pending_data) free(pending_data);
+    pending_data = copy;
+    pending_len = len;
+    pending_type = PENDING_TEXT;
+    return EXIT_SUCCESS;
 }
 
 char *get_copied_files_as_str(int *offset) {
@@ -1058,21 +1067,46 @@ int set_clipboard_cut_files(const list2 *paths) {
     }
     *p = 0;
     free_list(lst_url);
-    uint32_t len32 = (uint32_t)tot_len;
-    if (fork() > 0) {  // prevent caller from hanging
-        free(buf);
-        return EXIT_SUCCESS;
-    }
-    create_temp_file();
-    if (xclip_util(XCLIP_IN, "x-special/gnome-copied-files", &len32, &buf) != EXIT_SUCCESS) {
-        if (buf) free(buf);
-        error("Failed to copy files to clipboard");
-        return EXIT_FAILURE;
-    }
-    if (buf) free(buf);
+    if (pending_data) free(pending_data);
+    pending_data = buf;
+    pending_len = (uint32_t)tot_len;
+    pending_type = PENDING_FILES;
     return EXIT_SUCCESS;
 }
 
+void set_pending_clipboard_item(void) {
+    const char *atom_name;
+    switch (pending_type) {
+        case PENDING_TEXT: {
+            atom_name = NULL;
+            break;
+        }
+        case PENDING_FILES: {
+            atom_name = "x-special/gnome-copied-files";
+            break;
+        }
+        default: {
+            free(pending_data);
+            pending_data = NULL;
+            return;
+        }
+    }
+    create_temp_file();
+    if (xclip_util(XCLIP_IN, atom_name, &pending_len, &pending_data) != EXIT_SUCCESS) {
+        if (pending_data) {
+            free(pending_data);
+            pending_data = NULL;
+        }
+        pending_type = 0;
+        error("Failed to write to clipboard");
+        return;
+    }
+    if (pending_data) {
+        free(pending_data);
+        pending_data = NULL;
+    }
+    pending_type = 0;
+}
 #elif defined(_WIN32)
 static int set_temp_file(void) {
     if (!temp_file) {

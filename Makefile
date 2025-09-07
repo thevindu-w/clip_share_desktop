@@ -53,7 +53,7 @@ ifeq ($(detected_OS),Linux)
 	OBJS_C+= utils/listener_linux.o xclip/xclip.o xclip/xclib.o
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS_OPTIM=-Os
-	LDLIBS=-lmicrohttpd -lunistring -lX11 -lXmu -lXt -lXfixes
+	LDLIBS=-lmicrohttpd -lunistring -lX11 -lXmu -lXt -lXfixes -lpthread
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
 	OBJS_C+= utils/listener_windows.o
