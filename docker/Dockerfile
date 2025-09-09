@@ -6,7 +6,7 @@ FROM ubuntu:noble AS ubuntu_builder
 RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev xxd
 
 # Install test dependencies
-RUN apt-get install --no-install-recommends -y xclip python3-minimal diffutils findutils coreutils sed libpng16-16
+RUN apt-get install --no-install-recommends -y xclip python3-minimal coreutils diffutils findutils curl sed libpng16-16
 
 RUN mkdir -p /debs
 WORKDIR /debs
@@ -19,7 +19,7 @@ FROM fedora:42 AS fedora_builder
 RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel xxd
 
 # Install test dependencies
-RUN dnf install --setopt=install_weak_deps=False -y xorg-x11-server-Xvfb xclip python3 diffutils findutils coreutils sed libpng && dnf clean all
+RUN dnf install --setopt=install_weak_deps=False -y xorg-x11-server-Xvfb xclip python3 coreutils diffutils findutils curl sed libpng && dnf clean all
 
 FROM archlinux:base AS arch_builder
 
@@ -28,7 +28,7 @@ RUN pacman -Sy && \
     pacman -S --needed --noconfirm gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd tinyxxd
 
 # Install test dependencies
-RUN pacman -S --needed --noconfirm coreutils diffutils findutils python xclip sed libpng
+RUN pacman -S --needed --noconfirm coreutils diffutils findutils curl python xclip sed libpng
 RUN pacman -Sdd --needed --noconfirm pixman freetype2 graphite harfbuzz libfontenc xorg-xkbcomp xorg-setxkbmap xkeyboard-config libxfont2 libunwind libglvnd libxkbfile xorg-server-xvfb
 
 # hadolint ignore=DL3006

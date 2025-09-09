@@ -82,6 +82,7 @@ jobs:
           python
           diffutils
           findutils
+          curl
           sed
           vim
           unzip

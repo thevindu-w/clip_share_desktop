@@ -14,6 +14,7 @@ dependencies=(
     seq
     sleep
     timeout
+    curl
     diff
     find
     python3
@@ -55,6 +56,7 @@ export MAX_PROTO=3
 export DETECTED_OS
 export TESTS_DIR="$(pwd)"
 export LOG_DIR="${TESTS_DIR}/server_output"
+export XDG_CONFIG_HOME="${TESTS_DIR}/tmp"
 
 # Get the absolute path of clip_share executable
 program="$(realpath "../${program}")"
@@ -209,7 +211,7 @@ run_server() {
 check_logs() {
     cur_file="${0##*/}"
     cur_file="${cur_file%.sh}"
-    diffOutput=$(diff --strip-trailing-cr ${LOG_DIR}/${cur_file}.txt server.log 2>&1 || echo failed)
+    diffOutput="$(diff --strip-trailing-cr ${LOG_DIR}/${cur_file::${#cur_file}-4}.txt server.log 2>&1 || echo failed)"
     if [ ! -z "$diffOutput" ]; then
         showStatus info 'Server logs mismatch.'
         echo "$diffOutput"

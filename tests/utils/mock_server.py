@@ -1,6 +1,7 @@
 import socket
 import getopt
 import os
+import time
 import sys
 
 PROTO_MIN = 1
@@ -43,10 +44,12 @@ STATUS_NO_DATA = b'\x02'
 STATUS_UNKNOWN_METHOD = b'\x03'
 STATUS_METHOD_NOT_IMPLEMENTED = b'\x04'
 
-server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server_sock.bind((BIND_ADDR, PORT))
-server_sock.listen(3)
+def start_server():
+    global server_sock
+    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_sock.bind((BIND_ADDR, PORT))
+    server_sock.listen(3)
 
 def send_int(sock: socket.socket, value: int) -> None:
     b = value.to_bytes(8, 'big')
@@ -261,7 +264,19 @@ def negotiate_protocol(sock: socket.socket) -> None:
         handle_protocol(sock, client_version)
         return
 
+try:
+    start_server()
+except:
+    server_sock.close()
+    temp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    temp_sock.connect((BIND_ADDR, PORT))
+    temp_sock.send(b'\x00')
+    temp_sock.close()
+    time.sleep(0.05)
+    start_server()
+
 client_sock, _ = server_sock.accept()
+server_sock.close()
 client_sock.settimeout(0.05)
 negotiate_protocol(client_sock)
 client_sock.close()
