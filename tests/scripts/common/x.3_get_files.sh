@@ -17,6 +17,8 @@ fi
 diffOutput=$({ diff -rq . "${TESTS_DIR}/files/${files_dir}" 2>&1 | { grep -v '.keep' || true; }; } || echo failed)
 if [ -n "$diffOutput" ]; then
     showStatus info 'Files do not match.'
+    echo 'Diff:'
+    echo "$diffOutput"
     exit 1
 fi
 cd ..
