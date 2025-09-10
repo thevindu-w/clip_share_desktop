@@ -279,4 +279,8 @@ client_sock, _ = server_sock.accept()
 server_sock.close()
 client_sock.settimeout(0.05)
 negotiate_protocol(client_sock)
+try:
+    client_sock.recv(1) # wait for client to receive all data
+except:
+    pass
 client_sock.close()
