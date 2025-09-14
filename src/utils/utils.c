@@ -26,6 +26,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <globals.h>
+#include <microhttpd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -183,6 +184,10 @@ void cleanup(void) {
     puts("Cleaning up resources before exit");
 #endif
     cleanup_listener();
+    if (http_daemon) {
+        MHD_stop_daemon(http_daemon);
+        http_daemon = NULL;
+    }
     if (error_log_file) {
         free(error_log_file);
         error_log_file = NULL;

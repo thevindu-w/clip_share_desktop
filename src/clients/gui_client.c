@@ -30,11 +30,13 @@
 
 #ifdef __linux__
 #include <pthread.h>
+#include <sys/wait.h>
 #include <utils/utils.h>
 #endif
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <arpa/inet.h>
+#include <pwd.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -231,6 +233,10 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
 }
 
 void start_web(void) {
+#if defined(__linux__) || defined(__APPLE__)
+    signal(SIGPIPE, SIG_IGN);  // MHD requires ignoring SIGPIPE
+#endif
+
     struct sockaddr_in bind_addr;
     memset((char *)&bind_addr, 0, sizeof(bind_addr));
     bind_addr.sin_family = AF_INET;
