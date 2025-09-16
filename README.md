@@ -52,7 +52,9 @@ Download the desktop client from <a href="https://github.com/thevindu-w/clip_sha
 
 - [How to Use](#how-to-use)
   - [GUI client](#gui-client)
+  - [CLI client](#cli-client)
   - [Installation](#installation)
+  - [Configursation](#configuration)
 - [Build from Source](#build-from-source)
   - [Build tools](#build-tools)
   - [Dependencies](#dependencies)
@@ -68,11 +70,42 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 - You can run the client from a terminal or by double-clicking on the program (if the file manager supports executing programs in that way).
 - When the client starts, it will not display any visible window or produce any output.
 - Once the client starts, open a web browser (ex: Google Chrome, Microsoft Edge, Firefox, or any modern web browser) and visit [http://localhost:8888/](http://localhost:8888/). This should open the ClipShare client web app. (The port 8888 can be changed in the configuration file)
-- Using the GUI client is same as using the [mobile client](https://github.com/thevindu-w/clip_share_client#how-to-use) except the desktop client uses the `Send File` button to send both copied files and folders.
+- Using the GUI client is similar to using the [mobile client](https://github.com/thevindu-w/clip_share_client#how-to-use) except the desktop client uses the `Send File` button to send both copied files and folders.
 - To use the desktop client to send copied text or files, copy the text or files you want to send (just like you would copy them to paste somewhere else). Then press the correct Send button on the web app (either `Send Text` or `Send File`). Then you can paste them on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server).
-- To use the desktop client to receive copied text, image, or files, copy the text or files on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server). Then press the correct Get button on the web app (either `Get Text`, `Get Image`, or `Get File`). Then you can paste them on the machine that runs the client.
+- To use the desktop client to receive copied text, an image, or files, copy the text or files on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server). Then press the correct Get button on the web app (either `Get Text`, `Get Image`, or `Get File`). Then you can paste them on the machine that runs the client.
 - If something goes wrong, it will create a `client_err.log` file. That file will contain what went wrong.
 
+### CLI client
+
+The CLI client enables using this desktop client with a command. To use the client in this CLI mode, you need to run the client program with the following command line arguments.
+```bash
+clip-share-client -c COMMAND <server-address-ipv4> [optional args]
+```
+**Commands available:**
+- `sc`&nbsp;&nbsp;: Scan - server address is not needed
+- `g `&nbsp;&nbsp;: Get copied text
+- `s `&nbsp;&nbsp;: Send copied text
+- `fg`&nbsp;&nbsp;: Get copied files
+- `fs`&nbsp;&nbsp;: Send copied files
+- `i `&nbsp;&nbsp;: Get image
+- `ic`&nbsp;&nbsp;: Get copied image
+- `is`&nbsp;&nbsp;: Get screenshot - Display number can be used as an optional arg.
+
+**Examples:**
+```bash
+# Get copied text from the device having IP address 192.168.21.42
+clip-share-client -c g 192.168.21.42
+```
+
+```bash
+# Get a screenshot of screen number 1 from the device having IP address 192.168.21.42
+clip-share-client -c is 192.168.21.42 1
+```
+
+```bash
+# Scan and output IP addresses of available servers.
+clip-share-client -c sc
+```
 <br>
 
 ### Installation
@@ -132,6 +165,7 @@ working_dir=./path/to/work_dir
 bind_address=127.0.0.1
 max_text_length=4194304
 max_file_size=68719476736
+cut_received_files=false
 min_proto_version=1
 max_proto_version=3
 auto_send_text=false
@@ -154,6 +188,7 @@ Note that all the lines in the configuration file are optional. You may omit som
 | `bind_address` | The address of the interface to which the application should bind when listening for connections from the web browser in the GUI mode. It will listen on all interfaces if this is set to `0.0.0.0`. (Usually, this should have the loopback address `127.0.0.1` except for some rare cases) | IP address of an interface or wildcard address. IPv4 dot-decimal notation (ex: `192.168.37.5`) or `0.0.0.0` | `127.0.0.1` |
 | `max_text_length` | The maximum length of text that can be transferred. This is the number of bytes of the text encoded in UTF-8. | Any integer between 1 and 4294967295 (nearly 4 GiB) inclusive. Suffixes K, M, and G (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, and x10<sup>9</sup>, respectively. | 4194304 (i.e. 4 MiB) |
 | `max_file_size` | The maximum size of a single file in bytes that can be transferred. | Any integer between 1 and 9223372036854775807 (nearly 8 EiB) inclusive. Suffixes K, M, G, and T (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, x10<sup>9</sup>, and x10<sup>12</sup>, respectively. | 68719476736 (i.e. 64 GiB) |
+| `cut_received_files` | Whether to automatically cut the files into the clipboard on the _Get Files_ and _Get Image_ methods. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
 | `min_proto_version` | The minimum protocol version the client should accept from a server after negotiation. | Any protocol version number greater than or equal to the minimum protocol version the client has implemented. (ex: `1`) | The minimum protocol version the client has implemented |
 | `max_proto_version` | The maximum protocol version the client should accept from a server after negotiation. | Any protocol version number less than or equal to the maximum protocol version the client has implemented. (ex: `3`) | The maximum protocol version the client has implemented |
 | `auto_send_text` | Whether the application should auto-send the text when copied. The values `true` or `1` will enable auto-sending copied text, while `false` or `0` will disable the feature. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
