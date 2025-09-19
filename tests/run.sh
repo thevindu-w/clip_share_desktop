@@ -180,7 +180,11 @@ copy_files() {
             local absPath="$(realpath "$f")"
             absFiles+=("$absPath")
         done
-        osascript "${TESTS_DIR}/utils/setcopiedfiles.applescript" "${absFiles[@]}" >/dev/null
+        local cnt=0
+        while [ "$cnt" -lt "${#files[@]}" ]; do
+            osascript "${TESTS_DIR}/utils/setcopiedfiles.applescript" "${absFiles[@]}" >/dev/null
+            cnt="$(osascript "${TESTS_DIR}/utils/getcopiedfiles.applescript" | wc -l)"
+        done
     else
         echo "Copy files is not available for OS: $DETECTED_OS"
         exit 1

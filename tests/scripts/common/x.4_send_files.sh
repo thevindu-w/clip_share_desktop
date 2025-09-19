@@ -7,7 +7,10 @@ cp -r "${TESTS_DIR}/files/${files_dir}" original
 cd original
 find . -type f -name '.keep' -delete
 find . -type f -name '*.DS_Store' -delete
-copy_files *
+shopt -s nullglob
+file_list=(./*)
+shopt -u nullglob
+copy_files "${file_list[@]}"
 cd ../files
 run_server --proto-max="$proto"
 cd ..
