@@ -148,6 +148,7 @@ jobs:
         echo FILE_NAME="clip-share-client.exe" >> $GITHUB_ENV
         suffix="${version}-windows-x86_64.zip"
         echo ARCHIVE_NAME="clip_share_client-${suffix}" >> $GITHUB_ENV
+        echo INSTALLER_NAME="install-windows.bat" >> $GITHUB_ENV
 
     - name: Setup libmicrohttpd
       id: cache-libmicrohttpd
@@ -184,6 +185,22 @@ jobs:
         retention-days: 3
         if-no-files-found: error
         compression-level: 9
+
+    - name: Create online installer
+      run: |
+        cd helper_tools
+        sed -i "s/VERSION_DEFAULT =$/VERSION_DEFAULT = '${{env.VERSION}}'/" install-online-windows.ps1
+        powershell -ExecutionPolicy bypass ./ps2bat.ps1
+        mv install.bat "../${{env.INSTALLER_NAME}}"
+
+    - name: Upload online installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{env.INSTALLER_NAME}}"
+        path: "${{env.INSTALLER_NAME}}"
+        retention-days: 3
+        if-no-files-found: error
+        compression-level: 6
 
   macOS:
     runs-on: ${{ matrix.os }}
@@ -342,12 +359,23 @@ jobs:
         path: ${{ github.workspace }}
         merge-multiple: true
 
+    - name: Download Windows installer
+      uses: actions/download-artifact@v5
+      with:
+        name: "${{env.INSTALLER_WINDOWS}}"
+        path: "${{env.INSTALLER_WINDOWS}}"
+
     - name: Prepare assets
       run: |
         mkdir release
         mv "${{env.FILE_LINUX_AMD64}}" "${{env.FILE_WINDOWS64}}" "${{env.FILE_MACOS}}" release/
         mv .github/workflows/resources/clipshare-desktop.conf release/
+        mv "${{env.INSTALLER_WINDOWS}}/${{env.INSTALLER_WINDOWS}}" release/
+        mv helper_tools/install-online-linux-mac.sh release/install-linux-mac.sh
         cd release
+        sed -i "s/^VERSION_DEFAULT=$/VERSION_DEFAULT=${{env.VERSION}}/" install-linux-mac.sh
+        sed -i "s/^LINUX_SHA=$/LINUX_SHA='$(sha256sum -b ${{env.FILE_LINUX_AMD64}} | \
+        cut -d ' ' -f 1)'/" install-linux-mac.sh
         sha256sum -b * >SHA2-256SUM
 
     - name: Generate artifact attestation
