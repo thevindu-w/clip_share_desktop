@@ -11,5 +11,8 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Show a menu icon when running in the background.
-- Use the config option `tray_icon` to enable/disable showing the menu icon.
+- Add a feature to cut the received files into the clipboard.
+- Add a configuration option `cut_received_files` to enable/disable the feature.
+- Create online installers.
+- Fix non-critical errors in GUI mode on Linux and macOS.
+- Code improvements.
