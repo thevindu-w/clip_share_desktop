@@ -38,7 +38,7 @@
 
 static int _invoke_method(uint32_t server_addr, unsigned char method, MethodArgs *args) {
     socket_t sock;
-    connect_server(server_addr, configuration.app_port, &sock);
+    connect_server(&sock, server_addr);
     if (IS_NULL_SOCK(sock.type)) {
         puts("Couldn't connect");
         return EXIT_FAILURE;

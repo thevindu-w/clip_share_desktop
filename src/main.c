@@ -45,6 +45,8 @@
 
 // tcp and udp
 #define APP_PORT 4337
+// tcp
+#define APP_PORT_SECURE 4338
 
 // web client port
 #define WEB_PORT 8888
@@ -173,7 +175,9 @@ static inline void _change_working_dir(void) {
  */
 static inline void _apply_default_conf(void) {
     if (configuration.app_port <= 0) configuration.app_port = APP_PORT;
+    if (configuration.app_port_secure <= 0) configuration.app_port_secure = APP_PORT_SECURE;
     if (configuration.web_port <= 0) configuration.web_port = WEB_PORT;
+    if (configuration.secure_mode_enabled < 0) configuration.secure_mode_enabled = 0;
     if (configuration.max_text_length <= 0) configuration.max_text_length = MAX_TEXT_LENGTH;
     if (configuration.max_file_size <= 0) configuration.max_file_size = MAX_FILE_SIZE;
     if (configuration.cut_received_files < 0) configuration.cut_received_files = 0;
@@ -460,6 +464,23 @@ int main(int argc, char **argv) {
         kill_other_processes(prog_name);
         puts("Client Stopped");
         exit(EXIT_SUCCESS);
+    }
+
+    if (configuration.secure_mode_enabled) {
+#ifndef NO_SSL
+        if (!configuration.client_cert.data || !configuration.ca_cert.data || !configuration.trusted_servers) {
+            const char *message = "Secure mode needs client and CA certificates, and the trusted servers list.";
+            fprintf(stderr, "%s Please set them in the configuration file to use the secure mode.\n", message);
+            error_exit(message);
+        }
+#else
+        const char *message =
+            "Secure mode is enabled in the configuration. This program version does not support TLS/SSL.";
+        fprintf(stderr,
+                "%s If the secure mode is not needed, please set secure_mode_enabled=false in the configuration.\n",
+                message);
+        error_exit(message);
+#endif
     }
 
     if (configuration.working_dir) _change_working_dir();

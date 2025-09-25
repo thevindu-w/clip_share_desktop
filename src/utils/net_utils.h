@@ -21,7 +21,9 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-
+#ifndef NO_SSL
+#include <openssl/ssl.h>
+#endif
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
@@ -42,6 +44,12 @@ typedef SOCKET sock_t;
 #define VALID_SOCK 0x1
 #define IS_NULL_SOCK(type) ((type & MASK_VALID) == NULL_SOCK)  // NOLINT(runtime/references)
 
+// Connection encryption mask
+#define MASK_ENC 0x2
+#define PLAIN_SOCK 0x0
+#define SSL_SOCK 0x2
+#define IS_SSL(type) ((type & MASK_ENC) == SSL_SOCK)  // NOLINT(runtime/references)
+
 // Transport layer protocol mask
 #define MASK_TRNSPRT_PROTO 0x4
 #define TRNSPRT_TCP 0x0
@@ -49,9 +57,18 @@ typedef SOCKET sock_t;
 #define IS_UDP(type) ((type & MASK_TRNSPRT_PROTO) == TRNSPRT_UDP)  // NOLINT(runtime/references)
 
 typedef struct _socket_t {
-    sock_t socket;
+    union {
+        sock_t plain;
+#ifndef NO_SSL
+        SSL *ssl;
+#endif
+    } socket;
     unsigned char type;
 } socket_t;
+
+#ifndef NO_SSL
+extern void clear_ssl_ctx(void);
+#endif
 
 /*
  * Converts a ipv4 address in dotted decimal into in_addr_t.
@@ -59,7 +76,7 @@ typedef struct _socket_t {
  */
 extern int ipv4_aton(const char *address_str, uint32_t *address_ptr);
 
-extern void connect_server(uint32_t server_addr, uint16_t port, socket_t *socket);
+extern void connect_server(socket_t *socket, uint32_t server_addr);
 
 extern void get_udp_socket(socket_t *sock_p);
 

@@ -57,6 +57,67 @@ static inline void trim(char *str) {
     }
 }
 
+#ifndef NO_SSL
+/*
+ * Reads the list of server names from the file given by the filename.
+ * Trusted server names must not exceed 511 characters.
+ * Returns a list2* of null terminated strings as elements on success.
+ * Returns null on error.
+ */
+static inline list2 *get_server_list(const char *filename) {
+    FILE *f = fopen(filename, "r");
+    if (!f) error_exit("Error: trusted server list file not found");
+    list2 *server_list = init_list(1);
+    char server[512];
+    while (fscanf(f, "%511[^\n]%*c", server) != EOF) {
+        server[511] = 0;
+        trim(server);
+        size_t len = strnlen(server, 512);
+        if (len < 1) continue;
+        if (server[0] == '#') continue;
+        append(server_list, strdup(server));
+    }
+    fclose(f);
+    return server_list;
+}
+
+/*
+ * Loads the content of a file given by the file_name and set the buffer to the address pointed by ptr.
+ * File must not be empty and its size must be less than 64 KiB.
+ * ptr must be a valid pointer to a char*.
+ * If the char* pointed by ptr is not null. This will call free() on that char*
+ * Sets the malloced block of memory containing a null-terminated file content to the address pointed by ptr.
+ * Does not modify the ptr if an error occurred.
+ * Note that if the file contained null byte in it, the length of the string may be smaller than the allocated memory
+ * block.
+ */
+static inline void load_file(const char *file_name, data_buffer *buf_ptr) {
+    if (!file_name) error_exit("Error: invalid filename");
+    FILE *file_ptr = fopen(file_name, "rb");
+    if (!file_ptr) error_exit("Error: certificate file not found");
+    int64_t len = get_file_size(file_ptr);
+    if (len <= 0 || 65536L < len) {
+        fclose(file_ptr);
+        error_exit("Error: invalid certificate file size");
+    }
+    char *buf = (char *)malloc((size_t)len);
+    if (!buf) {
+        fclose(file_ptr);
+        error_exit("Error: malloc failed for certificate file");
+    }
+    ssize_t sz = (ssize_t)fread(buf, 1, (size_t)len, file_ptr);
+    if (sz < len) {
+        fclose(file_ptr);
+        free(buf);
+        error_exit("Error: certificate file reading failed");
+    }
+    fclose(file_ptr);
+    if (buf_ptr->data) free(buf_ptr->data);
+    buf_ptr->data = buf;
+    buf_ptr->len = (int32_t)len;
+}
+#endif
+
 /*
  * str must be a valid and null-terminated string
  * conf_ptr must be a valid pointer to a char
@@ -199,8 +260,23 @@ static void parse_line(char *line, config *cfg) {
 
     if (!strcmp("app_port", key)) {
         set_uint16(value, &(cfg->app_port));
+    } else if (!strcmp("app_port_secure", key)) {
+        set_uint16(value, &(cfg->app_port_secure));
     } else if (!strcmp("web_port", key)) {
         set_uint16(value, &(cfg->web_port));
+    } else if (!strcmp("secure_mode_enabled", key)) {
+        set_is_true(value, &(cfg->secure_mode_enabled));
+#ifndef NO_SSL
+    } else if (!strcmp("client_cert", key)) {
+        load_file(value, &(cfg->client_cert));
+    } else if (!strcmp("ca_cert", key)) {
+        load_file(value, &(cfg->ca_cert));
+    } else if (!strcmp("trusted_servers", key)) {
+        list2 *server_list = get_server_list(value);
+        if (server_list == NULL) return;
+        if (cfg->trusted_servers) free_list(cfg->trusted_servers);
+        cfg->trusted_servers = server_list;
+#endif
     } else if (!strcmp("working_dir", key)) {
         if (cfg->working_dir) free(cfg->working_dir);
         cfg->working_dir = strdup(value);
@@ -235,7 +311,14 @@ static void parse_line(char *line, config *cfg) {
 
 void parse_conf(config *cfg, const char *file_name) {
     cfg->app_port = 0;
+    cfg->app_port_secure = 0;
     cfg->web_port = 0;
+    cfg->secure_mode_enabled = -1;
+    cfg->client_cert.data = NULL;
+    cfg->client_cert.len = -1;
+    cfg->ca_cert.data = NULL;
+    cfg->ca_cert.len = -1;
+    cfg->trusted_servers = NULL;
     cfg->working_dir = NULL;
     cfg->max_text_length = 0;
     cfg->max_file_size = 0;
@@ -272,7 +355,28 @@ void parse_conf(config *cfg, const char *file_name) {
     return;
 }
 
+#ifndef NO_SSL
+static inline void clear_config_key_cert(config *cfg) {
+    if (cfg->client_cert.data) {
+        if (cfg->client_cert.len > 0) memset(cfg->client_cert.data, 0, (size_t)cfg->client_cert.len);
+        free(cfg->client_cert.data);
+        cfg->client_cert.data = NULL;
+    }
+    if (cfg->ca_cert.data) {
+        free(cfg->ca_cert.data);
+        cfg->ca_cert.data = NULL;
+    }
+    if (cfg->trusted_servers) {
+        free_list(cfg->trusted_servers);
+        cfg->trusted_servers = NULL;
+    }
+}
+#endif
+
 void clear_config(config *cfg) {
+#ifndef NO_SSL
+    clear_config_key_cert(cfg);
+#endif
     if (cfg->working_dir) {
         free(cfg->working_dir);
         cfg->working_dir = NULL;

@@ -106,6 +106,7 @@ clip-share-client -c is 192.168.21.42 1
 # Scan and output IP addresses of available servers.
 clip-share-client -c sc
 ```
+
 <br>
 
 ### Installation

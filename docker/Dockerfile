@@ -3,10 +3,10 @@ ARG DISTRO
 FROM ubuntu:noble AS ubuntu_builder
 
 # Install build dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev xxd
+RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev xxd
 
 # Install test dependencies
-RUN apt-get install --no-install-recommends -y xclip python3-minimal coreutils diffutils findutils curl sed libpng16-16
+RUN apt-get install --no-install-recommends -y xclip python3-minimal coreutils diffutils findutils curl openssl sed
 
 RUN mkdir -p /debs
 WORKDIR /debs
@@ -16,19 +16,19 @@ RUN dpkg --force-depends -i ./*.deb 2>/dev/null && apt-get clean -y
 FROM fedora:42 AS fedora_builder
 
 # Install build dependencies
-RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel xxd
+RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel xxd
 
 # Install test dependencies
-RUN dnf install --setopt=install_weak_deps=False -y xorg-x11-server-Xvfb xclip python3 coreutils diffutils findutils curl sed libpng && dnf clean all
+RUN dnf install --setopt=install_weak_deps=False -y xorg-x11-server-Xvfb xclip python3 coreutils diffutils findutils curl openssl sed && dnf clean all
 
 FROM archlinux:base AS arch_builder
 
 # Install build dependencies
 RUN pacman -Sy && \
-    pacman -S --needed --noconfirm gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd tinyxxd
+    pacman -S --needed --noconfirm gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl tinyxxd
 
 # Install test dependencies
-RUN pacman -S --needed --noconfirm coreutils diffutils findutils curl python xclip sed libpng
+RUN pacman -S --needed --noconfirm coreutils diffutils findutils curl python xclip sed
 RUN pacman -Sdd --needed --noconfirm pixman freetype2 graphite harfbuzz libfontenc xorg-xkbcomp xorg-setxkbmap xkeyboard-config libxfont2 libunwind libglvnd libxkbfile xorg-server-xvfb
 
 # hadolint ignore=DL3006
@@ -50,7 +50,7 @@ COPY Makefile ./
 COPY --chown=user ./src src
 
 # Build
-RUN make clean && make
+RUN make clean && make && make no_ssl
 
 # Prepare the test environment initialization script
 COPY --chmod=755 ./docker/run_docker.sh docker/

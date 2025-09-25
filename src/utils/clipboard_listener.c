@@ -48,7 +48,7 @@ static void send_to_servers(void) {
             continue;
         }
         socket_t sock;
-        connect_server(server_addr, configuration.app_port, &sock);
+        connect_server(&sock, server_addr);
         if (IS_NULL_SOCK(sock.type)) {
             return;
         }

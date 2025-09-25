@@ -1,7 +1,8 @@
 *.o
 *.tar.*
 *.tar
-clip-share-client
+/clip-share-client
+/clip-share-client-no-ssl
 *.exe
 *.res
 src/res/**/*_.*
@@ -12,4 +13,6 @@ dist/
 /build*
 .vscode/
 .trash/
+cert_keys/
+trusted_servers.txt
 .DS_Store

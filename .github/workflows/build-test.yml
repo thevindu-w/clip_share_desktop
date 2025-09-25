@@ -78,6 +78,7 @@ jobs:
         install: >-
           mingw-w64-clang-x86_64-clang
           mingw-w64-clang-x86_64-libunistring
+          mingw-w64-clang-x86_64-openssl
           make
           python
           diffutils
@@ -115,7 +116,9 @@ jobs:
         ref: ${{ github.ref }}
 
     - name: Build
-      run: make
+      run: |
+        make
+        make no_ssl
 
     - name: Test
       run: make test
@@ -136,7 +139,7 @@ jobs:
     steps:
     - name: Install build dependencies
       run: |
-        brew install libunistring coreutils gnu-sed
+        brew install openssl@3 libunistring coreutils gnu-sed
         echo "$(brew --prefix coreutils)"'/libexec/gnubin' >> $GITHUB_PATH
         echo "$(brew --prefix gnu-sed)"'/libexec/gnubin' >> $GITHUB_PATH
 
@@ -179,7 +182,9 @@ jobs:
         ref: ${{ github.ref }}
 
     - name: Build
-      run: make
+      run: |
+        make
+        make no_ssl
 
     - name: Test
       run: |

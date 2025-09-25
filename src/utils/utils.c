@@ -35,6 +35,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <utils/clipboard_listener.h>
+#include <utils/net_utils.h>
 #include <utils/utils.h>
 #ifdef __linux__
 #include <X11/Xmu/Atoms.h>
@@ -197,16 +198,19 @@ void cleanup(void) {
         cwd = NULL;
     }
     clear_config(&configuration);
+#ifndef NO_SSL
+    clear_ssl_ctx();
+#endif
 #ifdef __linux__
     if (_XA_CLIPBOARD) freeAtomPtr(_XA_CLIPBOARD);
     if (_XA_UTF8_STRING) freeAtomPtr(_XA_UTF8_STRING);
 #elif defined(_WIN32)
     WSACleanup();
-#ifdef _WIN64
     if (temp_file) {
         free(temp_file);
         temp_file = NULL;
     }
+#ifdef _WIN64
     cleanup_libs();
 #endif
 #endif

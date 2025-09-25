@@ -50,7 +50,7 @@ list2 *udp_scan(void) {
     if (IS_NULL_SOCK(socket.type)) {
         return NULL;
     }
-    sock_t sock = socket.socket;
+    sock_t sock = socket.socket.plain;
 
     socklen_t len = sizeof(serv_addr);
     sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&serv_addr, len);

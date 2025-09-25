@@ -22,6 +22,7 @@ SHELL:=/bin/bash
 .DELETE_ON_ERROR:
 
 PROGRAM_NAME=clip-share-client
+PROGRAM_NAME_NO_SSL:=$(PROGRAM_NAME)-no-ssl
 
 SRC_DIR=src
 BUILD_DIR=build
@@ -53,14 +54,16 @@ ifeq ($(detected_OS),Linux)
 	OBJS_C+= utils/listener_linux.o xclip/xclip.o xclip/xclib.o
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS_OPTIM=-Os
-	LDLIBS=-lmicrohttpd -lunistring -lX11 -lXmu -lXt -lXfixes -lpthread
+	LDLIBS_NO_SSL=-lmicrohttpd -lunistring -lX11 -lXmu -lXt -lXfixes -lpthread
+	LDLIBS_SSL=-lssl -lcrypto
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
 	OBJS_C+= utils/listener_windows.o
 	CFLAGS+= -Wformat-signedness
 	CFLAGS_OPTIM=-O3
 	OTHER_DEPENDENCIES+= res/win/app.coff
-	LDLIBS=-l:libmicrohttpd.a -l:libunistring.a -lws2_32 -lgdi32
+	LDLIBS_NO_SSL=-l:libmicrohttpd.a -l:libunistring.a -lws2_32 -lgdi32
+	LDLIBS_SSL=-l:libssl.a -l:libcrypto.a -l:libz.a -lcrypt32
 	LINK_FLAGS_BUILD=
 	ifeq ($(ARCH),x86_64)
 		CC=clang
@@ -68,10 +71,11 @@ else ifeq ($(detected_OS),Windows)
 	else
 		CFLAGS+= -ftree-vrp -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 		CFLAGS+= -D__USE_MINGW_ANSI_STDIO
-		LDLIBS+= -lShcore -lUserenv
+		LDLIBS_NO_SSL+= -lShcore -lUserenv
 		LINK_FLAGS_BUILD+= -no-pie
 	endif
 	PROGRAM_NAME:=$(PROGRAM_NAME).exe
+	PROGRAM_NAME_NO_SSL:=$(PROGRAM_NAME_NO_SSL).exe
 else ifeq ($(detected_OS),Darwin)
 export CPATH:=$(CPATH):$(shell brew --prefix)/include
 export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
@@ -81,10 +85,12 @@ export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
 	CFLAGS_OPTIM=-O3
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
-	LDLIBS=-framework AppKit -lmicrohttpd -lunistring -lobjc
+	LDLIBS_NO_SSL=-framework AppKit -lmicrohttpd -lunistring -lobjc
+	LDLIBS_SSL=-lssl -lcrypto
 else
 $(error ClipShare is not supported on this platform!)
 endif
+LDLIBS+= $(LDLIBS_SSL) $(LDLIBS_NO_SSL)
 CFLAGS+= -DINFO_NAME=\"clip_share\" -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
 CFLAGS_OPTIM+= -Werror
 
@@ -107,17 +113,28 @@ OTHER_DEPENDENCIES:=$(addprefix $(BUILD_DIR)/,$(OTHER_DEPENDENCIES))
 
 # append '_debug' to objects for debug executable to prevent overwriting objects for main build
 DEBUG_OBJS_C=$(OBJS_C:.o=_debug.o)
+DEBUG_OBJS_M=$(OBJS_M:.o=_debug.o)
 DEBUG_OBJS_BIN=$(OBJS_BIN:.o=_debug.o)
-DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_BIN)
+DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_M) $(DEBUG_OBJS_BIN)
+
+# append '_no_ssl' to objects for clip-share-client-no-sssl executable to prevent overwriting objects for clip_share
+NO_SSL_OBJS_C=$(OBJS_C:.o=_no_ssl.o)
+NO_SSL_OBJS_M=$(OBJS_M:.o=_no_ssl.o)
+NO_SSL_OBJS_BIN=$(OBJS_BIN:.o=_no_ssl.o)
+NO_SSL_OBJS=$(NO_SSL_OBJS_C) $(NO_SSL_OBJS_M) $(NO_SSL_OBJS_BIN)
 
 OBJS=$(OBJS_C) $(OBJS_M) $(OBJS_BIN)
-ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS) $(OTHER_DEPENDENCIES) $(OBJS_BIN:$(BUILD_DIR)/%.o=$(SRC_DIR)/%_.c)
+ALL_DEPENDENCIES=$(OBJS) $(DEBUG_OBJS) $(NO_SSL_OBJS) $(OTHER_DEPENDENCIES) $(OBJS_BIN:$(BUILD_DIR)/%.o=$(SRC_DIR)/%_.c)
 DIRS=$(foreach file,$(ALL_DEPENDENCIES),$(dir $(file)))
 DIRS:=$(sort $(DIRS))
 
 $(PROGRAM_NAME): $(OBJS) $(OTHER_DEPENDENCIES)
 	@echo CCLD $$'\t' $@
 	@$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS) -o $@
+
+$(PROGRAM_NAME_NO_SSL): $(NO_SSL_OBJS) $(OTHER_DEPENDENCIES)
+	@echo CCLD $$'\t' $@
+	@$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS_NO_SSL) -o $@
 
 .SECONDEXPANSION:
 $(ALL_DEPENDENCIES): %: | $$(dir %)
@@ -130,10 +147,19 @@ $(OBJS):
 	@$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $< -o $@
 
 $(DEBUG_OBJS_C): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%.c
+$(DEBUG_OBJS_M): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%.m
 $(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%_.c
 $(DEBUG_OBJS):
 	@echo CC $$'\t' $@
 	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $< -o $@
+
+$(NO_SSL_OBJS_C): $(BUILD_DIR)/%_no_ssl.o: $(SRC_DIR)/%.c
+$(NO_SSL_OBJS_M): $(BUILD_DIR)/%_no_ssl.o: $(SRC_DIR)/%.m
+$(NO_SSL_OBJS_BIN): $(BUILD_DIR)/%_no_ssl.o: $(SRC_DIR)/%_.c
+$(BUILD_DIR)/main_no_ssl.o: $(VERSION_FILE)
+$(NO_SSL_OBJS):
+	@echo CC $$'\t' $@
+	@$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -DNO_SSL -fno-pie $< -o $@
 
 $(SRC_DIR)/res/page_.c: $(SRC_DIR)/res/page.html
 	@echo generate $$'\t' $@
@@ -156,11 +182,13 @@ $(SRC_DIR)/res/mac/icon_.c: $(SRC_DIR)/res/mac/icon.png
 $(DIRS):
 	mkdir -p $@
 
-.PHONY: clean debug test check
+.PHONY: clean debug no_ssl test check
 
 debug: $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
 	@echo CCLD $$'\t' $@
 	@$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
+
+no_ssl: $(PROGRAM_NAME_NO_SSL)
 
 test: $(PROGRAM_NAME)
 	@chmod +x tests/run.sh && cd tests && ./run.sh $(PROGRAM_NAME)
