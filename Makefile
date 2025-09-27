@@ -16,7 +16,7 @@
 
 MAKEFLAGS+= -j4 --warn-undefined-variables --no-builtin-rules
 
-SHELL:=/bin/bash
+SHELL:=bash
 .SHELLFLAGS:=-eu -o pipefail -c
 .ONESHELL:
 .DELETE_ON_ERROR:
@@ -34,6 +34,7 @@ CC=gcc
 CPP=cpp
 CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
+VPATH=$(SRC_DIR)
 
 OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o utils/clipboard_listener.o
 OBJS_BIN=res/page.o
@@ -117,7 +118,7 @@ DEBUG_OBJS_M=$(OBJS_M:.o=_debug.o)
 DEBUG_OBJS_BIN=$(OBJS_BIN:.o=_debug.o)
 DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_M) $(DEBUG_OBJS_BIN)
 
-# append '_no_ssl' to objects for clip-share-client-no-sssl executable to prevent overwriting objects for clip_share
+# append '_no_ssl' to objects for clip-share-client-no-ssl executable to prevent overwriting objects for clip_share
 NO_SSL_OBJS_C=$(OBJS_C:.o=_no_ssl.o)
 NO_SSL_OBJS_M=$(OBJS_M:.o=_no_ssl.o)
 NO_SSL_OBJS_BIN=$(OBJS_BIN:.o=_no_ssl.o)
@@ -139,53 +140,58 @@ $(PROGRAM_NAME_NO_SSL): $(NO_SSL_OBJS) $(OTHER_DEPENDENCIES)
 .SECONDEXPANSION:
 $(ALL_DEPENDENCIES): %: | $$(dir %)
 
-$(OBJS_C): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-$(OBJS_M): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.m
-$(OBJS_BIN): $(BUILD_DIR)/%.o: $(SRC_DIR)/%_.c
+$(OBJS_C): $(BUILD_DIR)/%.o: %.c
+$(OBJS_M): $(BUILD_DIR)/%.o: %.m
+$(OBJS_BIN): $(BUILD_DIR)/%.o: %_.c
+$(BUILD_DIR)/main.o: $(VERSION_FILE)
 $(OBJS):
 	@echo CC $$'\t' $@
 	@$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -fno-pie $< -o $@
 
-$(DEBUG_OBJS_C): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%.c
-$(DEBUG_OBJS_M): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%.m
-$(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: $(SRC_DIR)/%_.c
+$(DEBUG_OBJS_C): $(BUILD_DIR)/%_debug.o: %.c
+$(DEBUG_OBJS_M): $(BUILD_DIR)/%_debug.o: %.m
+$(DEBUG_OBJS_BIN): $(BUILD_DIR)/%_debug.o: %_.c
+$(BUILD_DIR)/main_debug.o: $(VERSION_FILE)
 $(DEBUG_OBJS):
 	@echo CC $$'\t' $@
-	$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $< -o $@
+	@$(CC) $(CFLAGS) $(CFLAGS_DEBUG) $< -o $@
 
-$(NO_SSL_OBJS_C): $(BUILD_DIR)/%_no_ssl.o: $(SRC_DIR)/%.c
-$(NO_SSL_OBJS_M): $(BUILD_DIR)/%_no_ssl.o: $(SRC_DIR)/%.m
-$(NO_SSL_OBJS_BIN): $(BUILD_DIR)/%_no_ssl.o: $(SRC_DIR)/%_.c
+$(NO_SSL_OBJS_C): $(BUILD_DIR)/%_no_ssl.o: %.c
+$(NO_SSL_OBJS_M): $(BUILD_DIR)/%_no_ssl.o: %.m
+$(NO_SSL_OBJS_BIN): $(BUILD_DIR)/%_no_ssl.o: %_.c
 $(BUILD_DIR)/main_no_ssl.o: $(VERSION_FILE)
 $(NO_SSL_OBJS):
 	@echo CC $$'\t' $@
 	@$(CC) $(CFLAGS_OPTIM) $(CFLAGS) -DNO_SSL -fno-pie $< -o $@
 
-$(SRC_DIR)/res/page_.c: $(SRC_DIR)/res/page.html
+$(SRC_DIR)/res/page_.c: res/page.html
 	@echo generate $$'\t' $@
 	@cd $(dir $@) && \
 	xxd -i $(notdir $<) >$(notdir $@)
 
-$(BUILD_DIR)/res/win/app.coff: $(SRC_DIR)/res/win/app_.rc $(SRC_DIR)/res/win/resource.h
+$(BUILD_DIR)/res/win/app.coff: res/win/app_.rc res/win/resource.h
 	@echo windres $$'\t' $@
 	@windres -I$(SRC_DIR) $< -O coff -o $@
 
-$(SRC_DIR)/res/win/app_.rc: $(SRC_DIR)/res/win/app.rc $(VERSION_FILE)
+$(SRC_DIR)/res/win/app_.rc: res/win/app.rc $(VERSION_FILE)
 	@echo CPP $$'\t' $@
 	@$(CPP) -I$(SRC_DIR) -P -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) -DVERSION_PATCH=$(VERSION_PATCH) -DVERSION=\"$(VERSION)\" $< -o $@
 
-$(SRC_DIR)/res/mac/icon_.c: $(SRC_DIR)/res/mac/icon.png
+$(SRC_DIR)/res/mac/icon_.c: res/mac/icon.png
 	@echo generate $$'\t' $@
 	@cd $(dir $@) && \
 	xxd -i $(notdir $<) >$(notdir $@)
 
 $(DIRS):
-	mkdir -p $@
+	@echo create directory $@
+	@mkdir -p $@
 
-.PHONY: clean debug no_ssl test check
+.PHONY: all clean debug no_ssl test check
+
+all: $(PROGRAM_NAME) $(PROGRAM_NAME_NO_SSL)
 
 debug: $(DEBUG_OBJS) $(OTHER_DEPENDENCIES)
-	@echo CCLD $$'\t' $@
+	@echo CCLD $$'\t' $@ $(PROGRAM_NAME)
 	@$(CC) $^ $(LDLIBS) -o $(PROGRAM_NAME)
 
 no_ssl: $(PROGRAM_NAME_NO_SSL)
