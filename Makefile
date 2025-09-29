@@ -132,10 +132,18 @@ DIRS:=$(sort $(DIRS))
 $(PROGRAM_NAME): $(OBJS) $(OTHER_DEPENDENCIES)
 	@echo CCLD $$'\t' $@
 	@$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS) -o $@
+	@if [ "${detected_OS}" = 'Windows' ] && [ "${ARCH}" = 'x86_64' ]; then\
+		echo PatchPE $$'\t' $@;\
+		MSYS2_ARG_CONV_EXCL='/DependentLoadFlags' PatchPE.exe $@ /DependentLoadFlags 0x800 >/dev/null;\
+	fi
 
 $(PROGRAM_NAME_NO_SSL): $(NO_SSL_OBJS) $(OTHER_DEPENDENCIES)
 	@echo CCLD $$'\t' $@
 	@$(CC) $^ $(LINK_FLAGS_BUILD) $(LDLIBS_NO_SSL) -o $@
+	@if [ "${detected_OS}" = 'Windows' ] && [ "${ARCH}" = 'x86_64' ]; then\
+		echo PatchPE $$'\t' $@;\
+		MSYS2_ARG_CONV_EXCL='/DependentLoadFlags' PatchPE.exe $@ /DependentLoadFlags 0x800 >/dev/null;\
+	fi
 
 .SECONDEXPANSION:
 $(ALL_DEPENDENCIES): %: | $$(dir %)
