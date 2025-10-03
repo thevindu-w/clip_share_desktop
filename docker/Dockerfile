@@ -28,7 +28,7 @@ RUN pacman -Sy && \
     pacman -S --needed --noconfirm gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl tinyxxd
 
 # Install test dependencies
-RUN pacman -S --needed --noconfirm coreutils diffutils findutils curl python xclip sed
+RUN pacman -S --needed --noconfirm coreutils diffutils findutils curl python xclip sed libpng
 RUN pacman -Sdd --needed --noconfirm pixman freetype2 graphite harfbuzz libfontenc xorg-xkbcomp xorg-setxkbmap xkeyboard-config libxfont2 libunwind libglvnd libxkbfile xorg-server-xvfb
 
 # hadolint ignore=DL3006

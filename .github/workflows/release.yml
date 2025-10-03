@@ -115,7 +115,7 @@ jobs:
 
   Windows:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs:
     - Checks
     - Build-and-Test
@@ -139,16 +139,64 @@ jobs:
 
     - name: Set variables
       run: |
+        OPENSSL_PATH=/c/msys64/openssl-x86_64
+        echo OPENSSL_PATH="$OPENSSL_PATH" >> "$GITHUB_ENV"
         LIBMICROHTTPD_PATH=/c/msys64/libmicrohttpd-x86_64
         echo LIBMICROHTTPD_PATH="$LIBMICROHTTPD_PATH" >> "$GITHUB_ENV"
-        echo CPATH="${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
-        echo LIBRARY_PATH="${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        echo CPATH="${OPENSSL_PATH}/include:${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+        echo LIBRARY_PATH="${OPENSSL_PATH}/lib64:${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
         version="$(echo '${{github.ref_name}}' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
         echo VERSION="$version" >> $GITHUB_ENV
         echo FILE_NAME="clip-share-client.exe" >> $GITHUB_ENV
+        echo FILE_NAME_NO_SSL="clip-share-client-no-ssl.exe" >> $GITHUB_ENV
         suffix="${version}-windows-x86_64.zip"
         echo ARCHIVE_NAME="clip_share_client-${suffix}" >> $GITHUB_ENV
+        echo ARCHIVE_NAME_NO_SSL="clip_share_client-no_ssl-${suffix}" >> $GITHUB_ENV
         echo INSTALLER_NAME="install-windows.bat" >> $GITHUB_ENV
+
+    - name: Setup OpenSSL
+      id: cache-openssl
+      uses: actions/cache@v4
+      with:
+        path: C:\msys64\openssl-x86_64
+        key: openssl-windows-x86_64
+
+    - name: Build OpenSSL
+      if: ${{ steps.cache-openssl.outputs.cache-hit != 'true' }}
+      run: |
+        curl -OL https://github.com/openssl/openssl/releases/download/openssl-3.5.0/openssl-3.5.0.tar.gz
+        if [ "$(sha256sum -b openssl-3.5.0.tar.gz | cut -d ' ' -f 1)" != \
+            '344d0a79f1a9b08029b0744e2cc401a43f9c90acd1044d09a530b4885a8e9fc0' ]; then
+          echo OpenSSL hash mismatch
+          exit 1
+        fi
+        tar -xzf openssl-3.5.0.tar.gz
+        mkdir "$OPENSSL_PATH"
+        cd openssl-3.5.0
+        CC=clang ./Configure zlib no-zlib-dynamic no-brotli no-zstd no-shared no-tests no-docs \
+        --prefix="$OPENSSL_PATH" mingw64
+        make -j4
+        make install
+        cd ..
+        rm -rf openssl-3.5.0*
+
+    - name: Setup PatchPE
+      id: cache-patchpe
+      uses: actions/cache@v4
+      with:
+        path: C:\msys64\PatchPE.exe
+        key: patchpe-windows-x86_64
+
+    - name: Download PatchPE
+      if: ${{ steps.cache-patchpe.outputs.cache-hit != 'true' }}
+      run: |
+        curl -OL https://github.com/datadiode/PatchPE/releases/download/2.04/PatchPE.exe
+        if [ "$(sha256sum -b PatchPE.exe | cut -d ' ' -f 1)" != \
+            '77f81c7335a8ddc86a79315425ea6b9e4e165a53540db567ea46ef01eab2aa97' ]; then
+          echo PatchPE hash mismatch
+          exit 1
+        fi
+        mv PatchPE.exe /c/msys64/PatchPE.exe
 
     - name: Setup libmicrohttpd
       id: cache-libmicrohttpd
@@ -170,6 +218,9 @@ jobs:
 
     - name: Build
       run: |
+        if [ -n "$OPENSSL_PATH" ] && [ -d "$OPENSSL_PATH" ]; then
+          export PATH="${PATH}:/c/msys64"
+        fi
         make
         mkdir dist
         mv clip-share-client*.exe "dist/${{env.FILE_NAME}}"
@@ -177,11 +228,33 @@ jobs:
         cd dist
         zip -9 "../${{env.ARCHIVE_NAME}}" *
 
+    - name: Build no_ssl
+      run: |
+        if [ -n "$OPENSSL_PATH" ] && [ -d "$OPENSSL_PATH" ]; then
+          export PATH="${PATH}:/c/msys64"
+        fi
+        make clean
+        make no_ssl
+        mkdir dist_no_ssl
+        mv clip-share-client-no-ssl*.exe "dist_no_ssl/${{env.FILE_NAME_NO_SSL}}"
+        [ -f helper_tools/install-windows.bat ] && cp helper_tools/install-windows.bat dist_no_ssl/
+        cd dist_no_ssl
+        zip -9 "../${{env.ARCHIVE_NAME_NO_SSL}}" *
+
     - name: Upload Windows version
       uses: actions/upload-artifact@v4
       with:
         name: "${{env.ARCHIVE_NAME}}"
         path: "${{env.ARCHIVE_NAME}}"
+        retention-days: 3
+        if-no-files-found: error
+        compression-level: 9
+
+    - name: Upload Windows no-ssl version
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{env.ARCHIVE_NAME_NO_SSL}}"
+        path: "${{env.ARCHIVE_NAME_NO_SSL}}"
         retention-days: 3
         if-no-files-found: error
         compression-level: 9
@@ -350,6 +423,7 @@ jobs:
         echo TITLE="Version ${version}" >> $GITHUB_ENV
         echo FILE_LINUX_AMD64="clip_share_client-${version}-linux-x86_64.tar.gz" >> $GITHUB_ENV
         echo FILE_WINDOWS64="clip_share_client-${version}-windows-x86_64.zip" >> $GITHUB_ENV
+        echo FILE_WINDOWS64_NO_SSL="clip_share_client-no_ssl-${version}-windows-x86_64.zip" >> $GITHUB_ENV
         echo INSTALLER_WINDOWS="install-windows.bat" >> $GITHUB_ENV
         echo FILE_MACOS="clip_share_client-${version}-macos.zip" >> $GITHUB_ENV
 
@@ -369,7 +443,8 @@ jobs:
     - name: Prepare assets
       run: |
         mkdir release
-        mv "${{env.FILE_LINUX_AMD64}}" "${{env.FILE_WINDOWS64}}" "${{env.FILE_MACOS}}" release/
+        mv "${{env.FILE_LINUX_AMD64}}" "${{env.FILE_WINDOWS64}}" "${{env.FILE_WINDOWS64_NO_SSL}}" \
+        "${{env.FILE_MACOS}}" release/
         mv "${{env.INSTALLER_WINDOWS}}/${{env.INSTALLER_WINDOWS}}" release/
         mv .github/workflows/resources/clipshare-desktop.conf release/
         mv helper_tools/install-online-linux-mac.sh release/install-linux-mac.sh
