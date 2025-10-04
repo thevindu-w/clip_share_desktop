@@ -54,7 +54,8 @@ Download the desktop client from <a href="https://github.com/thevindu-w/clip_sha
   - [GUI client](#gui-client)
   - [CLI client](#cli-client)
   - [Installation](#installation)
-  - [Configursation](#configuration)
+  - [Create SSL/TLS certificates and key files](#create-ssltls-certificates-and-key-files) (optional)
+  - [Configuration](#configuration)
 - [Build from Source](#build-from-source)
   - [Build tools](#build-tools)
   - [Dependencies](#dependencies)
@@ -96,12 +97,10 @@ clip-share-client -c COMMAND <server-address-ipv4> [optional args]
 # Get copied text from the device having IP address 192.168.21.42
 clip-share-client -c g 192.168.21.42
 ```
-
 ```bash
 # Get a screenshot of screen number 1 from the device having IP address 192.168.21.42
 clip-share-client -c is 192.168.21.42 1
 ```
-
 ```bash
 # Scan and output IP addresses of available servers.
 clip-share-client -c sc
@@ -143,6 +142,19 @@ chmod +x install-mac.sh
 
 <br>
 
+### Create SSL/TLS certificates and key files
+
+**Note:** This section is optional if you do not need the TLS encrypted mode.
+
+The following files should be created, and their paths should be specified in the configuration file `clipshare.conf`. You may use different file names and paths to store the keys and certificates.
+
+* `client.pfx` &ensp; - &nbsp; SSL/TLS key and certificate file of the client
+* `ca.crt` &emsp;&emsp;&ensp; - &nbsp; SSL/TLS certificate of the CA, which signed both the server's and the client's SSL/TLS certificates
+
+Refer to the [Create SSL/TLS certificates and key files](https://github.com/thevindu-w/clip_share_server#create-ssltls-certificates-and-key-files) section for more information on generating the TLS keys and certificates.
+
+<br>
+
 ### Configuration
 
 The ClipShare desktop client can be configured using a configuration file. The configuration file should be named `clipshare-desktop.conf`.
@@ -160,7 +172,13 @@ To customize the client, create a file named &nbsp; `clipshare-desktop.conf` &nb
 
 ```properties
 app_port=4337
+app_port_secure=4338
 web_port=8888
+
+secure_mode_enabled=true
+client_cert=cert/client.pfx
+ca_cert=cert/ca.crt
+trusted_servers=trusted_servers.txt
 
 working_dir=./path/to/work_dir
 bind_address=127.0.0.1
@@ -184,7 +202,12 @@ Note that all the lines in the configuration file are optional. You may omit som
 | Property | Description | Accepted values | Default |
 |  :----:  | :--------   | :------------   |  :---:  |
 | `app_port` | The TCP port on which the server listens for unencrypted TCP connections. (Refer to the corresponding configuration value of the server) | TCP port number used for the server (1 - 65535) | `4337` |
+| `app_port_secure` | The TCP port on which the server listens for TLS-encrypted connections. (Refer to the corresponding configuration value of the server) | TCP port number used for the server (1 - 65535) | `4338` |
 | `web_port` | The TCP port on which the application listens for connections from the web browser. This setting is used only for the GUI client. (Values below 1024 may require superuser/admin privileges) | Any valid, unused TCP port number (1 - 65535) | `8888` |
+| `secure_mode_enabled` | Whether or not the application listens for TLS-encrypted connections. The values `true` or `1` will enable it, while `false` or `0` will disable it. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
+| `client_cert` | The TLS key and certificate store file of the client. This must be specified if the secure mode is enabled. | Absolute or relative path to the client's TLS certificate store PKCS#12 file | \<Unspecified\> |
+| `ca_cert` | The TLS certificate file of the CA that signed the TLS certificate of the client. This must be specified if the secure mode is enabled. | Absolute or relative path to the TLS certificate PEM file of the CA | \<Unspecified\> |
+| `trusted_servers` | The text file containing a list of trusted servers (Common Name of server certificate), one name per line. This must be specified if the secure mode is enabled. | Absolute or relative path to the trusted-servers file | \<Unspecified\> |
 | `working_dir` | The working directory where the application should run. All the files and images, that are fetched from the server, will be saved in this directory. It will follow symlinks if this is a path to a symlink. The user running this application should have write access to the directory | Absolute or relative path to an existing directory | `.` (i.e. Current directory) |
 | `bind_address` | The address of the interface to which the application should bind when listening for connections from the web browser in the GUI mode. It will listen on all interfaces if this is set to `0.0.0.0`. (Usually, this should have the loopback address `127.0.0.1` except for some rare cases) | IP address of an interface or wildcard address. IPv4 dot-decimal notation (ex: `192.168.37.5`) or `0.0.0.0` | `127.0.0.1` |
 | `max_text_length` | The maximum length of text that can be transferred. This is the number of bytes of the text encoded in UTF-8. | Any integer between 1 and 4294967295 (nearly 4 GiB) inclusive. Suffixes K, M, and G (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, and x10<sup>9</sup>, respectively. | 4194304 (i.e. 4 MiB) |
@@ -271,17 +294,17 @@ If you changed the configuration file, you must restart the server to apply the 
 
 * On Debian-based or Ubuntu-based distros,
   ```bash
-  sudo apt-get install libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev
+  sudo apt-get install libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev
   ```
 
 * On Redhat-based or Fedora-based distros,
   ```bash
-  sudo yum install glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel
+  sudo yum install glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel
   ```
 
 * On Arch-based distros,
   ```bash
-  sudo pacman -S libx11 libxmu libxfixes libunistring libmicrohttpd
+  sudo pacman -S libx11 libxmu libxfixes libunistring libmicrohttpd openssl
   ```
 
   glibc should already be available on Arch distros. But you may need to upgrade it with the following command. (You need to do this only if the build fails)
@@ -299,13 +322,29 @@ If you changed the configuration file, you must restart the server to apply the 
 
 * [libmicrohttpd](https://ftpmirror.gnu.org/libmicrohttpd/)
 * [libunistring](https://packages.msys2.org/package/mingw-w64-clang-x86_64-libunistring?repo=clang64)
+* [libssl](https://github.com/openssl/openssl/releases/) (provided by OpenSSL)
 
 In an [MSYS2](https://www.msys2.org/) environment, these libraries can be installed using pacman with the following command:
 ```bash
 pacman -S mingw-w64-clang-x86_64-libunistring
 ```
 
-However, installing libmicrohttpd from GNU is recommended. You can download the library from [ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip](https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip) and extract the files in it to the correct include and library directories in the MSYS2 environment. Alternatively, you may extract the library to a separate directory and set the `CPATH` and `LIBRARY_PATH` environment variables to the include and link-library paths, respectively.
+**Note:** However, to avoid DLL loading issues, it is recommended to compile openssl from its source with the following configuration and use that instead of the `mingw-w64-clang-x86_64-openssl` packaged version.
+```bash
+OPENSSL_PATH='<Use a suitable existing empty directory path here>'
+CC=clang ./Configure zlib no-zlib-dynamic no-brotli no-zstd no-shared no-tests no-docs --prefix="$OPENSSL_PATH" mingw64
+make
+make install
+```
+To use it, set the following environment variables in the shell used to build ClipShare.
+```bash
+export CPATH="${OPENSSL_PATH}/include"
+export LIBRARY_PATH="${OPENSSL_PATH}/lib64"
+```
+
+Installing libmicrohttpd from GNU is recommended. You can download the library from [ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip](https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip) and extract the files in it to the correct include and library directories in the MSYS2 environment. Alternatively, you may extract the library to a separate directory and set the `CPATH` and `LIBRARY_PATH` environment variables to the include and link-library paths, respectively.
+
+Additionally, [PatchPE](https://github.com/datadiode/PatchPE) should be available, and the PATH environment variable should be set accordingly. Download PatchPE from [github.com/datadiode/PatchPE/releases/download/2.04/PatchPE.exe](https://github.com/datadiode/PatchPE/releases/download/2.04/PatchPE.exe).
 </details>
 
 <details>
