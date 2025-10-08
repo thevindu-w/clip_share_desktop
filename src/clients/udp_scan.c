@@ -25,6 +25,8 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #elif defined(_WIN32)
 #include <winsock2.h>
@@ -38,12 +40,28 @@
 typedef int socklen_t;
 #endif
 
-list2 *udp_scan(void) {
-    struct sockaddr_in serv_addr;
-    memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(4337);
-    serv_addr.sin_addr.s_addr = INADDR_BROADCAST;
+#define MAX_THREADS 16
+#define ADDR_BUF_SZ 16
+#define CAST_SOCKADDR_IN (struct sockaddr_in *)(void *)
+
+typedef struct {
+    in_addr_t brd_addr;
+    pthread_mutex_t *mutex;
+    list2 *server_lst;
+} scan_arg_t;
+
+static void *scan_fn(void *args) {
+    scan_arg_t *arg = (scan_arg_t *)args;
+    in_addr_t broadcast = arg->brd_addr;
+    pthread_mutex_t *mutex = arg->mutex;
+    list2 *servers = arg->server_lst;
+    free(arg);
+
+    struct sockaddr_in server_addr;
+    memset((char *)&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(4337);
+    server_addr.sin_addr.s_addr = broadcast;
 
     socket_t socket;
     get_udp_socket(&socket);
@@ -52,30 +70,104 @@ list2 *udp_scan(void) {
     }
     sock_t sock = socket.socket.plain;
 
-    socklen_t len = sizeof(serv_addr);
-    sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&serv_addr, len);
+    socklen_t len = sizeof(server_addr);
+    sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&server_addr, len);
 
-    list2 *serv_lst = init_list(1);
     const int buf_sz = 16;
     char buffer[buf_sz];
-    for (int i = 0; i < 1024; i++) {
-        int n = (int)recvfrom(sock, (char *)buffer, (size_t)buf_sz, 0, (struct sockaddr *)&serv_addr, &len);
-        if (n < 0) n = 0;
-        if (n >= buf_sz) n = buf_sz - 1;
+    for (int i = 0; i < 256; i++) {
+        int n = (int)recvfrom(sock, (char *)buffer, (size_t)buf_sz, 0, (struct sockaddr *)&server_addr, &len);
+        if (n < 0) {
+            n = 0;
+        } else if (n >= buf_sz) {
+            n = buf_sz - 1;
+        }
         buffer[n] = '\0';
-        if (strncmp(INFO_NAME, buffer, (size_t)buf_sz)) break;
-        char *server = inet_ntoa(serv_addr.sin_addr);
-        append(serv_lst, strdup(server));
-        if (i == 0) {
-            // reduce timeout for subsequent recvfrom calls to 200ms
-#if defined(__linux__) || defined(__APPLE__)
-            struct timeval timeout = {.tv_sec = 0, .tv_usec = 200000L};
-#elif defined(_WIN32)
-            DWORD timeout = 200;
+        if (strncmp(INFO_NAME, buffer, (size_t)buf_sz)) {
+#ifdef DEBUG_MODE
+            puts("Incorrect scan response");
 #endif
-            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));  // ignore failure
+            continue;
+        }
+
+        char server[ADDR_BUF_SZ];
+        if (!inet_ntop(AF_INET, &server_addr.sin_addr, server, ADDR_BUF_SZ)) {
+#ifdef DEBUG_MODE
+            puts("inet_ntop failed");
+#endif
+            continue;
+        }
+        server[ADDR_BUF_SZ - 1] = 0;
+#ifdef DEBUG_MODE
+        char broadcast_str[ADDR_BUF_SZ];
+        struct in_addr broadcast_addr = {.s_addr = broadcast};
+        inet_ntop(AF_INET, &broadcast_addr, broadcast_str, ADDR_BUF_SZ);
+        printf("Server %s from %s\n", server, broadcast_str);
+#endif
+        if (!pthread_mutex_lock(mutex)) {
+            append(servers, strdup(server));
+            pthread_mutex_unlock(mutex);
         }
     }
     close_socket_no_wait(&socket);
-    return serv_lst;
+
+    return NULL;
+}
+
+list2 *udp_scan(void) {
+    struct ifaddrs *ptr_ifaddrs = NULL;
+    if (getifaddrs(&ptr_ifaddrs)) {
+        return NULL;
+    }
+    list2 *server_lst = init_list(2);
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_t threads[MAX_THREADS];
+    int ind = 0;
+    for (struct ifaddrs *ptr_entry = ptr_ifaddrs; ptr_entry; ptr_entry = ptr_entry->ifa_next) {
+        if (!(ptr_entry->ifa_addr) || ptr_entry->ifa_addr->sa_family != AF_INET) {
+            continue;
+        }
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-align"
+#endif
+        in_addr_t addr = (CAST_SOCKADDR_IN(ptr_entry->ifa_addr))->sin_addr.s_addr;
+        if (addr == htonl(INADDR_LOOPBACK)) {
+            continue;
+        }
+
+        pthread_t tid;
+        scan_arg_t *arg = malloc(sizeof(scan_arg_t));
+        arg->brd_addr = addr | ~(CAST_SOCKADDR_IN(ptr_entry->ifa_netmask))->sin_addr.s_addr;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+        arg->mutex = &mutex;
+        arg->server_lst = server_lst;
+        if (pthread_create(&tid, NULL, &scan_fn, arg)) {
+            free(arg);
+            continue;
+        }
+        threads[ind++] = tid;
+        if (ind >= MAX_THREADS) {
+            break;
+        }
+    }
+    freeifaddrs(ptr_ifaddrs);
+
+    struct timespec interval = {.tv_sec = 0, .tv_nsec = 50000000L};
+    for (int i = 0; i < 40; i++) {
+        if (server_lst->len) {
+            break;
+        }
+        nanosleep(&interval, NULL);
+    }
+    interval.tv_nsec = 200000000;
+    nanosleep(&interval, NULL);
+
+    for (int i = 0; i < ind; i++) {
+        pthread_cancel(threads[i]);
+    }
+
+    return server_lst;
 }
