@@ -63,7 +63,7 @@ else ifeq ($(detected_OS),Windows)
 	CFLAGS+= -Wformat-signedness
 	CFLAGS_OPTIM=-O3
 	OTHER_DEPENDENCIES+= res/win/app.coff
-	LDLIBS_NO_SSL=-l:libmicrohttpd.a -l:libunistring.a -lws2_32 -lgdi32
+	LDLIBS_NO_SSL=-l:libmicrohttpd.a -l:libunistring.a -lws2_32 -lgdi32 -lIphlpapi
 	LDLIBS_SSL=-l:libssl.a -l:libcrypto.a -l:libz.a -lcrypt32
 	LINK_FLAGS_BUILD=
 	ifeq ($(ARCH),x86_64)

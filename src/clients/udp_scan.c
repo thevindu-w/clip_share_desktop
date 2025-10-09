@@ -29,6 +29,7 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #elif defined(_WIN32)
+#include <iphlpapi.h>
 #include <winsock2.h>
 #endif
 
@@ -36,24 +37,40 @@
 #define MSG_CONFIRM 0
 #endif
 
-#ifdef _WIN32
-typedef int socklen_t;
-#endif
-
 #define MAX_THREADS 16
 #define ADDR_BUF_SZ 16
 #define CAST_SOCKADDR_IN (struct sockaddr_in *)(void *)
 
+#ifdef _WIN32
+
+typedef int socklen_t;
+typedef u_long in_addr_t;
+typedef HANDLE mutex_t;
+
+static inline int mutex_lock(mutex_t mutex) { return WaitForSingleObject(mutex, INFINITE) != WAIT_OBJECT_0; }
+
+static inline void mutex_unlock(mutex_t mutex) { ReleaseMutex(mutex); }
+
+#elif defined(__linux__) || defined(__APPLE__)
+
+typedef pthread_mutex_t *mutex_t;
+
+static inline int mutex_lock(mutex_t mutex) { return pthread_mutex_lock(mutex); }
+
+static inline void mutex_unlock(mutex_t mutex) { pthread_mutex_unlock(mutex); }
+
+#endif
+
 typedef struct {
     in_addr_t brd_addr;
-    pthread_mutex_t *mutex;
+    mutex_t mutex;
     list2 *server_lst;
 } scan_arg_t;
 
 static void *scan_fn(void *args) {
     scan_arg_t *arg = (scan_arg_t *)args;
     in_addr_t broadcast = arg->brd_addr;
-    pthread_mutex_t *mutex = arg->mutex;
+    mutex_t mutex = arg->mutex;
     list2 *servers = arg->server_lst;
     free(arg);
 
@@ -104,15 +121,17 @@ static void *scan_fn(void *args) {
         inet_ntop(AF_INET, &broadcast_addr, broadcast_str, ADDR_BUF_SZ);
         printf("Server %s from %s\n", server, broadcast_str);
 #endif
-        if (!pthread_mutex_lock(mutex)) {
+        if (!mutex_lock(mutex)) {
             append(servers, strdup(server));
-            pthread_mutex_unlock(mutex);
+            mutex_unlock(mutex);
         }
     }
     close_socket_no_wait(&socket);
 
     return NULL;
 }
+
+#if defined(__linux__) || defined(__APPLE__)
 
 list2 *udp_scan(void) {
     struct ifaddrs *ptr_ifaddrs = NULL;
@@ -171,3 +190,100 @@ list2 *udp_scan(void) {
 
     return server_lst;
 }
+
+#elif defined(_WIN32)
+
+static DWORD WINAPI scan_fn_wrapper(void *arg) {
+    scan_fn(arg);
+    return EXIT_SUCCESS;
+}
+
+list2 *udp_scan(void) {
+    ULONG bufSz = 4096;
+    PIP_ADAPTER_ADDRESSES pAddrs = NULL;
+    int retries = 3;
+    do {
+        pAddrs = malloc(bufSz);
+        if (!pAddrs) {
+            return NULL;
+        }
+        ULONG flags =
+            GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME;
+        ULONG ret = GetAdaptersAddresses(AF_INET, flags, NULL, pAddrs, &bufSz);
+        if (ret == NO_ERROR) {
+            break;
+        }
+        free(pAddrs);
+        pAddrs = NULL;
+        if (ret != ERROR_BUFFER_OVERFLOW) {
+            return NULL;
+        }
+        retries--;
+    } while (retries > 0 && bufSz < 1000000L);
+    if (!pAddrs) {
+        return NULL;
+    }
+
+    HANDLE mutex = CreateMutex(NULL, FALSE, NULL);
+    if (!mutex) {
+        free(pAddrs);
+        return NULL;
+    }
+    list2 *server_lst = init_list(2);
+    HANDLE threads[MAX_THREADS];
+    int ind = 0;
+    for (PIP_ADAPTER_ADDRESSES cur = pAddrs; cur; cur = cur->Next) {
+        PIP_ADAPTER_UNICAST_ADDRESS unicast = cur->FirstUnicastAddress;
+        if (!unicast) {
+            continue;
+        }
+        SOCKET_ADDRESS socket_addr = unicast->Address;
+        if (socket_addr.lpSockaddr->sa_family != AF_INET) {
+            continue;
+        }
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-align"
+#endif
+        in_addr_t addr = (CAST_SOCKADDR_IN(socket_addr.lpSockaddr))->sin_addr.s_addr;
+        if (addr == htonl(INADDR_LOOPBACK)) {
+            continue;
+        }
+
+        in_addr_t mask = ~((1 << unicast->OnLinkPrefixLength) - 1);
+
+        scan_arg_t *arg = malloc(sizeof(scan_arg_t));
+        arg->brd_addr = addr | mask;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+        arg->mutex = mutex;
+        arg->server_lst = server_lst;
+        HANDLE thread = CreateThread(NULL, 0, scan_fn_wrapper, arg, 0, NULL);
+        if (!thread) {
+            free(arg);
+            continue;
+        }
+        threads[ind++] = thread;
+        if (ind >= MAX_THREADS) {
+            break;
+        }
+    }
+    free(pAddrs);
+
+    for (int i = 0; i < 40; i++) {
+        if (server_lst->len) {
+            break;
+        }
+        Sleep(50);
+    }
+    Sleep(200);
+
+    for (int i = 0; i < ind; i++) {
+        TerminateThread(threads[i], 1);
+    }
+    CloseHandle(mutex);
+    return server_lst;
+}
+
+#endif
