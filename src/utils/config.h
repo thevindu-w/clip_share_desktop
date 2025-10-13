@@ -31,6 +31,7 @@ typedef struct _data_buffer {
 typedef struct _config {
     uint16_t app_port;
     uint16_t app_port_secure;
+    uint16_t udp_port;
     uint16_t web_port;
 
     int8_t secure_mode_enabled;

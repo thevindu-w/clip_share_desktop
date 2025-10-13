@@ -77,7 +77,7 @@ static void *scan_fn(void *args) {
     struct sockaddr_in server_addr;
     memset((char *)&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(4337);
+    server_addr.sin_port = htons(configuration.udp_port);
     server_addr.sin_addr.s_addr = broadcast;
 
     socket_t socket;

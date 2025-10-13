@@ -176,6 +176,7 @@ static inline void _change_working_dir(void) {
 static inline void _apply_default_conf(void) {
     if (configuration.app_port <= 0) configuration.app_port = APP_PORT;
     if (configuration.app_port_secure <= 0) configuration.app_port_secure = APP_PORT_SECURE;
+    if (configuration.udp_port <= 0) configuration.udp_port = APP_PORT;
     if (configuration.web_port <= 0) configuration.web_port = WEB_PORT;
     if (configuration.secure_mode_enabled < 0) configuration.secure_mode_enabled = 0;
     if (configuration.max_text_length <= 0) configuration.max_text_length = MAX_TEXT_LENGTH;
