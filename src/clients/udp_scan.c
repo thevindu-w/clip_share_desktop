@@ -131,6 +131,29 @@ static void *scan_fn(void *args) {
     return NULL;
 }
 
+static list2 *filter_addresses(list2 *servers, list2 *addrs) {
+    if (!servers->len) {
+        free_list(addrs);
+        return servers;
+    }
+
+    for (unsigned int i = 0; i < servers->len; i++) {
+        char *server = servers->array[i];
+        for (unsigned int j = 0; j < addrs->len; j++) {
+            if (!strncmp(server, addrs->array[j], ADDR_BUF_SZ)) {
+                free(server);
+                servers->array[i] = servers->array[servers->len - 1];
+                servers->array[servers->len - 1] = NULL;
+                servers->len -= 1;
+                i--;
+                break;
+            }
+        }
+    }
+    free_list(addrs);
+    return servers;
+}
+
 #if defined(__linux__) || defined(__APPLE__)
 
 list2 *udp_scan(void) {
@@ -139,6 +162,8 @@ list2 *udp_scan(void) {
         return NULL;
     }
     list2 *server_lst = init_list(2);
+    list2 *addr_lst = init_list(2);
+    char ifaddr[ADDR_BUF_SZ];
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_t threads[MAX_THREADS];
     int ind = 0;
@@ -150,14 +175,19 @@ list2 *udp_scan(void) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-align"
 #endif
-        in_addr_t addr = (CAST_SOCKADDR_IN(ptr_entry->ifa_addr))->sin_addr.s_addr;
-        if (addr == htonl(INADDR_LOOPBACK)) {
+        struct in_addr addr = (CAST_SOCKADDR_IN(ptr_entry->ifa_addr))->sin_addr;
+        if (addr.s_addr == htonl(INADDR_LOOPBACK)) {
             continue;
+        }
+
+        if (inet_ntop(AF_INET, &addr, ifaddr, ADDR_BUF_SZ)) {
+            ifaddr[ADDR_BUF_SZ - 1] = 0;
+            append(addr_lst, strdup(ifaddr));
         }
 
         pthread_t tid;
         scan_arg_t *arg = malloc(sizeof(scan_arg_t));
-        arg->brd_addr = addr | ~(CAST_SOCKADDR_IN(ptr_entry->ifa_netmask))->sin_addr.s_addr;
+        arg->brd_addr = addr.s_addr | ~(CAST_SOCKADDR_IN(ptr_entry->ifa_netmask))->sin_addr.s_addr;
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -187,8 +217,8 @@ list2 *udp_scan(void) {
     for (int i = 0; i < ind; i++) {
         pthread_cancel(threads[i]);
     }
-
-    return server_lst;
+    pthread_mutex_destroy(&mutex);
+    return filter_addresses(server_lst, addr_lst);
 }
 
 #elif defined(_WIN32)
@@ -230,6 +260,8 @@ list2 *udp_scan(void) {
         return NULL;
     }
     list2 *server_lst = init_list(2);
+    list2 *addr_lst = init_list(2);
+    char ifaddr[ADDR_BUF_SZ];
     HANDLE threads[MAX_THREADS];
     int ind = 0;
     for (PIP_ADAPTER_ADDRESSES cur = pAddrs; cur; cur = cur->Next) {
@@ -245,15 +277,20 @@ list2 *udp_scan(void) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-align"
 #endif
-        in_addr_t addr = (CAST_SOCKADDR_IN(socket_addr.lpSockaddr))->sin_addr.s_addr;
-        if (addr == htonl(INADDR_LOOPBACK)) {
+        struct in_addr addr = (CAST_SOCKADDR_IN(socket_addr.lpSockaddr))->sin_addr;
+        if (addr.s_addr == htonl(INADDR_LOOPBACK)) {
             continue;
+        }
+
+        if (inet_ntop(AF_INET, &addr, ifaddr, ADDR_BUF_SZ)) {
+            ifaddr[ADDR_BUF_SZ - 1] = 0;
+            append(addr_lst, strdup(ifaddr));
         }
 
         in_addr_t mask = ~((1 << unicast->OnLinkPrefixLength) - 1);
 
         scan_arg_t *arg = malloc(sizeof(scan_arg_t));
-        arg->brd_addr = addr | mask;
+        arg->brd_addr = addr.s_addr | mask;
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -283,7 +320,7 @@ list2 *udp_scan(void) {
         TerminateThread(threads[i], 1);
     }
     CloseHandle(mutex);
-    return server_lst;
+    return filter_addresses(server_lst, addr_lst);
 }
 
 #endif
