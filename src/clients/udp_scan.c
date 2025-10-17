@@ -19,6 +19,7 @@
 #include <clients/udp_scan.h>
 #include <globals.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <utils/list_utils.h>
 #include <utils/net_utils.h>
@@ -131,12 +132,19 @@ static void *scan_fn(void *args) {
     return NULL;
 }
 
+static int addr_comp(const void *elem1, const void *elem2) {
+    const char *addr1 = *(const char *const *)elem1;
+    const char *addr2 = *(const char *const *)elem2;
+    return strncmp(addr1, addr2, ADDR_BUF_SZ);
+}
+
 static list2 *filter_addresses(list2 *servers, list2 *addrs) {
     if (!servers->len) {
         free_list(addrs);
         return servers;
     }
 
+    // Remove address of this client machine
     for (unsigned int i = 0; i < servers->len; i++) {
         char *server = servers->array[i];
         for (unsigned int j = 0; j < addrs->len; j++) {
@@ -151,6 +159,20 @@ static list2 *filter_addresses(list2 *servers, list2 *addrs) {
         }
     }
     free_list(addrs);
+
+    // Remove duplicates
+    qsort(servers->array, servers->len, sizeof(servers->array[0]), &addr_comp);
+    for (unsigned int i = 1; i < servers->len; i++) {
+        char *prev = servers->array[i - 1];
+        char *cur = servers->array[i];
+        if (!strncmp(prev, cur, ADDR_BUF_SZ)) {
+            free(cur);
+            servers->array[i] = servers->array[servers->len - 1];
+            servers->array[servers->len - 1] = NULL;
+            servers->len -= 1;
+            i--;
+        }
+    }
     return servers;
 }
 
