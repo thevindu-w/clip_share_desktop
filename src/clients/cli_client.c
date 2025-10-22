@@ -36,6 +36,8 @@
 #define COMMAND_GET_COPIED_IMAGE 6
 #define COMMAND_GET_SCREENSHOT 7
 
+static void net_scan(void);
+
 static int _invoke_method(uint32_t server_addr, unsigned char method, MethodArgs *args) {
     socket_t sock;
     connect_server(&sock, server_addr);
@@ -213,7 +215,7 @@ void cli_client(int argc, char **argv, const char *prog_name) {
 #endif
 }
 
-void net_scan(void) {
+static void net_scan(void) {
     list2 *servers = udp_scan();
     if (!servers) {
         fprintf(stderr, "Scan failed\n");

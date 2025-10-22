@@ -21,6 +21,4 @@
 
 extern void cli_client(int argc, char **argv, const char *prog_name);
 
-extern void net_scan(void);
-
 #endif  // CLIENTS_CLI_CLIENT_H_
