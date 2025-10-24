@@ -12,5 +12,7 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Add support for TLS-encrypted secure communication with the server.
+- Improve scan operation to scan all interfaces.
+- Add a configuration option `udp_port` to set the scanning port.
+- Minor bug fixes.
 - Code improvements.
