@@ -184,9 +184,9 @@ jobs:
       matrix:
         os:
         - macos-latest
-        - macos-13
+        - macos-15-intel
         exclude:
-        - os: ${{ (github.event_name == 'push') && (inputs.trigger != 'workflow_call') && 'macos-13' }}
+        - os: ${{ (github.event_name == 'push') && (inputs.trigger != 'workflow_call') && 'macos-15-intel' }}
 
     steps:
     - name: Install build dependencies
