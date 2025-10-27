@@ -199,7 +199,7 @@ int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
     return EXIT_SUCCESS;
 }
 
-void connect_server(socket_t *sock_p, uint32_t addr) {
+static void _connect_server(socket_t *sock_p, uint32_t addr) {
     sock_p->type = NULL_SOCK;
     sock_t sock = socket(PF_INET, SOCK_STREAM, 0);
     if (sock == INVALID_SOCKET) {
@@ -288,16 +288,23 @@ void connect_server(socket_t *sock_p, uint32_t addr) {
         close_sock(sock);
         return;
     }
+    sock_p->socket.ssl = ssl;
+    sock_p->type = sock_type;
     if (check_peer_certs(ssl, configuration.trusted_servers) != EXIT_SUCCESS) {
         close_socket_no_wait(sock_p);
         return;
     }
-    sock_p->socket.ssl = ssl;
-    sock_p->type = sock_type;
 #else
     close_sock(sock);
     error("Requesting SSL connection in NO_SSL version");
 #endif
+}
+
+void connect_server(socket_t *sock_p, uint32_t addr) {
+    _connect_server(sock_p, addr);
+    if (IS_NULL_SOCK(sock_p->type)) {
+        _connect_server(sock_p, addr);
+    }
 }
 
 void get_udp_socket(socket_t *sock_p) {
