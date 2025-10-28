@@ -105,7 +105,7 @@ jobs:
         gzip -9 >"${{env.ARCHIVE_NAME}}"
 
     - name: Upload Linux version
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: "${{env.ARCHIVE_NAME}}"
         path: "${{env.ARCHIVE_NAME}}"
@@ -242,7 +242,7 @@ jobs:
         zip -9 "../${{env.ARCHIVE_NAME_NO_SSL}}" *
 
     - name: Upload Windows version
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: "${{env.ARCHIVE_NAME}}"
         path: "${{env.ARCHIVE_NAME}}"
@@ -251,7 +251,7 @@ jobs:
         compression-level: 9
 
     - name: Upload Windows no-ssl version
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: "${{env.ARCHIVE_NAME_NO_SSL}}"
         path: "${{env.ARCHIVE_NAME_NO_SSL}}"
@@ -267,7 +267,7 @@ jobs:
         mv install.bat "../${{env.INSTALLER_NAME}}"
 
     - name: Upload online installer
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: "${{env.INSTALLER_NAME}}"
         path: "${{env.INSTALLER_NAME}}"
@@ -343,7 +343,7 @@ jobs:
         mv 'clip-share-client' "${{env.FILE_NAME}}"
 
     - name: Upload macOS binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: "${{env.FILE_NAME}}"
         path: "${{env.FILE_NAME}}"
@@ -369,13 +369,13 @@ jobs:
         echo FILE_ARM="clip-share-client-arm64" >> $GITHUB_ENV
 
     - name: Download macOS x86_64 version
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: "${{env.FILE_INTEL}}"
         path: "${{env.FILE_INTEL}}"
 
     - name: Download macOS ARM64 version
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: "${{env.FILE_ARM}}"
         path: "${{env.FILE_ARM}}"
@@ -391,7 +391,7 @@ jobs:
         zip -9 "../${{env.ARCHIVE_NAME}}" *
 
     - name: Upload macOS version
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: "${{env.ARCHIVE_NAME}}"
         path: "${{env.ARCHIVE_NAME}}"
@@ -428,14 +428,14 @@ jobs:
         echo FILE_MACOS="clip_share_client-${version}-macos.zip" >> $GITHUB_ENV
 
     - name: Download builds
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         pattern: clip_share_client-*
         path: ${{ github.workspace }}
         merge-multiple: true
 
     - name: Download Windows installer
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: "${{env.INSTALLER_WINDOWS}}"
         path: "${{env.INSTALLER_WINDOWS}}"
