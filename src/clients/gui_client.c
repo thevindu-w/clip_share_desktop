@@ -72,7 +72,9 @@ static void *set_clipboard_thread_fn(void *args) {
 #endif
 
 static void callback_fn(unsigned int status, const char *msg, size_t len, status_callback_params *params) {
-    if (!params || params->called) return;
+    if ((!params) || params->called) {
+        return;
+    }
     params->called = 1;
     if (!msg) msg = "";
 #pragma GCC diagnostic push
@@ -106,18 +108,18 @@ static void handle_method(struct MHD_Connection *connection, const char *address
 static void handle_scan(struct MHD_Connection *connection) {
     status_callback_params params = {.called = 0, .connection = connection};
     list2 *server_list = udp_scan();
-    if (!server_list || server_list->len < 1) {
+    if ((!server_list) || server_list->len < 1) {
         if (server_list) free_list(server_list);
         callback_fn(RESP_OK, "", 0, &params);
         return;
     }
     size_t tot_len = 0;
     for (uint32_t i = 0; i < server_list->len; i++) {
-        char *addr = server_list->array[i];
+        const char *addr = server_list->array[i];
         if (!addr) continue;
         tot_len += strnlen(addr, 64) + 1;
     }
-    char *servers = malloc(tot_len);
+    char *servers = tot_len ? malloc(tot_len) : NULL;
     if (!servers) {
         free_list(server_list);
         callback_fn(RESP_OK, "", 0, &params);
@@ -125,7 +127,7 @@ static void handle_scan(struct MHD_Connection *connection) {
     }
     char *ptr = servers;
     for (uint32_t i = 0; i < server_list->len; i++) {
-        char *addr = server_list->array[i];
+        const char *addr = server_list->array[i];
         if (!addr) continue;
         size_t len = strnlen(addr, 64);
         strncpy(ptr, addr, len);
@@ -145,9 +147,11 @@ static MHD_Result_t extract_query_params(void *cls, enum MHD_ValueKind kind, con
 #ifdef DEBUG_MODE
     printf("%s: %s\n", key, value);
 #endif
-    if (!strcmp(key, "server") && strnlen(value, 17) < 16) {
-        query->server = strdup(value);
-    } else if (!strcmp(key, "display") && value && *value && strnlen(value, 7) < 6) {
+    if (!strcmp(key, "server")) {
+        if (strnlen(value, 17) < 16) {
+            query->server = strdup(value);
+        }
+    } else if ((!strcmp(key, "display")) && value && *value && strnlen(value, 7) < 6) {
         char *end_ptr = NULL;
         unsigned long long disp64 = strtoull(value, &end_ptr, 10);
         if (end_ptr && !*end_ptr && disp64 < 65536) {
@@ -185,7 +189,7 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
         if (!strcmp(url, "/scan")) {
             handle_scan(connection);
             handled = 1;
-        } else if (!query.server || query.display < 0) {
+        } else if ((!query.server) || query.display < 0) {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_BAD_REQUEST;
         } else if (!strcmp(url, "/get/text")) {

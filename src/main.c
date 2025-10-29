@@ -337,7 +337,7 @@ static char *get_user_home(void) {
 
 static char *get_user_home(void) {
     const char *home = getenv("HOME");
-    if (!home || !*home) {
+    if (!(home && *home)) {
         struct passwd pw;
         struct passwd *result = NULL;
         const size_t buf_sz = 2048;
@@ -467,22 +467,23 @@ int main(int argc, char **argv) {
         exit(EXIT_SUCCESS);
     }
 
-    if (configuration.secure_mode_enabled) {
 #ifndef NO_SSL
-        if (!configuration.client_cert.data || !configuration.ca_cert.data || !configuration.trusted_servers) {
-            const char *message = "Secure mode needs client and CA certificates, and the trusted servers list.";
-            fprintf(stderr, "%s Please set them in the configuration file to use the secure mode.\n", message);
-            error_exit(message);
-        }
+    if (configuration.secure_mode_enabled &&
+        !(configuration.client_cert.data && configuration.ca_cert.data && configuration.trusted_servers)) {
+        const char *message = "Secure mode needs client and CA certificates, and the trusted servers list.";
+        fprintf(stderr, "%s Please set them in the configuration file to use the secure mode.\n", message);
+        error_exit(message);
+    }
 #else
+    if (configuration.secure_mode_enabled) {
         const char *message =
             "Secure mode is enabled in the configuration. This program version does not support TLS/SSL.";
         fprintf(stderr,
                 "%s If the secure mode is not needed, please set secure_mode_enabled=false in the configuration.\n",
                 message);
         error_exit(message);
-#endif
     }
+#endif
 
     if (configuration.working_dir) _change_working_dir();
     cwd = getcwd_wrapper(0);
@@ -509,11 +510,9 @@ int main(int argc, char **argv) {
             }
         }
 
-        if (configuration.auto_send_text) {
-            // auto-send text when copied
-            if (fork() == 0) {
-                return start_clipboard_listener();
-            }
+        // auto-send text when copied
+        if (configuration.auto_send_text && (fork() == 0)) {
+            return start_clipboard_listener();
         }
 
 #ifdef __APPLE__

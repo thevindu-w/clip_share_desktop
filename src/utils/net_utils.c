@@ -169,7 +169,9 @@ static int check_peer_certs(const SSL *ssl, const list2 *trusted_servers) {
 #endif
 
 int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
-    if (!address_ptr || !address_str) return EXIT_FAILURE;
+    if ((!address_ptr) || (!address_str)) {
+        return EXIT_FAILURE;
+    }
     unsigned int a;
     unsigned int b;
     unsigned int c;
@@ -400,12 +402,13 @@ int read_sock(socket_t *socket, char *buf, uint64_t size) {
             total_sz_read += (uint64_t)sz_read;
             cnt = 0;
             ptr += sz_read;
-        } else if (cnt++ > 10 || fatal) {
+        } else if (cnt > 10 || fatal) {
 #ifdef DEBUG_MODE
             fputs("Read sock failed\n", stderr);
 #endif
             return EXIT_FAILURE;
         }
+        cnt++;
     }
     return EXIT_SUCCESS;
 }
@@ -476,12 +479,13 @@ int write_sock(socket_t *socket, const char *buf, uint64_t size) {
             total_written += (uint64_t)sz_written;
             cnt = 0;
             ptr += sz_written;
-        } else if (cnt++ > 10 || fatal) {
+        } else if (cnt > 10 || fatal) {
 #ifdef DEBUG_MODE
             fputs("Write sock failed\n", stderr);
 #endif
             return EXIT_FAILURE;
         }
+        cnt++;
     }
     return EXIT_SUCCESS;
 }

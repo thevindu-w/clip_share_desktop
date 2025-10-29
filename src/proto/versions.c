@@ -165,7 +165,7 @@ int version_2(socket_t *socket, uint8_t method, StatusCallback *callback) {
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
 
-int version_3(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallback *callback) {
+int version_3(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:

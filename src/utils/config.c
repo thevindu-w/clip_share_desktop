@@ -126,9 +126,9 @@ static inline void load_file(const char *file_name, data_buffer *buf_ptr) {
  * Otherwise, does not change the value pointed by conf_ptr
  */
 static inline void set_is_true(const char *str, int8_t *conf_ptr) {
-    if (!strcasecmp("true", str) || !strcmp("1", str)) {
+    if ((!strcasecmp("true", str)) || !strcmp("1", str)) {
         *conf_ptr = 1;
-    } else if (!strcasecmp("false", str) || !strcmp("0", str)) {
+    } else if ((!strcasecmp("false", str)) || !strcmp("0", str)) {
         *conf_ptr = 0;
     } else {
         error_exit("Error: invalid boolean config value");
@@ -181,7 +181,7 @@ static inline void set_int64(const char *str, int64_t *conf_ptr) {
 }
 
 /*
- * str must be a valid and null-terminated string
+ * str must be a valid, non-empty, and null-terminated string
  * conf_ptr must be a valid pointer to an unsigned int
  * Sets the value pointed by conf_ptr to the unsigned int given as a string in str if that is a valid value between 1
  * and 2^32-2 inclusive. Otherwise, does not change the value pointed by conf_ptr
@@ -192,7 +192,6 @@ static inline void set_uint32(const char *str, uint32_t *conf_ptr) {
     if (value < 0 || value > 4294967294LL) error_exit("Error: config value not in range 0-4294967294");
     switch (*end_ptr) {
         case '\0':
-            end_ptr--;
             break;
         case 'k':
         case 'K': {
@@ -212,8 +211,9 @@ static inline void set_uint32(const char *str, uint32_t *conf_ptr) {
             value *= 1000000000L;
             break;
         }
-        default:
+        default: {
             error_exit("Error: config value has invalid suffix");
+        }
     }
     if (*end_ptr && *(end_ptr + 1)) error_exit("Error: config value has invalid suffix");
     if (value <= 0 || 4294967295LL <= value) error_exit("Error: invalid config value");

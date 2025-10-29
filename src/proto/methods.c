@@ -145,7 +145,7 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
     }
 
     char *data = malloc((size_t)length + 1);
-    if (!data || read_sock(socket, data, (uint64_t)length) != EXIT_SUCCESS) {
+    if ((!data) || read_sock(socket, data, (uint64_t)length) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
         fputs("Read data failed\n", stderr);
 #endif
@@ -289,7 +289,7 @@ static int _transfer_single_file(int version, socket_t *socket, const char *file
 
 static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len,
                               StatusCallback *callback) {
-    if (!file_list || file_list->len == 0 || file_list->len >= 0xFFFFFFFFUL) {
+    if ((!file_list) || file_list->len == 0 || file_list->len >= 0xFFFFFFFFUL) {
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
@@ -436,7 +436,7 @@ int get_files_v1(socket_t *socket, StatusCallback *callback) { return _get_files
 static inline int _save_image_common(socket_t *socket, StatusCallback *callback) {
     struct timeval ts;
     gettimeofday(&ts, NULL);
-    uint64_t millis = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_usec / 1000L;
+    uint64_t millis = ((uint64_t)ts.tv_sec * 1000) + ((uint64_t)ts.tv_usec / 1000L);
     char file_name[40];
     if (snprintf_check(file_name, sizeof(file_name), "%" PRIx64 ".png", millis)) return EXIT_FAILURE;
     int status = _save_file_common(1, socket, file_name, callback);
@@ -535,7 +535,7 @@ static int save_file(int version, socket_t *socket, const char *dirname, StatusC
 
 #if PROTOCOL_MIN <= 1
     if (version == 1) {
-        if (_get_base_name(file_name, (size_t)name_length) != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (_get_base_name(file_name, name_length) != EXIT_SUCCESS) return EXIT_FAILURE;
 
         // PATH_SEP is not allowed in version 1 get files
         if (strchr(file_name, PATH_SEP)) return EXIT_FAILURE;  // all '/'s are converted to PATH_SEP
@@ -584,7 +584,10 @@ static char *_check_and_rename(const char *filename, const char *dirname) {
     int n = 1;
     while (file_exists(new_path)) {
         if (n > 999999L) return NULL;
-        if (snprintf_check(new_path, name_max_len, ".%c%i_%s", PATH_SEP, n++, filename)) return NULL;
+        if (snprintf_check(new_path, name_max_len, ".%c%i_%s", PATH_SEP, n, filename)) {
+            return NULL;
+        }
+        n++;
     }
 
     if (rename_file(old_path, new_path)) {

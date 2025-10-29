@@ -137,7 +137,7 @@ void error(const char *msg) {
     FILE *f = open_file(error_log_file, "a");
     // retry with delays if failed
     for (unsigned int i = 0; i < 4; i++) {
-        unsigned int interval = 1 + i * 50;
+        unsigned int interval = 1 + (i * 50);
         if (f != NULL || milli_sleep(interval)) break;
         f = open_file(error_log_file, "a");
     }
@@ -653,7 +653,7 @@ static void _recurse_dir(const char *_path, list2 *lst, int depth, int include_l
         if (!(strcmp(filename, ".") && strcmp(filename, ".."))) continue;
         is_empty = 0;
         const size_t _fname_len = strnlen(filename, sizeof(dir->d_name));
-        if (_fname_len + p_len > 2048) {
+        if ((_fname_len + p_len) > 2048) {
             error("Too long file name.");
             (void)closedir(d);
             return;
@@ -708,7 +708,7 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
             if (fname[fname_len - 1] == PATH_SEP) fname[fname_len - 1] = 0;  // if directory, remove ending /
             const char *sep_ptr = strrchr(fname, PATH_SEP);
             if (sep_ptr > fname) {
-                dfiles_p->path_len = (size_t)sep_ptr - (size_t)fname + 1;
+                dfiles_p->path_len = (size_t)(sep_ptr - fname) + 1;
             }
         }
 
@@ -887,8 +887,8 @@ int check_and_delete_temp_file(void) {
 
 static inline int8_t hex2char(char h) {
     if ('0' <= h && h <= '9') return (int8_t)((int)h - '0');
-    if ('A' <= h && h <= 'F') return (int8_t)((int)h - 'A' + 10);
-    if ('a' <= h && h <= 'f') return (int8_t)((int)h - 'a' + 10);
+    if ('A' <= h && h <= 'F') return (int8_t)(((int)h - 'A') + 10);
+    if ('a' <= h && h <= 'f') return (int8_t)(((int)h - 'a') + 10);
     return -1;
 }
 

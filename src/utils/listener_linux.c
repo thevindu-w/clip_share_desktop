@@ -52,7 +52,7 @@ static int check_text(void) {
     char *copy = targets;
     const char *token;
     while ((token = strsep(&copy, "\n"))) {
-        if (!strncmp(token, "text/plain", 10) || !strcmp(token, "UTF8_STRING")) {
+        if ((!strncmp(token, "text/plain", 10)) || !strcmp(token, "UTF8_STRING")) {
             found = 1;
         }
         if (!strncmp(token, "x-special/gnome-copied-files", 28)) {

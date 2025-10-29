@@ -156,7 +156,7 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_
     if (*command_p == COMMAND_GET_SCREENSHOT && argv[2] && argv[2][0]) {
         char *end_ptr = NULL;
         unsigned long long disp64 = strtoull(argv[2], &end_ptr, 10);
-        if (!end_ptr || *end_ptr || disp64 >= 65536) {
+        if ((!end_ptr) || *end_ptr || disp64 >= 65536) {
             fprintf(stderr, "Invalid display value %s\n\n", argv[2]);
             *command_p = 0;
             return;
@@ -210,7 +210,9 @@ void cli_client(int argc, char **argv, const char *prog_name) {
         }
     }
 #ifdef __linux__
-    if (!pending_data || fork() > 0) return;
+    if ((!pending_data) || fork() > 0) {
+        return;
+    }
     set_pending_clipboard_item();
 #endif
 }

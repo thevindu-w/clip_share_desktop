@@ -163,7 +163,7 @@ static list2 *filter_addresses(list2 *servers, list2 *addrs) {
     // Remove duplicates
     qsort(servers->array, servers->len, sizeof(servers->array[0]), &addr_comp);
     for (unsigned int i = 1; i < servers->len; i++) {
-        char *prev = servers->array[i - 1];
+        const char *prev = servers->array[i - 1];
         char *cur = servers->array[i];
         if (!strncmp(prev, cur, ADDR_BUF_SZ)) {
             free(cur);
@@ -190,7 +190,7 @@ list2 *udp_scan(void) {
     pthread_t threads[MAX_THREADS];
     int ind = 0;
     for (struct ifaddrs *ptr_entry = ptr_ifaddrs; ptr_entry; ptr_entry = ptr_entry->ifa_next) {
-        if (!(ptr_entry->ifa_addr) || ptr_entry->ifa_addr->sa_family != AF_INET) {
+        if ((!ptr_entry->ifa_addr) || ptr_entry->ifa_addr->sa_family != AF_INET) {
             continue;
         }
 #ifdef __clang__
