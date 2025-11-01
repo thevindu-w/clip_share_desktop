@@ -1,4 +1,4 @@
-ARG DISTRO
+ARG DISTRO='ubuntu'
 
 FROM ubuntu:noble AS ubuntu_builder
 
@@ -30,6 +30,16 @@ RUN pacman -Sy && \
 # Install test dependencies
 RUN pacman -S --needed --noconfirm coreutils diffutils findutils curl python xclip sed libpng
 RUN pacman -Sdd --needed --noconfirm pixman freetype2 graphite harfbuzz libfontenc xorg-xkbcomp xorg-setxkbmap xkeyboard-config libxfont2 libunwind libglvnd libxkbfile xorg-server-xvfb
+
+FROM debian:bullseye-slim AS debian_builder
+ARG NO_XVFB=''
+
+# Install build dependencies
+RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev xxd
+
+# Install test dependencies
+RUN apt-get install --no-install-recommends -y xclip python3-minimal coreutils diffutils findutils curl openssl sed
+RUN if [ -z "$NO_XVFB" ]; then apt-get install --no-install-recommends -y xvfb; fi
 
 # hadolint ignore=DL3006
 FROM ${DISTRO}_builder

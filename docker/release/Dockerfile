@@ -19,6 +19,11 @@ FROM archlinux:base AS arch_builder
 RUN pacman -Sy && \
     pacman -S --needed --noconfirm coreutils gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl tinyxxd
 
+FROM debian:bullseye-slim AS debian_builder
+
+# Install dependencies
+RUN apt-get update && apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev xxd && apt-get clean -y
+
 # hadolint ignore=DL3006
 FROM ${DISTRO}_builder
 
