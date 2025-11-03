@@ -77,9 +77,18 @@ if [ "${confirm::1}" != 'y' ] && [ "${confirm::1}" != 'Y' ]; then
     exit 0
 fi
 
+if [ "$OS" = 'Linux' ]; then
+    machine="$(uname -m)"
+    if [ "$machine" = 'x86_64' ]; then
+        ARCH=x86_64
+    else
+        ARCH=arm64
+    fi
+fi
+
 filename_prefix="clip_share_client-$VERSION"
 if [ "$OS" = 'Linux' ]; then
-    filename="${filename_prefix}-linux-x86_64.tar.gz"
+    filename="${filename_prefix}-linux-${ARCH}.tar.gz"
 elif [ "$OS" = 'Darwin' ]; then
     filename="${filename_prefix}-macos.zip"
 fi
@@ -109,10 +118,15 @@ if ! download "$url" &>/dev/null; then
 fi
 echo -e '\rDownload completed                   '
 
-LINUX_SHA=
+LINUX_AMD64_SHA=
+LINUX_ARM64_SHA=
 MAC_SHA=
 if [ "$OS" = 'Linux' ]; then
-    SHA256="$LINUX_SHA"
+    if [ "$ARCH" = 'x86_64' ]; then
+        SHA256="$LINUX_AMD64_SHA"
+    elif [ "$ARCH" = 'arm64' ]; then
+        SHA256="$LINUX_ARM64_SHA"
+    fi
 elif [ "$OS" = 'Darwin' ]; then
     SHA256="$MAC_SHA"
 fi
