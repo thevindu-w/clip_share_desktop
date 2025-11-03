@@ -155,7 +155,7 @@ jobs:
         gzip -9 >"${{env.ARCHIVE_NAME64}}"
 
     - name: Upload Linux arm64 version
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: "${{env.ARCHIVE_NAME64}}"
         path: "${{env.ARCHIVE_NAME64}}"
