@@ -112,7 +112,32 @@ clip-share-client -c sc
 
 **Note:** This section is optional if you prefer manually starting the server over automatically starting on login/reboot.
 
-Installer scripts are available in the archives (`zip` for Windows and macOS, and `tar.gz` for Linux) attached to releases on GitHub. They are also available in the [helper_tools/](https://github.com/thevindu-w/clip_share_desktop/tree/master/helper_tools) directory. You must have the `clip-share-client` (or `clip-share-client.exe` on Windows) executable in the current working directory to run the installer. If you download the archive from releases and extract it, you will have the executable, along with the installer script. Run the interactive script and follow the instructions to install ClipShare.
+#### Online installers
+
+Online installer scripts are attached with the releases. They will download the corresponding version during the installation. Therefore, they do not require having the compiled binaries, along with the installer, to run it. However, they require internet access to download the binaries from GitHub during the installation. Run the interactive script and follow the instructions to install ClipShare desktop.
+
+<details>
+  <summary>Linux and macOS</summary>
+
+1. Open a terminal in the directory where the `install-linux-mac.sh` installer script is downloaded.
+1. Run the install script as shown below, and follow the instructions of it.
+```bash
+chmod +x install-linux-mac.sh
+./install-linux-mac.sh
+```
+</details>
+
+<details>
+  <summary>Windows</summary>
+
+1. Download the `install-windows.bat` file from [release assets](https://github.com/thevindu-w/clip_share_desktop/releases/latest).
+1. Double-click on the `install-windows.bat` installer script to run it. It will open a Command Prompt window. Follow the instructions on it to install ClipShare. (If double-clicking did not run the installer, right-click on it and select Run)
+</details>
+<br>
+
+#### Standalone installers
+
+Standalone installer scripts are available in the archives (`zip` for Windows and macOS, and `tar.gz` for Linux) attached to releases on GitHub. They are also available in the [helper_tools/](https://github.com/thevindu-w/clip_share_desktop/tree/master/helper_tools) directory. You must have the `clip-share-client` (or `clip-share-client.exe` on Windows) executable in the current working directory to run the installer. If you download the archive from releases and extract it, you will have the executable, along with the installer script. Run the interactive script and follow the instructions to install ClipShare.
 
 **Note:** These installers do NOT need admin or superuser privileges to run. Therefore, do not run them with elevated privileges.
 
