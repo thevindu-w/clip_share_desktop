@@ -79,7 +79,7 @@ ListenerCallback clip_callback = NULL;
             return;
         }
     }
-    clip_callback();
+    clip_callback(COPIED_TYPE_TEXT);
 }
 
 @end

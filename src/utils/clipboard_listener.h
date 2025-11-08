@@ -19,7 +19,11 @@
 #ifndef UTILS_CLIPBOARD_LISTENER_H_
 #define UTILS_CLIPBOARD_LISTENER_H_
 
-typedef void (*ListenerCallback)(void);
+#define COPIED_TYPE_NONE 0
+#define COPIED_TYPE_TEXT 1
+#define COPIED_TYPE_FILE 2
+
+typedef void (*ListenerCallback)(int);
 
 extern int start_clipboard_listener(void);
 

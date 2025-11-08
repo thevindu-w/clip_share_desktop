@@ -27,7 +27,10 @@
 #include <sys/socket.h>
 #endif
 
-static void send_to_servers(void) {
+static void send_to_servers(int type) {
+    if (type == COPIED_TYPE_NONE) {
+        return;
+    }
     list2 *servers = udp_scan();
     if (!servers) {
 #ifdef DEBUG_MODE
@@ -52,7 +55,8 @@ static void send_to_servers(void) {
         if (IS_NULL_SOCK(sock.type)) {
             return;
         }
-        handle_proto(&sock, METHOD_SEND_TEXT, NULL, NULL);
+        uint8_t method = type == COPIED_TYPE_FILE ? METHOD_SEND_FILE : METHOD_SEND_TEXT;
+        handle_proto(&sock, method, NULL, NULL);
         close_socket_no_wait(&sock);
     }
     free_list(servers);

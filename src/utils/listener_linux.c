@@ -36,7 +36,7 @@
 
 static volatile int running;
 
-static int check_text(void) {
+static int get_copied_type(void) {
     char *targets;
     uint32_t targets_len;
     if (xclip_util(XCLIP_OUT, "TARGETS", &targets_len, &targets) || targets_len <= 0) {  // do not change the order
@@ -48,26 +48,25 @@ static int check_text(void) {
         }
         return EXIT_FAILURE;
     }
-    char found = 0;
+    int copied_type = COPIED_TYPE_NONE;
     char *copy = targets;
     const char *token;
     while ((token = strsep(&copy, "\n"))) {
         if ((!strncmp(token, "text/plain", 10)) || !strcmp(token, "UTF8_STRING")) {
-            found = 1;
+            copied_type = COPIED_TYPE_TEXT;
         }
         if (!strncmp(token, "x-special/gnome-copied-files", 28)) {
-            found = 0;
+            copied_type = COPIED_TYPE_FILE;
             break;
         }
     }
     free(targets);
-    if (!found) {
 #ifdef DEBUG_MODE
-        puts("No copied text");
-#endif
-        return EXIT_FAILURE;
+    if (!copied_type) {
+        puts("No copied items");
     }
-    return EXIT_SUCCESS;
+#endif
+    return copied_type;
 }
 
 int clipboard_listen(ListenerCallback callback) {
@@ -93,8 +92,9 @@ int clipboard_listen(ListenerCallback callback) {
         if (check_and_delete_temp_file()) {  // send text only if it's not from clip-share
             continue;
         }
-        if (check_text() == EXIT_SUCCESS) {
-            callback();
+        int copied_type = get_copied_type();
+        if (copied_type != COPIED_TYPE_NONE) {
+            callback(copied_type);
         }
     }
     XDestroyWindow(dpy, win);

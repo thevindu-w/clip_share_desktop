@@ -43,7 +43,7 @@ static LRESULT CALLBACK ClipWindProc(HWND window, UINT msg, WPARAM wParam, LPARA
             uint32_t len = 0;
             if (!check_and_delete_temp_file() &&  // send text only if it's not from clip-share
                 (get_clipboard_text(&txt, &len) == EXIT_SUCCESS) && txt && (len > 0)) {
-                clip_callback();
+                clip_callback(COPIED_TYPE_TEXT);
             }
             return 0;
         }
