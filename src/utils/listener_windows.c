@@ -29,6 +29,26 @@ static volatile HWND hWnd = NULL;
 static ListenerCallback clip_callback = NULL;
 static volatile WINBOOL listening = FALSE;
 
+static int get_copied_type(void) {
+    int copied_type = COPIED_TYPE_NONE;
+    if (!OpenClipboard(0)) {
+        Sleep(10);  // retry after a short delay
+        if (!OpenClipboard(0)) {
+            return copied_type;
+        }
+    }
+    if (IsClipboardFormatAvailable(CF_HDROP)) {
+        copied_type = COPIED_TYPE_FILE;
+    } else if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
+        copied_type = COPIED_TYPE_TEXT;
+    }
+    CloseClipboard();
+#ifdef DEBUG_MODE
+    printf("Copied type = %i\n", copied_type);
+#endif
+    return copied_type;
+}
+
 static LRESULT CALLBACK ClipWindProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE: {
@@ -39,11 +59,12 @@ static LRESULT CALLBACK ClipWindProc(HWND window, UINT msg, WPARAM wParam, LPARA
             return 0;
         }
         case WM_CLIPBOARDUPDATE: {
-            char *txt = NULL;
-            uint32_t len = 0;
-            if (!check_and_delete_temp_file() &&  // send text only if it's not from clip-share
-                (get_clipboard_text(&txt, &len) == EXIT_SUCCESS) && txt && (len > 0)) {
-                clip_callback(COPIED_TYPE_TEXT);
+            if (check_and_delete_temp_file()) {  // send text only if it's not from clip-share
+                return 0;
+            }
+            int copied_type = get_copied_type();
+            if (copied_type != COPIED_TYPE_NONE) {
+                clip_callback(copied_type);
             }
             return 0;
         }
