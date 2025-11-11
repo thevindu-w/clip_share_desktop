@@ -65,21 +65,21 @@ ListenerCallback clip_callback = NULL;
         return;
     }
 
+    int copied_type = COPIED_TYPE_NONE;
     @autoreleasepool {
-        NSString *text = [self.pasteboard stringForType:NSPasteboardTypeString];
-        if (!text) {
-            return;
-        }
         NSArray *fileURLs = [self.pasteboard readObjectsForClasses:self.classes options:self.options];
         if (fileURLs && [fileURLs count]) {
-            return;
+            copied_type = COPIED_TYPE_FILE;
         }
-        NSImage *img = [[NSImage alloc] initWithPasteboard:self.pasteboard];
-        if (img) {
-            return;
+        NSString *text =
+            (copied_type == COPIED_TYPE_NONE) ? [self.pasteboard stringForType:NSPasteboardTypeString] : NULL;
+        if (text) {
+            copied_type = COPIED_TYPE_TEXT;
         }
     }
-    clip_callback(COPIED_TYPE_TEXT);
+    if (copied_type != COPIED_TYPE_NONE) {
+        clip_callback(copied_type);
+    }
 }
 
 @end
