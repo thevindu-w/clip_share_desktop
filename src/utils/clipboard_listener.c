@@ -28,8 +28,21 @@
 #endif
 
 static void send_to_servers(int type) {
-    if (type == COPIED_TYPE_NONE) {
-        return;
+    switch (type) {
+        case COPIED_TYPE_TEXT: {
+            if (!configuration.auto_send_text) {
+                return;
+            }
+            break;
+        }
+        case COPIED_TYPE_FILE: {
+            if (!configuration.auto_send_files) {
+                return;
+            }
+            break;
+        }
+        default:
+            return;
     }
     list2 *servers = udp_scan();
     if (!servers) {

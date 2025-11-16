@@ -188,6 +188,7 @@ static inline void _apply_default_conf(void) {
         configuration.max_proto_version > PROTOCOL_MAX)
         configuration.max_proto_version = PROTOCOL_MAX;
     if (configuration.auto_send_text < 0) configuration.auto_send_text = 0;
+    if (configuration.auto_send_files < 0) configuration.auto_send_files = 0;
 #if defined(_WIN32) || defined(__APPLE__)
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
 #endif
@@ -511,7 +512,7 @@ int main(int argc, char **argv) {
         }
 
         // auto-send text when copied
-        if (configuration.auto_send_text && (fork() == 0)) {
+        if ((configuration.auto_send_text || configuration.auto_send_files) && (fork() == 0)) {
             return start_clipboard_listener();
         }
 
@@ -535,7 +536,7 @@ int main(int argc, char **argv) {
 
         HANDLE webThread = CreateThread(NULL, 0, webThreadFn, NULL, 0, NULL);
 
-        if (configuration.auto_send_text) {
+        if (configuration.auto_send_text || configuration.auto_send_files) {
             CreateThread(NULL, 0, listenerThreadFn, NULL, 0, NULL);
         }
 

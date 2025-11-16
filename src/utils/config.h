@@ -47,6 +47,7 @@ typedef struct _config {
     uint16_t min_proto_version;
     uint16_t max_proto_version;
     int8_t auto_send_text;
+    int8_t auto_send_files;
 #if defined(_WIN32) || defined(__APPLE__)
     int8_t tray_icon;
 #endif
