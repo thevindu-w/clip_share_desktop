@@ -180,6 +180,28 @@ Refer to the [Create SSL/TLS certificates and key files](https://github.com/thev
 
 <br>
 
+### Auto-send options
+
+The ClipShare desktop client can auto-send text and files when copied. This feature allows you to copy text or files on one device and paste on another device without manually sharing the content through the desktop client's interface. Use the following configuration options to enable this feature.
+
+* `auto_send_text`=`true` &ensp; - &nbsp; To auto-send copied text.
+* `auto_send_files`=`true` &ensp; - &nbsp; To auto-send copied files.
+
+It is recommended to set the `cut_sent_files` [configuration of the server](https://github.com/thevindu-w/clip_share_server#configuration) to `true` when using the auto-send feature for files.
+Furthermore, use a temporary files directory as the `working_dir` configuration of the server when using auto-send option for files to avoid persisting unintended files on the server. You may use the following directories as the temporary directory, depending on the OS.
+
+| OS | Temporary directory |
+|  :----:  | :--------  |
+| Windows | `C:\Users\<your_username>\AppData\Local\Temp` |
+| macOS | `/tmp/` |
+| Linux | `/tmp/` |
+
+Refer to the [Configuration](#configuration) section for more information on the config file and available configuration options.
+
+To use the auto-send feature to bi-directionally share copied text and files, you need to run both the server and the desktop client on both devices.
+
+<br>
+
 ### Configuration
 
 The ClipShare desktop client can be configured using a configuration file. The configuration file should be named `clipshare-desktop.conf`.
@@ -207,12 +229,16 @@ trusted_servers=trusted_servers.txt
 
 working_dir=./path/to/work_dir
 bind_address=127.0.0.1
+cut_received_files=false
+
 max_text_length=4194304
 max_file_size=68719476736
-cut_received_files=false
+
 min_proto_version=1
 max_proto_version=3
+
 auto_send_text=false
+auto_send_files=false
 
 # Windows and macOS only
 tray_icon=true
@@ -241,6 +267,7 @@ Note that all the lines in the configuration file are optional. You may omit som
 | `min_proto_version` | The minimum protocol version the client should accept from a server after negotiation. | Any protocol version number greater than or equal to the minimum protocol version the client has implemented. (ex: `1`) | The minimum protocol version the client has implemented |
 | `max_proto_version` | The maximum protocol version the client should accept from a server after negotiation. | Any protocol version number less than or equal to the maximum protocol version the client has implemented. (ex: `3`) | The maximum protocol version the client has implemented |
 | `auto_send_text` | Whether the application should auto-send the text when copied. The values `true` or `1` will enable auto-sending copied text, while `false` or `0` will disable the feature. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
+| `auto_send_files` | Whether the application should auto-send files when copied. The values `true` or `1` will enable auto-sending copied files, while `false` or `0` will disable the feature. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
 | `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. This option is available only on Windows and macOS. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
 
 <br>
