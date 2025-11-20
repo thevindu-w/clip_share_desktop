@@ -12,6 +12,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Automatically retry once if connecting to the server fails.
-- Build and include arm64 binaries in releases.
-- Code improvements.
+- Add auto-send feature for files.
+- Add a configuration option `auto_send_files` to enable/disable the feature.
