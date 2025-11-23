@@ -19,13 +19,39 @@
 #include <clients/udp_scan.h>
 #include <globals.h>
 #include <proto/selector.h>
-#include <stdio.h>
 #include <utils/clipboard_listener.h>
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <arpa/inet.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #endif
+
+typedef struct {
+    char *server;
+    int type;
+} send_arg_t;
+
+static void *send_to_server(void *args) {
+    send_arg_t *arg = (send_arg_t *)args;
+    const char *server = arg->server;
+    int type = arg->type;
+    free(arg);
+
+    uint32_t server_addr;
+    if (ipv4_aton(server, &server_addr) != EXIT_SUCCESS) {
+        return NULL;
+    }
+    socket_t sock;
+    connect_server(&sock, server_addr);
+    if (IS_NULL_SOCK(sock.type)) {
+        return NULL;
+    }
+    uint8_t method = (type == COPIED_TYPE_FILE) ? METHOD_SEND_FILE : METHOD_SEND_TEXT;
+    handle_proto(&sock, method, NULL, NULL);
+    close_socket_no_wait(&sock);
+    return NULL;
+}
 
 static void send_to_servers(int type) {
     switch (type) {
@@ -51,26 +77,27 @@ static void send_to_servers(int type) {
 #endif
         return;
     }
-    if (servers->len == 0) {
+    if (servers->len <= 0 || servers->len > 512) {
 #ifdef DEBUG_MODE
-        fprintf(stderr, "No servers found\n");
+        fprintf(stderr, "No servers or too many servers found\n");
 #endif
         free_list(servers);
         return;
     }
+
+    pthread_t threads[servers->len];
     for (size_t i = 0; i < servers->len; i++) {
-        uint32_t server_addr;
-        if (ipv4_aton(servers->array[i], &server_addr) != EXIT_SUCCESS) {
-            continue;
+        send_arg_t *arg = malloc(sizeof(send_arg_t));
+        arg->server = servers->array[i];
+        arg->type = type;
+        pthread_t tid = 0;
+        if (pthread_create(&tid, NULL, &send_to_server, arg)) {
+            free(arg);
         }
-        socket_t sock;
-        connect_server(&sock, server_addr);
-        if (IS_NULL_SOCK(sock.type)) {
-            return;
-        }
-        uint8_t method = type == COPIED_TYPE_FILE ? METHOD_SEND_FILE : METHOD_SEND_TEXT;
-        handle_proto(&sock, method, NULL, NULL);
-        close_socket_no_wait(&sock);
+        threads[i] = tid;
+    }
+    for (size_t i = 0; i < servers->len; i++) {
+        pthread_join(threads[i], NULL);
     }
     free_list(servers);
 }

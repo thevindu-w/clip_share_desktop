@@ -216,4 +216,4 @@ install: $(PROGRAM_NAME) helper_tools/install.sh
 clean:
 	@echo RM
 	@$(RM) -r $(BUILD_DIR) $(ALL_DEPENDENCIES) $(SRC_DIR)/res/win/app_.rc
-	@$(RM) $(PROGRAM_NAME)
+	@$(RM) $(PROGRAM_NAME) $(PROGRAM_NAME_NO_SSL)
