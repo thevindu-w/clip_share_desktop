@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set version
       run: |
@@ -50,7 +50,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set version
       run: |
@@ -122,7 +122,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set version
       run: |
@@ -264,7 +264,7 @@ jobs:
         rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
 
     - name: Check out repository code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Build
       run: |
@@ -379,7 +379,7 @@ jobs:
         rm -r libmicrohttpd
 
     - name: Check out repository code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set version
       run: |
@@ -408,7 +408,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set version
       run: |
@@ -464,7 +464,7 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set variables
       run: |
