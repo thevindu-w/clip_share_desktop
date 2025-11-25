@@ -53,6 +53,13 @@ static void *send_to_server(void *args) {
     return NULL;
 }
 
+#ifdef _WIN32
+static DWORD WINAPI send_to_server_wrapper(void *arg) {
+    send_to_server(arg);
+    return EXIT_SUCCESS;
+}
+#endif
+
 static void send_to_servers(int type) {
     switch (type) {
         case COPIED_TYPE_TEXT: {
@@ -85,19 +92,38 @@ static void send_to_servers(int type) {
         return;
     }
 
+#ifdef _WIN32
+    HANDLE threads[servers->len];
+#elif defined(__linux__) || defined(__APPLE__)
     pthread_t threads[servers->len];
+#endif
     for (size_t i = 0; i < servers->len; i++) {
         send_arg_t *arg = malloc(sizeof(send_arg_t));
         arg->server = servers->array[i];
         arg->type = type;
+#ifdef _WIN32
+        HANDLE thread = CreateThread(NULL, 0, send_to_server_wrapper, arg, 0, NULL);
+        if (!thread) {
+            free(arg);
+        }
+        threads[i] = thread;
+#elif defined(__linux__) || defined(__APPLE__)
         pthread_t tid = 0;
         if (pthread_create(&tid, NULL, &send_to_server, arg)) {
             free(arg);
         }
         threads[i] = tid;
+#endif
     }
     for (size_t i = 0; i < servers->len; i++) {
+        if (!threads[i]) {
+            continue;
+        }
+#ifdef _WIN32
+        WaitForSingleObject(threads[i], INFINITE);
+#elif defined(__linux__) || defined(__APPLE__)
         pthread_join(threads[i], NULL);
+#endif
     }
     free_list(servers);
 }
