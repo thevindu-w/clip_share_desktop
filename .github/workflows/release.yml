@@ -258,7 +258,8 @@ jobs:
     - name: Download libmicrohttpd
       if: ${{ steps.cache-libmicrohttpd.outputs.cache-hit != 'true' }}
       run: |
-        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip
+        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip ||
+        curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip
         unzip libmicrohttpd-latest-w32-bin.zip
         mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/clang64 "$LIBMICROHTTPD_PATH"
         rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
@@ -366,7 +367,8 @@ jobs:
       run: |
         mkdir libmicrohttpd
         cd libmicrohttpd
-        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz
+        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz ||
+        curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-latest.tar.gz
         tar -xzf libmicrohttpd-latest.tar.gz
         rm libmicrohttpd-latest.tar.gz
         cd libmicrohttpd*
