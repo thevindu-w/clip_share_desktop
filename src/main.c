@@ -189,6 +189,7 @@ static inline void _apply_default_conf(void) {
         configuration.max_proto_version = PROTOCOL_MAX;
     if (configuration.auto_send_text < 0) configuration.auto_send_text = 0;
     if (configuration.auto_send_files < 0) configuration.auto_send_files = 0;
+    if (configuration.auto_send_max_files <= 0) configuration.auto_send_max_files = 32;
 #if defined(_WIN32) || defined(__APPLE__)
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
 #endif

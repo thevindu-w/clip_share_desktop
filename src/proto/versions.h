@@ -28,7 +28,7 @@
  * Accepts a socket connection and method code after the protocol version 1 is selected after the negotiation phase.
  * Negotiate the method code with the server and pass the control to the respective method handler.
  */
-extern int version_1(socket_t *socket, uint8_t method, StatusCallback *callback);
+extern int version_1(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback);
 #endif
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
@@ -36,7 +36,7 @@ extern int version_1(socket_t *socket, uint8_t method, StatusCallback *callback)
  * Accepts a socket connection and method code after the protocol version 2 is selected after the negotiation phase.
  * Negotiate the method code with the server and pass the control to the respective method handler.
  */
-extern int version_2(socket_t *socket, uint8_t method, StatusCallback *callback);
+extern int version_2(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback);
 #endif
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)

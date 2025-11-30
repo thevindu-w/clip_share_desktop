@@ -32,15 +32,19 @@
 
 static inline int proto_handler(socket_t *socket, uint8_t version, uint8_t method, MethodArgs *args,
                                 StatusCallback *callback) {
+    MethodArgs methodArgs = {0};
+    if (!args) {
+        args = &methodArgs;
+    }
     switch (version) {
 #if PROTOCOL_MIN <= 1
         case 1: {
-            return version_1(socket, method, callback);
+            return version_1(socket, method, args, callback);
         }
 #endif
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
         case 2: {
-            return version_2(socket, method, callback);
+            return version_2(socket, method, args, callback);
         }
 #endif
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)

@@ -67,7 +67,7 @@ static inline int method_request(socket_t *socket, uint8_t method, StatusCallbac
 
 #if PROTOCOL_MIN <= 1
 
-int version_1(socket_t *socket, uint8_t method, StatusCallback *callback) {
+int version_1(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -98,7 +98,7 @@ int version_1(socket_t *socket, uint8_t method, StatusCallback *callback) {
             return get_files_v1(socket, callback);
         }
         case METHOD_SEND_FILE: {
-            return send_file_v1(socket, callback);
+            return send_file_v1(socket, args->is_auto_send, callback);
         }
         case METHOD_GET_IMAGE: {
             return get_image_v1(socket, callback);
@@ -116,7 +116,7 @@ int version_1(socket_t *socket, uint8_t method, StatusCallback *callback) {
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
 
-int version_2(socket_t *socket, uint8_t method, StatusCallback *callback) {
+int version_2(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback) {
     switch (method) {
         case METHOD_GET_TEXT:
         case METHOD_SEND_TEXT:
@@ -147,7 +147,7 @@ int version_2(socket_t *socket, uint8_t method, StatusCallback *callback) {
             return get_files_v2(socket, callback);
         }
         case METHOD_SEND_FILE: {
-            return send_files_v2(socket, callback);
+            return send_files_v2(socket, args->is_auto_send, callback);
         }
         case METHOD_GET_IMAGE: {
             return get_image_v1(socket, callback);
@@ -198,7 +198,7 @@ int version_3(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
             return get_files_v3(socket, callback);
         }
         case METHOD_SEND_FILE: {
-            return send_files_v3(socket, callback);
+            return send_files_v3(socket, args->is_auto_send, callback);
         }
         case METHOD_GET_IMAGE: {
             return get_image_v1(socket, callback);

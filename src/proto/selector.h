@@ -35,6 +35,7 @@
 
 typedef union {
     uint16_t display;
+    int8_t is_auto_send;
 } MethodArgs;
 
 /*

@@ -205,7 +205,8 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             handle_method(connection, query.server, METHOD_GET_COPIED_IMAGE, NULL);
             handled = 1;
         } else if (!strcmp(url, "/get/screenshot")) {
-            MethodArgs args = {.display = (uint16_t)query.display};
+            MethodArgs args = {0};
+            args.display = (uint16_t)query.display;
             handle_method(connection, query.server, METHOD_GET_SCREENSHOT, &args);
             handled = 1;
         } else if (!strcmp(url, "/send/text")) {

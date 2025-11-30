@@ -70,7 +70,7 @@ static inline int _send_data(socket_t *socket, int64_t length, const char *data)
 /*
  * Common function to send files.
  */
-static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len,
+static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len, int8_t is_auto_send,
                               StatusCallback *callback);
 
 /*
@@ -287,7 +287,7 @@ static int _transfer_single_file(int version, socket_t *socket, const char *file
     return _transfer_regular_file(socket, file_path, filename, fname_len, callback);
 }
 
-static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len,
+static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len, int8_t is_auto_send,
                               StatusCallback *callback) {
     if ((!file_list) || file_list->len == 0 || file_list->len >= 0xFFFFFFFFUL) {
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
@@ -295,6 +295,9 @@ static int _send_files_common(int version, socket_t *socket, list2 *file_list, s
     }
 
     uint32_t file_cnt = file_list->len;
+    if (is_auto_send && file_cnt > configuration.auto_send_max_files) {
+        return EXIT_FAILURE;
+    }
     char **files = (char **)file_list->array;
 #ifdef DEBUG_MODE
     printf("%" PRIu32 "file(s)\n", file_cnt);
@@ -423,9 +426,9 @@ static inline int _get_base_name(char *file_name, size_t name_length) {
     return EXIT_SUCCESS;
 }
 
-int send_file_v1(socket_t *socket, StatusCallback *callback) {
+int send_file_v1(socket_t *socket, int8_t is_auto_send, StatusCallback *callback) {
     list2 *file_list = get_copied_files();
-    int ret = _send_files_common(1, socket, file_list, 0, callback);
+    int ret = _send_files_common(1, socket, file_list, 0, is_auto_send, callback);
     if (file_list) free_list(file_list);
     return ret;
 }
@@ -655,10 +658,10 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
 }
 
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
-int send_files_v2(socket_t *socket, StatusCallback *callback) {
+int send_files_v2(socket_t *socket, int8_t is_auto_send, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 0);
-    int ret = _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
+    int ret = _send_files_common(2, socket, copied_dir_files.lst, copied_dir_files.path_len, is_auto_send, callback);
     if (copied_dir_files.lst) free_list(copied_dir_files.lst);
     return ret;
 }
@@ -689,10 +692,10 @@ int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callba
     return _save_image_common(socket, callback);
 }
 
-int send_files_v3(socket_t *socket, StatusCallback *callback) {
+int send_files_v3(socket_t *socket, int8_t is_auto_send, StatusCallback *callback) {
     dir_files copied_dir_files;
     get_copied_dirs_files(&copied_dir_files, 1);
-    int ret = _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len, callback);
+    int ret = _send_files_common(3, socket, copied_dir_files.lst, copied_dir_files.path_len, is_auto_send, callback);
     if (copied_dir_files.lst) free_list(copied_dir_files.lst);
     return ret;
 }

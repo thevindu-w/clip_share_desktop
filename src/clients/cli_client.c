@@ -168,7 +168,7 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_
 void cli_client(int argc, char **argv, const char *prog_name) {
     int8_t command;
     uint32_t server_addr;
-    MethodArgs args = {.display = 0};
+    MethodArgs args = {0};
     _parse_args(argc, argv, &command, &server_addr, &args);
 
     switch (command) {

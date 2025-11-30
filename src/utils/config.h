@@ -41,13 +41,18 @@ typedef struct _config {
 
     char *working_dir;
     uint32_t bind_addr;
+    int8_t cut_received_files;
+
     uint32_t max_text_length;
     int64_t max_file_size;
-    int8_t cut_received_files;
+
     uint16_t min_proto_version;
     uint16_t max_proto_version;
+
     int8_t auto_send_text;
     int8_t auto_send_files;
+
+    uint32_t auto_send_max_files;
 #if defined(_WIN32) || defined(__APPLE__)
     int8_t tray_icon;
 #endif

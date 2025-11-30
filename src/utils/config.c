@@ -302,6 +302,8 @@ static void parse_line(char *line, config *cfg) {
         set_is_true(value, &(cfg->auto_send_text));
     } else if (!strcmp("auto_send_files", key)) {
         set_is_true(value, &(cfg->auto_send_files));
+    } else if (!strcmp("auto_send_max_files", key)) {
+        set_uint32(value, &(cfg->auto_send_max_files));
 #if defined(_WIN32) || defined(__APPLE__)
     } else if (!strcmp("tray_icon", key)) {
         set_is_true(value, &(cfg->tray_icon));
@@ -332,6 +334,7 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->max_proto_version = 0;
     cfg->auto_send_text = -1;
     cfg->auto_send_files = -1;
+    cfg->auto_send_max_files = 0;
 #if defined(_WIN32) || defined(__APPLE__)
     cfg->tray_icon = -1;
 #endif

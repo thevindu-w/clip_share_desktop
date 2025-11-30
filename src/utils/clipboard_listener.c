@@ -48,7 +48,9 @@ static void *send_to_server(void *args) {
         return NULL;
     }
     uint8_t method = (type == COPIED_TYPE_FILE) ? METHOD_SEND_FILE : METHOD_SEND_TEXT;
-    handle_proto(&sock, method, NULL, NULL);
+    MethodArgs methodArgs = {0};
+    methodArgs.is_auto_send = 1;
+    handle_proto(&sock, method, &methodArgs, NULL);
     close_socket_no_wait(&sock);
     return NULL;
 }
