@@ -92,7 +92,7 @@ static int _save_file_common(int version, socket_t *socket, const char *file_nam
 static inline int _is_valid_fname(const char *fname, size_t name_length);
 
 static int _transfer_single_file(int version, socket_t *socket, const char *file_path, size_t path_len,
-                                 StatusCallback *callback);
+                                 int8_t is_auto_send, StatusCallback *callback);
 
 int send_text_v1(socket_t *socket, StatusCallback *callback) {
     uint32_t length = 0;
@@ -175,14 +175,15 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
 }
 
 static int _transfer_regular_file(socket_t *socket, const char *file_path, const char *filename, size_t fname_len,
-                                  StatusCallback *callback) {
+                                  int8_t is_auto_send, StatusCallback *callback) {
     FILE *fp = open_file(file_path, "rb");
     if (!fp) {
         error("Couldn't open some files");
         return EXIT_FAILURE;
     }
     int64_t file_size = get_file_size(fp);
-    if (file_size < 0 || file_size > configuration.max_file_size) {
+    if (file_size < 0 || file_size > configuration.max_file_size ||
+        (is_auto_send && file_size > configuration.auto_send_max_file_size)) {
 #ifdef DEBUG_MODE
         printf("file size = %" PRIi64 "\n", file_size);
 #endif
@@ -232,7 +233,7 @@ static int _transfer_directory(socket_t *socket, const char *filename, size_t fn
 #endif
 
 static int _transfer_single_file(int version, socket_t *socket, const char *file_path, size_t path_len,
-                                 StatusCallback *callback) {
+                                 int8_t is_auto_send, StatusCallback *callback) {
     const char *tmp_fname;
     switch (version) {
 #if PROTOCOL_MIN <= 1
@@ -284,7 +285,7 @@ static int _transfer_single_file(int version, socket_t *socket, const char *file
         return _transfer_directory(socket, filename, fname_len - 1, callback);
     }
 #endif
-    return _transfer_regular_file(socket, file_path, filename, fname_len, callback);
+    return _transfer_regular_file(socket, file_path, filename, fname_len, is_auto_send, callback);
 }
 
 static int _send_files_common(int version, socket_t *socket, list2 *file_list, size_t path_len, int8_t is_auto_send,
@@ -315,7 +316,7 @@ static int _send_files_common(int version, socket_t *socket, list2 *file_list, s
         printf("file name = %s\n", file_path);
 #endif
 
-        if (_transfer_single_file(version, socket, file_path, path_len, callback) != EXIT_SUCCESS) {
+        if (_transfer_single_file(version, socket, file_path, path_len, is_auto_send, callback) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
             puts("Transfer failed");
 #endif

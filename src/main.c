@@ -52,8 +52,9 @@
 #define WEB_PORT 8888
 
 // maximum transfer sizes
-#define MAX_TEXT_LENGTH 4194304L     // 4 MiB
-#define MAX_FILE_SIZE 68719476736LL  // 64 GiB
+#define MAX_TEXT_LENGTH 4194304L           // 4 MiB
+#define MAX_FILE_SIZE 68719476736LL        // 64 GiB
+#define AUTO_SEND_MAX_FILE_SIZE 67108864L  // 64 MiB
 
 #define ERROR_LOG_FILE "client_err.log"
 
@@ -190,6 +191,7 @@ static inline void _apply_default_conf(void) {
     if (configuration.auto_send_text < 0) configuration.auto_send_text = 0;
     if (configuration.auto_send_files < 0) configuration.auto_send_files = 0;
     if (configuration.auto_send_max_files <= 0) configuration.auto_send_max_files = 32;
+    if (configuration.auto_send_max_file_size <= 0) configuration.auto_send_max_file_size = AUTO_SEND_MAX_FILE_SIZE;
 #if defined(_WIN32) || defined(__APPLE__)
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
 #endif
