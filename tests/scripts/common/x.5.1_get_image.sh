@@ -7,7 +7,10 @@ run_server --proto-max="$proto" --image=copied
 if [ "$interface" = "web" ]; then
     "$program" >client.log &
     sleep 0.1
-    curl -fs -X POST -H 'Content-Length: 0' 'http://127.0.0.1:8888/get/image?server=127.0.0.1' >/dev/null
+    http_status="$(curl -fs -w '%{http_code}' -o /dev/null -X POST -H 'Content-Length: 0' 'http://127.0.0.1:8888/get/image?server=127.0.0.1')"
+    if [ "$http_status" != 200 ]; then
+        showStatus info "Incorrect HTTP status: $http_status"
+    fi
 else
     "$program" -c i 127.0.0.1 >client.log
 fi
