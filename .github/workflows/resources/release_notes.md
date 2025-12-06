@@ -12,5 +12,7 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Add auto-send feature for files.
-- Add a configuration option `auto_send_files` to enable/disable the feature.
+- Improvements in the auto-send feature.
+- Add a configuration option `auto_send_max_files` to limit the maximum number of files to auto-send.
+- Add a configuration option `auto_send_max_file_size` to limit the maximum file size to auto-send.
+- Other minor fixes.
