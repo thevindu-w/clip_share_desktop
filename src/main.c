@@ -449,14 +449,6 @@ int main(int argc, char **argv) {
 
     _set_error_log_file(ERROR_LOG_FILE);
 
-    char *conf_path = get_conf_file();
-    if (!conf_path) {
-        exit(EXIT_FAILURE);
-    }
-    parse_conf(&configuration, conf_path);
-    free(conf_path);
-    _apply_default_conf();
-
     int8_t stop = 0;
     int8_t daemonize = 1;
     int cmd_offset = 0;
@@ -470,6 +462,14 @@ int main(int argc, char **argv) {
         puts("Client Stopped");
         exit(EXIT_SUCCESS);
     }
+
+    char *conf_path = get_conf_file();
+    if (!conf_path) {
+        exit(EXIT_FAILURE);
+    }
+    parse_conf(&configuration, conf_path);
+    free(conf_path);
+    _apply_default_conf();
 
 #ifndef NO_SSL
     if (configuration.secure_mode_enabled &&
