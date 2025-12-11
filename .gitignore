@@ -14,5 +14,5 @@ dist/
 .vscode/
 .trash/
 cert_keys/
-trusted_servers.txt
+/trusted_servers.txt
 .DS_Store

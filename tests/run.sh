@@ -206,6 +206,16 @@ clear_clipboard() {
     fi
 }
 
+# Update the test clipshare-desktop.conf file. Usage: update_config <key> <value>
+update_config() {
+    "$program" -s &>/dev/null || true
+    rm -f client_err.log >/dev/null 2>&1
+    local key="$1"
+    local value="$2"
+    [[ $key =~ ^[A-Za-z0-9_]+$ ]]
+    sed -i -E 's@^(\s|#)*'"$key"'\s*=.*$@'"${key}=${value}"'@' clipshare-desktop.conf
+}
+
 run_server() {
     args=("$@")
     python3 "${TESTS_DIR}/utils/mock_server.py" "${args[@]/#/}" >>${TESTS_DIR}/tmp/server.log &
@@ -223,7 +233,7 @@ check_logs() {
     fi
 }
 
-export -f setColor showStatus copy_text get_copied_text copy_files clear_clipboard run_server check_logs
+export -f setColor showStatus copy_text get_copied_text copy_files clear_clipboard update_config run_server check_logs
 
 exitCode=0
 passCnt=0

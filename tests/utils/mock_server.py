@@ -1,39 +1,47 @@
-import socket
 import getopt
 import os
-import time
+import socket
+import ssl
 import sys
+import time
 
+TLS_ENABLED = False
 PROTO_MIN = 1
 PROTO_MAX = 3
 BIND_ADDR = '127.0.0.1'
 PORT = 4337
+TLS_PORT = 4338
 DISABLED_METHODS = []
 COPIED_TEXT = None
 FILES_COPIED = False
 IMAGE = None
 
-options, _ = getopt.getopt(sys.argv[1:], "", ['proto-min=', 'proto-max=', 'bind=', 'port=', 'disabled-methods=', 'text=', 'image=', 'files='])
+options, _ = getopt.getopt(sys.argv[1:], "", ['tls=', 'proto-min=', 'proto-max=', 'bind=', 'port=', 'disabled-methods=', 'text=', 'image=', 'files='])
 for opt, arg in options:
     arg = arg.strip()
-    if opt in ('--proto-min'):
+    if opt == '--tls':
+        TLS_ENABLED = True
+        PORT = TLS_PORT
+    elif opt == '--proto-min':
         PROTO_MIN = int(arg)
-    elif opt in ('--proto-max'):
+    elif opt == '--proto-max':
         PROTO_MAX = int(arg)
-    elif opt in ('--bind'):
+    elif opt == '--bind':
         BIND_ADDR = arg
-    elif opt in ('--port'):
+    elif opt == '--port':
         PORT = int(arg)
-    elif opt in ('--disabled-methods'):
+        TLS_PORT = PORT
+    elif opt == '--disabled-methods':
         DISABLED_METHODS = arg.split(',')
-    elif opt in ('--text'):
+    elif opt == '--text':
         COPIED_TEXT = arg
-    elif opt in ('--image'):
+    elif opt == '--image':
         IMAGE = arg
-    elif opt in ('--files'):
+    elif opt == '--files':
         FILES_COPIED = True
 
 FILES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'files'))
+TLS_CERT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tmp'))
 
 PROTO_OK = b'\x01'
 PROTO_OBSOLETE = b'\x02'
@@ -50,6 +58,13 @@ def start_server():
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_sock.bind((BIND_ADDR, PORT))
     server_sock.listen(3)
+
+def init_ssl():
+    global context
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain(certfile=os.path.join(TLS_CERT_DIR, 'testServer.crt'), keyfile=os.path.join(TLS_CERT_DIR, 'testServer.key'))
+    context.load_verify_locations(os.path.join(TLS_CERT_DIR, 'testCA.crt'))
+    context.verify_mode = ssl.CERT_REQUIRED
 
 def send_int(sock: socket.socket, value: int) -> None:
     b = value.to_bytes(8, 'big')
@@ -265,6 +280,7 @@ def negotiate_protocol(sock: socket.socket) -> None:
         return
 
 try:
+    if (TLS_ENABLED): init_ssl()
     start_server()
 except:
     server_sock.close()
@@ -278,6 +294,8 @@ except:
 client_sock, _ = server_sock.accept()
 server_sock.close()
 client_sock.settimeout(0.05)
+if TLS_ENABLED:
+    client_sock = context.wrap_socket(client_sock, server_side=True)
 negotiate_protocol(client_sock)
 try:
     client_sock.recv(1) # wait for client to receive all data
