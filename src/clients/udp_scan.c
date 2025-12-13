@@ -310,7 +310,7 @@ list2 *udp_scan(void) {
             append(addr_lst, strdup(ifaddr));
         }
 
-        in_addr_t mask = ~((1 << unicast->OnLinkPrefixLength) - 1);
+        in_addr_t mask = (in_addr_t) ~((1 << unicast->OnLinkPrefixLength) - 1);
 
         scan_arg_t *arg = malloc(sizeof(scan_arg_t));
         arg->brd_addr = addr.s_addr | mask;
