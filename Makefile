@@ -36,8 +36,9 @@ CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 VPATH=$(SRC_DIR)
 
-OBJS_C=main.o clients/cli_client.o clients/gui_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o utils/clipboard_listener.o
-OBJS_BIN=res/page.o
+OBJS_C=main.o clients/cli_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o utils/clipboard_listener.o
+OBJS_C_WEB=clients/gui_client.o
+OBJS_BIN=
 OBJS_M=
 
 OTHER_DEPENDENCIES=
@@ -50,12 +51,14 @@ else
 endif
 
 ARCH?=x86_64
+NO_WEB?=0
 
 ifeq ($(detected_OS),Linux)
 	OBJS_C+= utils/listener_linux.o xclip/xclip.o xclip/xclib.o
 	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS_OPTIM=-Os
-	LDLIBS_NO_SSL=-lmicrohttpd -lunistring -lX11 -lXmu -lXt -lXfixes -lpthread
+	LDLIBS_NO_SSL=-lunistring -lX11 -lXmu -lXt -lXfixes -lpthread
+	LDLIBS_MHD=-lmicrohttpd
 	LDLIBS_SSL=-lssl -lcrypto
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
@@ -63,7 +66,8 @@ else ifeq ($(detected_OS),Windows)
 	CFLAGS+= -Wformat-signedness
 	CFLAGS_OPTIM=-O3
 	OTHER_DEPENDENCIES+= res/win/app.coff
-	LDLIBS_NO_SSL=-l:libmicrohttpd.a -l:libunistring.a -lws2_32 -lgdi32 -lIphlpapi
+	LDLIBS_NO_SSL=-l:libunistring.a -lws2_32 -lgdi32 -lIphlpapi
+	LDLIBS_MHD=-l:libmicrohttpd.a
 	LDLIBS_SSL=-l:libssl.a -l:libcrypto.a -l:libz.a -lcrypt32
 	LINK_FLAGS_BUILD=
 	ifeq ($(ARCH),x86_64)
@@ -86,12 +90,21 @@ export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
 	CFLAGS_OPTIM=-O3
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
-	LDLIBS_NO_SSL=-framework AppKit -lmicrohttpd -lunistring -lobjc
+	LDLIBS_NO_SSL=-framework AppKit -lunistring -lobjc
+	LDLIBS_MHD=-lmicrohttpd
 	LDLIBS_SSL=-lssl -lcrypto
 else
 $(error ClipShare is not supported on this platform!)
 endif
-LDLIBS+= $(LDLIBS_SSL) $(LDLIBS_NO_SSL)
+
+ifeq ($(NO_WEB),1)
+	CFLAGS+= -DNO_WEB=1
+else
+	OBJS_C:=$(OBJS_C) $(OBJS_C_WEB)
+	OBJS_BIN:=res/page.o $(OBJS_BIN)
+	LDLIBS_NO_SSL:=$(LDLIBS_MHD) $(LDLIBS_NO_SSL)
+endif
+LDLIBS=$(LDLIBS_SSL) $(LDLIBS_NO_SSL)
 CFLAGS+= -DINFO_NAME=\"clip_share\" -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
 CFLAGS_OPTIM+= -Werror
 

@@ -19,9 +19,12 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
-#include <microhttpd.h>
 #include <stdint.h>
 #include <utils/config.h>
+
+#ifndef NO_WEB
+#include <microhttpd.h>
+#endif
 
 #define CONFIG_FILE "clipshare-desktop.conf"
 
@@ -38,6 +41,8 @@ extern char *pending_data;
 extern const char *global_prog_name;
 #endif
 
+#ifndef NO_WEB
 extern struct MHD_Daemon *http_daemon;
+#endif
 
 #endif  // GLOBALS_H_

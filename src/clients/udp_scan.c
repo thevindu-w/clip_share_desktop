@@ -32,6 +32,7 @@
 #elif defined(_WIN32)
 #include <iphlpapi.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #endif
 
 #ifndef MSG_CONFIRM

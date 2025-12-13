@@ -16,6 +16,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef NO_WEB
+
 #include <clients/gui_client.h>
 #include <clients/status_cb.h>
 #include <clients/udp_scan.h>
@@ -259,3 +261,5 @@ void start_web(void) {
 #endif
     return;
 }
+
+#endif

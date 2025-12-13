@@ -206,11 +206,13 @@ static volatile HWND hWnd = NULL;
 static volatile GUID guid = {0};
 static volatile char running = 1;
 
+#ifndef NO_WEB
 static DWORD WINAPI webThreadFn(void *arg) {
     (void)arg;
     start_web();
     return EXIT_SUCCESS;
 }
+#endif
 
 static DWORD WINAPI listenerThreadFn(void *arg) {
     (void)arg;
@@ -531,16 +533,21 @@ int main(int argc, char **argv) {
         }
 #endif
 
+#ifndef NO_WEB
         start_web();
+#endif
 #elif defined(_WIN32)
         // initialize instance and guid
         instance = GetModuleHandle(NULL);
         setGUID();
 
+#ifndef NO_WEB
         HANDLE webThread = CreateThread(NULL, 0, webThreadFn, NULL, 0, NULL);
+#endif
 
+        HANDLE listenerThread = NULL;
         if (configuration.auto_send_text || configuration.auto_send_files) {
-            CreateThread(NULL, 0, listenerThreadFn, NULL, 0, NULL);
+            listenerThread = CreateThread(NULL, 0, listenerThreadFn, NULL, 0, NULL);
         }
 
         if (configuration.tray_icon) {
@@ -555,9 +562,15 @@ int main(int argc, char **argv) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
             }
+            if (listenerThread != NULL) TerminateThread(listenerThread, 0);
+#ifndef NO_WEB
             if (webThread != NULL) TerminateThread(webThread, 0);
+#endif
         }
+        if (listenerThread != NULL) WaitForSingleObject(listenerThread, INFINITE);
+#ifndef NO_WEB
         if (webThread != NULL) WaitForSingleObject(webThread, INFINITE);
+#endif
 
         remove_tray_icon();
         CloseHandle(instance);

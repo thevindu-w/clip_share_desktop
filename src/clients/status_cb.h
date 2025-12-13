@@ -19,9 +19,11 @@
 #ifndef CLIENTS_STATUS_CB_H_
 #define CLIENTS_STATUS_CB_H_
 
-#include <microhttpd.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#ifndef NO_WEB
+#include <microhttpd.h>
 
 #define RESP_OK MHD_HTTP_OK                                   // Method action is successfully completed
 #define RESP_NO_DATA MHD_HTTP_NOT_FOUND                       // Requested data is not available on the server
@@ -39,6 +41,26 @@ typedef struct _status_callback_params {
     int8_t called;
     struct MHD_Connection *connection;
 } status_callback_params;
+
+#else
+
+#define RESP_OK 0
+#define RESP_NO_DATA 0
+#define RESP_DATA_ERROR 0
+#define RESP_METHOD_NOT_ALLOWED 0
+#define RESP_PROTO_METHOD_ERROR 0
+#define RESP_PROTO_VERSION_MISMATCH 0
+#define RESP_SERVER_ERROR 0
+#define RESP_COMMUNICATION_FAILURE 0
+#define RESP_CONNECTION_FAILURE 0
+#define RESP_INVALID_ADDRESS 0
+#define RESP_LOCAL_ERROR 0
+
+typedef struct _status_callback_params {
+    // unused
+} status_callback_params;
+
+#endif
 
 typedef void (*StatusCallbackFn)(unsigned int, const char *, size_t, status_callback_params *);
 

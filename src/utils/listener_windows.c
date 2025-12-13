@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <utils/clipboard_listener.h>
 #include <utils/utils.h>
+#include <windows.h>
 
 static volatile int running = 0;
 static volatile HINSTANCE instance = NULL;

@@ -19,6 +19,8 @@
 #ifndef CLIENTS_GUI_CLIENT_H_
 #define CLIENTS_GUI_CLIENT_H_
 
+#ifndef NO_WEB
 extern void start_web(void);
+#endif
 
 #endif  // CLIENTS_GUI_CLIENT_H_

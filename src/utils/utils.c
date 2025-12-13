@@ -26,7 +26,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <globals.h>
-#include <microhttpd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +47,10 @@
 #ifdef _WIN64
 #include <utils/win_load_lib.h>
 #endif
+#endif
+
+#ifndef NO_WEB
+#include <microhttpd.h>
 #endif
 
 #define MAX_RECURSE_DEPTH 256
@@ -186,10 +189,12 @@ void cleanup(void) {
     puts("Cleaning up resources before exit");
 #endif
     cleanup_listener();
+#ifndef NO_WEB
     if (http_daemon) {
         MHD_stop_daemon(http_daemon);
         http_daemon = NULL;
     }
+#endif
     if (error_log_file) {
         free(error_log_file);
         error_log_file = NULL;
