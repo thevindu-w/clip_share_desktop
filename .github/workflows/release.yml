@@ -105,7 +105,7 @@ jobs:
         gzip -9 >"${{env.ARCHIVE_NAME}}"
 
     - name: Upload Linux version
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: "${{env.ARCHIVE_NAME}}"
         path: "${{env.ARCHIVE_NAME}}"
@@ -155,7 +155,7 @@ jobs:
         gzip -9 >"${{env.ARCHIVE_NAME64}}"
 
     - name: Upload Linux arm64 version
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: "${{env.ARCHIVE_NAME64}}"
         path: "${{env.ARCHIVE_NAME64}}"
@@ -206,7 +206,7 @@ jobs:
 
     - name: Setup OpenSSL
       id: cache-openssl
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\msys64\openssl-x86_64
         key: openssl-windows-x86_64
@@ -232,7 +232,7 @@ jobs:
 
     - name: Setup PatchPE
       id: cache-patchpe
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\msys64\PatchPE.exe
         key: patchpe-windows-x86_64
@@ -250,7 +250,7 @@ jobs:
 
     - name: Setup libmicrohttpd
       id: cache-libmicrohttpd
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\msys64\libmicrohttpd-x86_64
         key: libmicrohttpd-windows-x86_64
@@ -293,7 +293,7 @@ jobs:
         zip -9 "../${{env.ARCHIVE_NAME_NO_SSL}}" *
 
     - name: Upload Windows version
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: "${{env.ARCHIVE_NAME}}"
         path: "${{env.ARCHIVE_NAME}}"
@@ -302,7 +302,7 @@ jobs:
         compression-level: 9
 
     - name: Upload Windows no-ssl version
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: "${{env.ARCHIVE_NAME_NO_SSL}}"
         path: "${{env.ARCHIVE_NAME_NO_SSL}}"
@@ -318,7 +318,7 @@ jobs:
         mv install.bat "../${{env.INSTALLER_NAME}}"
 
     - name: Upload online installer
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: "${{env.INSTALLER_NAME}}"
         path: "${{env.INSTALLER_NAME}}"
@@ -357,7 +357,7 @@ jobs:
 
     - name: Setup libmicrohttpd
       id: cache-libmicrohttpd
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.LIBMICROHTTPD_PATH }}
         key: libmicrohttpd-macos-${{ env.ARCH_SUFFIX }}
@@ -395,7 +395,7 @@ jobs:
         mv 'clip-share-client' "${{env.FILE_NAME}}"
 
     - name: Upload macOS binary
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: "${{env.FILE_NAME}}"
         path: "${{env.FILE_NAME}}"
@@ -421,13 +421,13 @@ jobs:
         echo FILE_ARM="clip-share-client-arm64" >> $GITHUB_ENV
 
     - name: Download macOS x86_64 version
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: "${{env.FILE_INTEL}}"
         path: "${{env.FILE_INTEL}}"
 
     - name: Download macOS ARM64 version
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: "${{env.FILE_ARM}}"
         path: "${{env.FILE_ARM}}"
@@ -443,7 +443,7 @@ jobs:
         zip -9 "../${{env.ARCHIVE_NAME}}" *
 
     - name: Upload macOS version
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: "${{env.ARCHIVE_NAME}}"
         path: "${{env.ARCHIVE_NAME}}"
@@ -482,14 +482,14 @@ jobs:
         echo FILE_MACOS="clip_share_client-${version}-macos.zip" >> $GITHUB_ENV
 
     - name: Download builds
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         pattern: clip_share_client-*
         path: ${{ github.workspace }}
         merge-multiple: true
 
     - name: Download Windows installer
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: "${{env.INSTALLER_WINDOWS}}"
         path: "${{env.INSTALLER_WINDOWS}}"

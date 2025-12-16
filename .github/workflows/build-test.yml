@@ -122,7 +122,7 @@ jobs:
 
     - name: Setup OpenSSL
       id: cache-openssl
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\msys64\openssl-x86_64
         key: openssl-windows-x86_64
@@ -148,7 +148,7 @@ jobs:
 
     - name: Setup PatchPE
       id: cache-patchpe
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\msys64\PatchPE.exe
         key: patchpe-windows-x86_64
@@ -166,7 +166,7 @@ jobs:
 
     - name: Setup libmicrohttpd
       id: cache-libmicrohttpd
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\msys64\libmicrohttpd-x86_64
         key: libmicrohttpd-windows-x86_64
@@ -231,7 +231,7 @@ jobs:
 
     - name: Setup libmicrohttpd
       id: cache-libmicrohttpd
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.LIBMICROHTTPD_PATH }}
         key: libmicrohttpd-macos-${{ env.ARCH_SUFFIX }}
