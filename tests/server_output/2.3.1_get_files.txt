@@ -1,0 +1,5 @@
+Client version 3 is unknown
+Client accepted version 2
+Using protocol version 2
+Client requested method 3
+No copied files
