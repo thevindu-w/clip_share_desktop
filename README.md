@@ -112,6 +112,8 @@ clip-share-client -c sc
 
 **Note:** This section is optional if you prefer manually starting the server over automatically starting on login/reboot.
 
+To install the client to run on startup, use the corresponding installer script for your platform.
+
 #### Online installers
 
 Online installer scripts are attached with the releases. They will download the corresponding version during the installation. Therefore, they do not require having the compiled binaries, along with the installer, to run it. However, they require internet access to download the binaries from GitHub during the installation. Run the interactive script and follow the instructions to install ClipShare desktop.
@@ -133,7 +135,6 @@ chmod +x install-linux-mac.sh
 1. Download the `install-windows.bat` file from [release assets](https://github.com/thevindu-w/clip_share_desktop/releases/latest).
 1. Double-click on the `install-windows.bat` installer script to run it. It will open a Command Prompt window. Follow the instructions on it to install ClipShare. (If double-clicking did not run the installer, right-click on it and select Run)
 </details>
-<br>
 
 #### Standalone installers
 
@@ -164,6 +165,12 @@ chmod +x install-mac.sh
 1. Place the `install-windows.bat` file and the `clip-share-client.exe` executable in the same folder. (the executable name may have suffixes)
 1. Double-click on the `install-windows.bat` installer script to run it. It will open a Command Prompt window. Follow the instructions on it to install ClipShare. (If double-clicking did not run the installer, right-click on it and select Run)
 </details>
+
+#### Homebrew (for macOS)
+
+**Note:** If you have a previous installation of ClipShare desktop client installed using other methods (ex: installer scripts), please uninstall it before installing ClipShare with Homebrew to avoid conflicts.
+
+ClipShare desktop client is available as a Homebrew service for macOS. Refer to the [Homebrew repository](https://github.com/thevindu-w/homebrew-clipshare#how-to-install-clipshare-formulae) for instructions on installing ClipShare desktop client with Homebrew.
 
 <br>
 
