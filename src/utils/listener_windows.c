@@ -30,26 +30,6 @@ static volatile HWND hWnd = NULL;
 static ListenerCallback clip_callback = NULL;
 static volatile WINBOOL listening = FALSE;
 
-static int get_copied_type(void) {
-    int copied_type = COPIED_TYPE_NONE;
-    if (!OpenClipboard(0)) {
-        Sleep(10);  // retry after a short delay
-        if (!OpenClipboard(0)) {
-            return copied_type;
-        }
-    }
-    if (IsClipboardFormatAvailable(CF_HDROP)) {
-        copied_type = COPIED_TYPE_FILE;
-    } else if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
-        copied_type = COPIED_TYPE_TEXT;
-    }
-    CloseClipboard();
-#ifdef DEBUG_MODE
-    printf("Copied type = %i\n", copied_type);
-#endif
-    return copied_type;
-}
-
 static LRESULT CALLBACK ClipWindProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE: {

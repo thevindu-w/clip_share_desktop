@@ -30,6 +30,10 @@
 #define PATH_SEP '\\'
 #endif
 
+#define COPIED_TYPE_NONE 0
+#define COPIED_TYPE_TEXT 1
+#define COPIED_TYPE_FILE 2
+
 /*
  * List of files and the length of the path of their parent directory
  */
@@ -79,6 +83,8 @@ extern void *realloc_or_free(void *ptr, size_t size) __attribute__((__malloc__))
 #ifdef __linux__
 extern void set_pending_clipboard_item(void);
 #endif
+
+extern int8_t get_copied_type(void);
 
 /*
  * Get copied text from clipboard.

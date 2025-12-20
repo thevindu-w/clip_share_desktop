@@ -20,6 +20,7 @@
 #include <globals.h>
 #include <proto/selector.h>
 #include <utils/clipboard_listener.h>
+#include <utils/utils.h>
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <arpa/inet.h>

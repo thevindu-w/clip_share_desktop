@@ -65,18 +65,7 @@ ListenerCallback clip_callback = NULL;
         return;
     }
 
-    int copied_type = COPIED_TYPE_NONE;
-    @autoreleasepool {
-        NSArray *fileURLs = [self.pasteboard readObjectsForClasses:self.classes options:self.options];
-        if (fileURLs && [fileURLs count]) {
-            copied_type = COPIED_TYPE_FILE;
-        }
-        NSString *text =
-            (copied_type == COPIED_TYPE_NONE) ? [self.pasteboard stringForType:NSPasteboardTypeString] : NULL;
-        if (text) {
-            copied_type = COPIED_TYPE_TEXT;
-        }
-    }
+    int8_t copied_type = get_copied_type();
     if (copied_type != COPIED_TYPE_NONE) {
         clip_callback(copied_type);
     }

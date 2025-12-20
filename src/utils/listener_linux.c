@@ -36,39 +36,6 @@
 
 static volatile int running;
 
-static int get_copied_type(void) {
-    char *targets;
-    uint32_t targets_len;
-    if (xclip_util(XCLIP_OUT, "TARGETS", &targets_len, &targets) || targets_len <= 0) {  // do not change the order
-#ifdef DEBUG_MODE
-        printf("xclip read TARGETS. len = %" PRIu32 "\n", targets_len);
-#endif
-        if (targets) {
-            free(targets);
-        }
-        return EXIT_FAILURE;
-    }
-    int copied_type = COPIED_TYPE_NONE;
-    char *copy = targets;
-    const char *token;
-    while ((token = strsep(&copy, "\n"))) {
-        if ((!strncmp(token, "text/plain", 10)) || !strcmp(token, "UTF8_STRING")) {
-            copied_type = COPIED_TYPE_TEXT;
-        }
-        if (!strncmp(token, "x-special/gnome-copied-files", 28)) {
-            copied_type = COPIED_TYPE_FILE;
-            break;
-        }
-    }
-    free(targets);
-#ifdef DEBUG_MODE
-    if (!copied_type) {
-        puts("No copied items");
-    }
-#endif
-    return copied_type;
-}
-
 int clipboard_listen(ListenerCallback callback) {
     Display *dpy = XOpenDisplay(NULL);
     if (!dpy) {
