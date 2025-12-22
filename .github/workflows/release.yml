@@ -260,6 +260,11 @@ jobs:
       run: |
         curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip ||
         curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip
+        if [ "$(sha256sum -b libmicrohttpd-latest-w32-bin.zip | cut -d ' ' -f 1)" != \
+            'f12c375b412956bee3814aea82b169229e0e673a708cc620e374012ff2bd779d' ]; then
+          echo Libmicrohttpd hash mismatch
+          exit 1
+        fi
         unzip libmicrohttpd-latest-w32-bin.zip
         mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/clang64 "$LIBMICROHTTPD_PATH"
         rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
@@ -369,6 +374,11 @@ jobs:
         cd libmicrohttpd
         curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz ||
         curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-latest.tar.gz
+        if [ "$(sha256sum -b libmicrohttpd-latest.tar.gz | cut -d ' ' -f 1)" != \
+            'df324fcd0834175dab07483133902d9774a605bfa298025f69883288fd20a8c7' ]; then
+          echo Libmicrohttpd hash mismatch
+          exit 1
+        fi
         tar -xzf libmicrohttpd-latest.tar.gz
         rm libmicrohttpd-latest.tar.gz
         cd libmicrohttpd*
