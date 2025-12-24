@@ -61,10 +61,14 @@ static inline void _get_text(uint32_t server_addr) {
 
 static inline void _send_text(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_SEND_TEXT, NULL) == EXIT_SUCCESS)
-        msg_suffix = "done";
-    else
-        msg_suffix = "failed!";
+    if (get_copied_type() == COPIED_TYPE_TEXT) {
+        if (_invoke_method(server_addr, METHOD_SEND_TEXT, NULL) == EXIT_SUCCESS)
+            msg_suffix = "done";
+        else
+            msg_suffix = "failed!";
+    } else {
+        msg_suffix = "failed! - No text copied";
+    }
     printf("Send text %s\n", msg_suffix);
 }
 
@@ -79,10 +83,14 @@ static inline void _get_files(uint32_t server_addr) {
 
 static inline void _send_files(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_SEND_FILE, NULL) == EXIT_SUCCESS)
-        msg_suffix = "done";
-    else
-        msg_suffix = "failed!";
+    if (get_copied_type() == COPIED_TYPE_FILE) {
+        if (_invoke_method(server_addr, METHOD_SEND_FILE, NULL) == EXIT_SUCCESS)
+            msg_suffix = "done";
+        else
+            msg_suffix = "failed!";
+    } else {
+        msg_suffix = "failed! - No files copied";
+    }
     printf("Send files %s\n", msg_suffix);
 }
 

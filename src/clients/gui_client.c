@@ -29,11 +29,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <utils/net_utils.h>
+#include <utils/utils.h>
 
 #ifdef __linux__
 #include <pthread.h>
 #include <sys/wait.h>
-#include <utils/utils.h>
 #endif
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -90,6 +90,26 @@ static void callback_fn(unsigned int status, const char *msg, size_t len, status
 
 static void handle_method(struct MHD_Connection *connection, const char *address, uint8_t method, MethodArgs *args) {
     status_callback_params params = {.called = 0, .connection = connection};
+    switch (method) {
+        case METHOD_SEND_TEXT: {
+            if (get_copied_type() != COPIED_TYPE_TEXT) {
+                callback_fn(RESP_NO_DATA, NULL, 0, &params);
+                return;
+            }
+            break;
+        }
+
+        case METHOD_SEND_FILE: {
+            if (get_copied_type() != COPIED_TYPE_FILE) {
+                callback_fn(RESP_NO_DATA, NULL, 0, &params);
+                return;
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
     uint32_t server_addr;
     if (ipv4_aton(address, &server_addr) != EXIT_SUCCESS) {
         callback_fn(RESP_INVALID_ADDRESS, NULL, 0, &params);
