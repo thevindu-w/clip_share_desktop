@@ -53,7 +53,11 @@ Download the desktop client from <a href="https://github.com/thevindu-w/clip_sha
 - [How to Use](#how-to-use)
   - [GUI client](#gui-client)
   - [CLI client](#cli-client)
-  - [Installation](#installation)
+  - [Installation](#installation) (optional)
+    - [Online installers](#online-installers)
+    - [Standalone installers](#standalone-installers)
+    - [Homebrew (for macOS)](#homebrew-for-macos)
+    - [apt, dnf, or yum (for Ubuntu or Fedora-based Linux)](#apt-dnf-or-yum-for-ubuntu-or-fedora-based-linux)
   - [Create SSL/TLS certificates and key files](#create-ssltls-certificates-and-key-files) (optional)
   - [Configuration](#configuration)
 - [Build from Source](#build-from-source)
@@ -171,6 +175,12 @@ chmod +x install-mac.sh
 **Note:** If you have a previous installation of ClipShare desktop client installed using other methods (ex: installer scripts), please uninstall it before installing ClipShare with Homebrew to avoid conflicts.
 
 ClipShare desktop client is available as a Homebrew service for macOS. Refer to the [Homebrew repository](https://github.com/thevindu-w/homebrew-clipshare#how-to-install-clipshare-formulae) for instructions on installing ClipShare desktop client with Homebrew.
+
+#### apt, dnf, or yum (for Ubuntu or Fedora-based Linux)
+
+**Note:** If you have a previous installation of ClipShare desktop client installed using other methods (ex: installer scripts), please uninstall it before installing ClipShare with the package manager to avoid conflicts.
+
+ClipShare desktop client is available as `deb` and `rpm` packages for Linux. Refer to [https://thevindu-w.github.io/clipshare-packages/](https://thevindu-w.github.io/clipshare-packages/) for instructions on installing ClipShare client with the default package manager.
 
 <br>
 
