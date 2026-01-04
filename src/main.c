@@ -182,6 +182,7 @@ static inline void _apply_default_conf(void) {
     if (configuration.secure_mode_enabled < 0) configuration.secure_mode_enabled = 0;
     if (configuration.max_text_length <= 0) configuration.max_text_length = MAX_TEXT_LENGTH;
     if (configuration.max_file_size <= 0) configuration.max_file_size = MAX_FILE_SIZE;
+    if (configuration.max_file_count <= 0) configuration.max_file_count = 0xFFFFFFFEUL;
     if (configuration.cut_received_files < 0) configuration.cut_received_files = 0;
     if (configuration.min_proto_version < PROTOCOL_MIN) configuration.min_proto_version = PROTOCOL_MIN;
     if (configuration.min_proto_version > PROTOCOL_MAX) configuration.min_proto_version = PROTOCOL_MAX;

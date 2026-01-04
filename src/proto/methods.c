@@ -611,7 +611,7 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
-    if (cnt <= 0 || cnt >= 0xFFFFFFFFLL) {
+    if (cnt <= 0 || (uint64_t)cnt > configuration.max_file_count) {
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }

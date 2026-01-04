@@ -45,6 +45,7 @@ typedef struct _config {
 
     uint32_t max_text_length;
     int64_t max_file_size;
+    uint32_t max_file_count;
 
     uint16_t min_proto_version;
     uint16_t max_proto_version;
