@@ -67,6 +67,8 @@ typedef struct {
     in_addr_t brd_addr;
     mutex_t mutex;
     list2 *server_lst;
+    socket_t *sockets;
+    int index;
 } scan_arg_t;
 
 static void *scan_fn(void *args) {
@@ -74,6 +76,8 @@ static void *scan_fn(void *args) {
     in_addr_t broadcast = arg->brd_addr;
     mutex_t mutex = arg->mutex;
     list2 *servers = arg->server_lst;
+    socket_t *sockets = arg->sockets;
+    int ind = arg->index;
     free(arg);
 
     struct sockaddr_in server_addr;
@@ -82,12 +86,12 @@ static void *scan_fn(void *args) {
     server_addr.sin_port = htons(configuration.udp_port);
     server_addr.sin_addr.s_addr = broadcast;
 
-    socket_t socket;
-    get_udp_socket(&socket);
-    if (IS_NULL_SOCK(socket.type)) {
+    socket_t *socket = &(sockets[ind]);
+    get_udp_socket(socket);
+    if (IS_NULL_SOCK(socket->type)) {
         return NULL;
     }
-    sock_t sock = socket.socket.plain;
+    sock_t sock = socket->socket.plain;
 
     socklen_t len = sizeof(server_addr);
     sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&server_addr, len);
@@ -128,7 +132,7 @@ static void *scan_fn(void *args) {
             mutex_unlock(mutex);
         }
     }
-    close_socket_no_wait(&socket);
+    close_socket_no_wait(socket);
 
     return NULL;
 }
@@ -189,6 +193,7 @@ list2 *udp_scan(void) {
     char ifaddr[ADDR_BUF_SZ];
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_t threads[MAX_THREADS];
+    socket_t sockets[MAX_THREADS];
     int ind = 0;
     for (struct ifaddrs *ptr_entry = ptr_ifaddrs; ptr_entry; ptr_entry = ptr_entry->ifa_next) {
         if ((!ptr_entry->ifa_addr) || ptr_entry->ifa_addr->sa_family != AF_INET) {
@@ -216,6 +221,9 @@ list2 *udp_scan(void) {
 #endif
         arg->mutex = &mutex;
         arg->server_lst = server_lst;
+        arg->sockets = sockets;
+        arg->index = ind;
+        sockets[ind].type = NULL_SOCK;
         if (pthread_create(&tid, NULL, &scan_fn, arg)) {
             free(arg);
             continue;
@@ -234,11 +242,12 @@ list2 *udp_scan(void) {
         }
         nanosleep(&interval, NULL);
     }
-    interval.tv_nsec = 200000000;
+    interval.tv_nsec = 200000000L;
     nanosleep(&interval, NULL);
 
     for (int i = 0; i < ind; i++) {
         pthread_cancel(threads[i]);
+        close_socket_no_wait(&(sockets[i]));
     }
     pthread_mutex_destroy(&mutex);
     return filter_addresses(server_lst, addr_lst);
@@ -286,6 +295,7 @@ list2 *udp_scan(void) {
     list2 *addr_lst = init_list(2);
     char ifaddr[ADDR_BUF_SZ];
     HANDLE threads[MAX_THREADS];
+    socket_t sockets[MAX_THREADS];
     int ind = 0;
     for (PIP_ADAPTER_ADDRESSES cur = pAddrs; cur; cur = cur->Next) {
         PIP_ADAPTER_UNICAST_ADDRESS unicast = cur->FirstUnicastAddress;
@@ -319,6 +329,9 @@ list2 *udp_scan(void) {
 #endif
         arg->mutex = mutex;
         arg->server_lst = server_lst;
+        arg->sockets = sockets;
+        arg->index = ind;
+        sockets[ind].type = NULL_SOCK;
         HANDLE thread = CreateThread(NULL, 0, scan_fn_wrapper, arg, 0, NULL);
         if (!thread) {
             free(arg);
@@ -341,6 +354,7 @@ list2 *udp_scan(void) {
 
     for (int i = 0; i < ind; i++) {
         TerminateThread(threads[i], 1);
+        close_socket_no_wait(&(sockets[i]));
     }
     CloseHandle(mutex);
     return filter_addresses(server_lst, addr_lst);
