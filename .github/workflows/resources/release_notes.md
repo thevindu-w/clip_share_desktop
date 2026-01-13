@@ -12,7 +12,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Avoid connecting to servers for send methods if data is not available.
-- Add an option to build without web mode.
-- Other minor fixes.
-- Code quality improvements.
+- Add a configuration option `max_file_count` to limit the maximum number of files received with Get Files.
+- Fix UDP sockets not closing after a scan operation.
