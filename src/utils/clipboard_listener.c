@@ -19,6 +19,7 @@
 #include <clients/udp_scan.h>
 #include <globals.h>
 #include <proto/selector.h>
+#include <string.h>
 #include <utils/clipboard_listener.h>
 #include <utils/utils.h>
 
@@ -63,6 +64,20 @@ static DWORD WINAPI send_to_server_wrapper(void *arg) {
 }
 #endif
 
+static inline int is_server_allowed(const char *addr) {
+    if (!addr) {
+        return 0;
+    }
+    int found = 0;
+    for (uint32_t i = 0; i < configuration.auto_send_servers->len; i++) {
+        if (!strcmp(addr, configuration.auto_send_servers->array[i])) {
+            found = 1;
+            break;
+        }
+    }
+    return found;
+}
+
 static void send_to_servers(int type) {
     switch (type) {
         case COPIED_TYPE_TEXT: {
@@ -86,6 +101,20 @@ static void send_to_servers(int type) {
         fprintf(stderr, "Scan failed\n");
 #endif
         return;
+    }
+    if (configuration.auto_send_servers && servers->len < 1024) {
+        for (uint32_t i = 0; i < servers->len; i++) {
+            char *addr = servers->array[i];
+            if (is_server_allowed(addr)) {
+                continue;
+            }
+            if (addr) {
+                free(addr);
+            }
+            servers->array[i] = servers->array[servers->len - 1];
+            servers->len--;
+            i--;
+        }
     }
     if (servers->len <= 0 || servers->len > 512) {
 #ifdef DEBUG_MODE

@@ -71,6 +71,12 @@ extern void clear_ssl_ctx(void);
 #endif
 
 /*
+ * Checks if the address_str is a valid IPv4 address in dot-decimal notation.
+ * returns zero for valid addresses and non-zero for invalid addresses.
+ */
+extern int validate_ipv4(const char *address_str);
+
+/*
  * Converts a ipv4 address in dotted decimal into in_addr_t.
  * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
  */

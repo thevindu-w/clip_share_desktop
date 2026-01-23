@@ -15,4 +15,5 @@ dist/
 .trash/
 cert_keys/
 /trusted_servers.txt
+/auto_send*.txt
 .DS_Store

@@ -168,9 +168,9 @@ static int check_peer_certs(const SSL *ssl, const list2 *trusted_servers) {
 }
 #endif
 
-int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
-    if ((!address_ptr) || (!address_str)) {
-        return EXIT_FAILURE;
+int validate_ipv4(const char *address_str) {
+    if (!address_str) {
+        return 1;
     }
     unsigned int a;
     unsigned int b;
@@ -180,6 +180,13 @@ int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
 #ifdef DEBUG_MODE
         printf("Invalid address %s\n", address_str);
 #endif
+        return 1;
+    }
+    return 0;
+}
+
+int ipv4_aton(const char *address_str, uint32_t *address_ptr) {
+    if ((!address_ptr) || validate_ipv4(address_str)) {
         return EXIT_FAILURE;
     }
     struct in_addr addr;

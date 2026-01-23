@@ -52,6 +52,7 @@ typedef struct _config {
 
     int8_t auto_send_text;
     int8_t auto_send_files;
+    list2 *auto_send_servers;
 
     uint32_t auto_send_max_files;
     int64_t auto_send_max_file_size;

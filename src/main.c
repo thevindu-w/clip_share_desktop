@@ -193,6 +193,10 @@ static inline void _apply_default_conf(void) {
     if (configuration.auto_send_files < 0) configuration.auto_send_files = 0;
     if (configuration.auto_send_max_files <= 0) configuration.auto_send_max_files = 32;
     if (configuration.auto_send_max_file_size <= 0) configuration.auto_send_max_file_size = AUTO_SEND_MAX_FILE_SIZE;
+    if (configuration.auto_send_servers && configuration.auto_send_servers->len == 0) {
+        free_list(configuration.auto_send_servers);
+        configuration.auto_send_servers = NULL;
+    }
 #if defined(_WIN32) || defined(__APPLE__)
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
 #endif

@@ -32,7 +32,7 @@
 #define LINE_MAX_LEN 2047
 
 /*
- * Trims all charactors in the range \x01 to \x20 inclusive from both ends of
+ * Trims all charactors in the range \\x01 to \\x20 inclusive from both ends of
  * the string in-place.
  * The string must point to a valid and null-terminated string.
  * This does not re-allocate memory to shrink.
@@ -57,7 +57,6 @@ static inline void trim(char *str) {
     }
 }
 
-#ifndef NO_SSL
 /*
  * Reads the list of server names from the file given by the filename.
  * Trusted server names must not exceed 511 characters.
@@ -66,7 +65,9 @@ static inline void trim(char *str) {
  */
 static inline list2 *get_server_list(const char *filename) {
     FILE *f = fopen(filename, "r");
-    if (!f) error_exit("Error: trusted server list file not found");
+    if (!f) {
+        error_exit("Error: server list file not found");
+    }
     list2 *server_list = init_list(1);
     char server[512];
     while (fscanf(f, "%511[^\n]%*c", server) != EOF) {
@@ -81,6 +82,29 @@ static inline list2 *get_server_list(const char *filename) {
     return server_list;
 }
 
+/*
+ * Reads the list of server IP addresses from the file given by the filename.
+ * Returns a list2* of null terminated strings as elements on success.
+ * Returns null on error.
+ */
+static inline list2 *get_server_addresses(const char *filename) {
+    list2 *server_list = get_server_list(filename);
+    for (uint32_t i = 0; i < server_list->len; i++) {
+        char *addr = server_list->array[i];
+        if (validate_ipv4(addr)) {
+            if (addr) {
+                free(addr);
+            }
+            server_list->array[i] = server_list->array[server_list->len - 1];
+            server_list->len--;
+            i--;
+        }
+    }
+
+    return server_list;
+}
+
+#ifndef NO_SSL
 /*
  * Loads the content of a file given by the file_name and set the buffer to the address pointed by ptr.
  * File must not be empty and its size must be less than 64 KiB.
@@ -308,6 +332,11 @@ static void parse_line(char *line, config *cfg) {
         set_uint32(value, &(cfg->auto_send_max_files));
     } else if (!strcmp("auto_send_max_file_size", key)) {
         set_int64(value, &(cfg->auto_send_max_file_size));
+    } else if (!strcmp("auto_send_servers", key)) {
+        list2 *addr_list = get_server_addresses(value);
+        if (addr_list == NULL) return;
+        if (cfg->auto_send_servers) free_list(cfg->auto_send_servers);
+        cfg->auto_send_servers = addr_list;
 #if defined(_WIN32) || defined(__APPLE__)
     } else if (!strcmp("tray_icon", key)) {
         set_is_true(value, &(cfg->tray_icon));
@@ -339,6 +368,7 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->max_proto_version = 0;
     cfg->auto_send_text = -1;
     cfg->auto_send_files = -1;
+    cfg->auto_send_servers = NULL;
     cfg->auto_send_max_files = 0;
     cfg->auto_send_max_file_size = 0;
 #if defined(_WIN32) || defined(__APPLE__)
@@ -392,6 +422,10 @@ void clear_config(config *cfg) {
 #ifndef NO_SSL
     clear_config_key_cert(cfg);
 #endif
+    if (cfg->auto_send_servers) {
+        free_list(cfg->auto_send_servers);
+        cfg->auto_send_servers = NULL;
+    }
     if (cfg->working_dir) {
         free(cfg->working_dir);
         cfg->working_dir = NULL;
