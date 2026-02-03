@@ -230,7 +230,7 @@ The application searches for the configuration file in the following paths in th
 
 If it can't find a configuration file in any of the above directories, it will use the default values specified in the table below.
 
-To customize the client, create a file named &nbsp; `clipshare-desktop.conf` &nbsp; in any of the directories mentioned above and add the following lines to that configuration file. You may omit some lines to keep the default values.
+To customize the client, create a file named &nbsp; `clipshare-desktop.conf` &nbsp; in any of the directories mentioned above and add the following lines to that configuration file. You may omit some lines to keep the default values. Note that the configuration file must have [UTF-8](https://en.wikipedia.org/wiki/UTF-8) or [ASCII](https://en.wikipedia.org/wiki/ASCII) encoding.
 <details>
   <summary>Sample configuration file</summary>
 
@@ -256,6 +256,10 @@ max_proto_version=3
 
 auto_send_text=false
 auto_send_files=false
+auto_send_servers=auto_send_servers.txt
+
+auto_send_max_files=32
+auto_send_max_file_size=64M
 
 # Windows and macOS only
 tray_icon=true
@@ -287,6 +291,7 @@ Note that all the lines in the configuration file are optional. You may omit som
 | `max_proto_version` | The maximum protocol version the client should accept from a server after negotiation. | Any protocol version number less than or equal to the maximum protocol version the client has implemented. (ex: `3`) | The maximum protocol version the client has implemented |
 | `auto_send_text` | Whether the application should auto-send the text when copied. The values `true` or `1` will enable auto-sending copied text, while `false` or `0` will disable the feature. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
 | `auto_send_files` | Whether the application should auto-send files when copied. The values `true` or `1` will enable auto-sending copied files, while `false` or `0` will disable the feature. | `true`, `false`, `1`, `0` (Case insensitive) | `false` |
+| `auto_send_servers` | The text file containing a list of IPv4 addresses (in dot-decimal notation, one address per line) of servers to allow auto-sending. If this is not specified or there are no valid IPv4 addresses in the file, all addresses are allowed. | Absolute or relative path to the server addresses file | \<Unspecified\> |
 | `auto_send_max_files` | The maximum number of files to auto-send. The auto-send feature will not send files if the number of copied files exceeds this limit. | Any integer between 1 and 4294967295 inclusive | 32 |
 | `auto_send_max_file_size` | The maximum size of any single file in bytes, transferred with auto-send. | Any integer between 1 and 9223372036854775807 (nearly 8 EiB) inclusive. Suffixes K, M, G, and T (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, x10<sup>9</sup>, and x10<sup>12</sup>, respectively. | 67108864 (i.e. 64 MiB) |
 | `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. This option is available only on Windows and macOS. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
