@@ -34,7 +34,7 @@ extern int get_files_v1(socket_t *socket, StatusCallback *callback);
 extern int send_file_v1(socket_t *socket, int8_t is_auto_send, StatusCallback *callback);
 #endif
 extern int get_image_v1(socket_t *socket, StatusCallback *callback);
-extern int info_v1(socket_t *socket);
+extern int info_v1(socket_t *socket, StatusCallback *callback);
 
 // Version 2 methods
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)

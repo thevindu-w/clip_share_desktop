@@ -104,7 +104,7 @@ int version_1(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
             return get_image_v1(socket, callback);
         }
         case METHOD_INFO: {
-            return info_v1(socket);
+            return info_v1(socket, callback);
         }
         default: {  // unknown method
             if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
@@ -153,7 +153,7 @@ int version_2(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
             return get_image_v1(socket, callback);
         }
         case METHOD_INFO: {
-            return info_v1(socket);
+            return info_v1(socket, callback);
         }
         default: {  // unknown method
             if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
@@ -211,7 +211,7 @@ int version_3(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
             return get_screenshot_v3(socket, display, callback);
         }
         case METHOD_INFO: {
-            return info_v1(socket);
+            return info_v1(socket, callback);
         }
         default: {  // unknown method
             if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);

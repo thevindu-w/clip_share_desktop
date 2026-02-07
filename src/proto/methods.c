@@ -468,9 +468,47 @@ static inline int _save_image_common(socket_t *socket, StatusCallback *callback)
 
 int get_image_v1(socket_t *socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
 
-int info_v1(socket_t *socket) {
-    // TODO(thevindu-w): implement
-    (void)socket;
+int info_v1(socket_t *socket, StatusCallback *callback) {
+    int64_t length;
+    if (read_size(socket, &length) != EXIT_SUCCESS) {
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+#ifdef DEBUG_MODE
+    printf("Len = %" PRIi64 "\n", length);
+#endif
+    // limit maximum length to max_text_length
+    if (length <= 0 || length > configuration.max_text_length) {
+        if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+
+    char *data = malloc((size_t)length + 1);
+    if ((!data) || read_sock(socket, data, (uint64_t)length) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fputs("Read data failed\n", stderr);
+#endif
+        if (data) free(data);
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    data[length] = 0;
+    if (u8_check((uint8_t *)data, (size_t)length)) {
+#ifdef DEBUG_MODE
+        fputs("Invalid UTF-8\n", stderr);
+#endif
+        free(data);
+        if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+#ifdef DEBUG_MODE
+    if (length < 1024) puts(data);
+#endif
+    if (strncmp(INFO_NAME, data, (size_t)length + 1)) {
+        if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    if (callback) callback->function(RESP_OK, data, (size_t)length, callback->params);
     return EXIT_SUCCESS;
 }
 

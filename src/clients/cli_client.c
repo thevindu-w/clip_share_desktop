@@ -35,6 +35,7 @@
 #define COMMAND_GET_IMAGE 5
 #define COMMAND_GET_COPIED_IMAGE 6
 #define COMMAND_GET_SCREENSHOT 7
+#define COMMAND_INFO 125
 
 static void net_scan(void);
 
@@ -121,6 +122,15 @@ static inline void _get_screenshot(uint32_t server_addr, MethodArgs *args) {
     printf("Get screenshot %s\n", msg_suffix);
 }
 
+static inline void _get_info(uint32_t server_addr) {
+    const char *msg_suffix;
+    if (_invoke_method(server_addr, METHOD_INFO, NULL) == EXIT_SUCCESS)
+        msg_suffix = "done";
+    else
+        msg_suffix = "failed!";
+    printf("Info check %s\n", msg_suffix);
+}
+
 /*
  * Parse command line arguments and set corresponding variables
  */
@@ -141,10 +151,12 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_
         *command_p = COMMAND_SEND_FILES;
     } else if (strncmp(cmd, "i", 2) == 0) {
         *command_p = COMMAND_GET_IMAGE;
-    } else if (strncmp(cmd, "ic", 2) == 0) {
+    } else if (strncmp(cmd, "ic", 3) == 0) {
         *command_p = COMMAND_GET_COPIED_IMAGE;
-    } else if (strncmp(cmd, "is", 2) == 0) {
+    } else if (strncmp(cmd, "is", 3) == 0) {
         *command_p = COMMAND_GET_SCREENSHOT;
+    } else if (strncmp(cmd, "in", 3) == 0) {
+        *command_p = COMMAND_INFO;
     } else {
         fprintf(stderr, "Invalid command %s\n\n", argv[0]);
         *command_p = 0;
@@ -210,6 +222,10 @@ void cli_client(int argc, char **argv, const char *prog_name) {
         }
         case COMMAND_GET_SCREENSHOT: {
             _get_screenshot(server_addr, &args);
+            break;
+        }
+        case COMMAND_INFO: {
+            _get_info(server_addr);
             break;
         }
         default: {
