@@ -527,32 +527,8 @@ static inline int _make_directories(const char *path) {
     return EXIT_SUCCESS;
 }
 
-static int save_file(int version, socket_t *socket, const char *dirname, StatusCallback *callback) {
-    int64_t fname_size;
-    if (read_size(socket, &fname_size) != EXIT_SUCCESS) {
-        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
-        return EXIT_FAILURE;
-    }
-#ifdef DEBUG_MODE
-    printf("name_len = %" PRIi64 "\n", fname_size);
-#endif
-    // limit file name length to MAX_FILE_NAME_LENGTH chars
-    if (fname_size <= 0 || fname_size > MAX_FILE_NAME_LENGTH) {
-        if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
-        return EXIT_FAILURE;
-    }
-
-    const size_t name_length = (size_t)fname_size;
-    char file_name[name_length + 1];
-    if (read_sock(socket, file_name, name_length) != EXIT_SUCCESS) {
-#ifdef DEBUG_MODE
-        fputs("Read file name failed\n", stderr);
-#endif
-        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
-        return EXIT_FAILURE;
-    }
-
-    file_name[name_length] = 0;
+static inline int _validate_and_save(int version, socket_t *socket, const char *dirname, char *file_name,
+                                     size_t name_length, StatusCallback *callback) {
     if (_is_valid_fname(file_name, name_length) != EXIT_SUCCESS) {
 #ifdef DEBUG_MODE
         printf("Invalid filename \'%s\'\n", file_name);
@@ -601,6 +577,35 @@ static int save_file(int version, socket_t *socket, const char *dirname, StatusC
     if (file_exists(new_path)) return EXIT_FAILURE;
 
     return _save_file_common(version, socket, new_path, callback);
+}
+
+static int save_file(int version, socket_t *socket, const char *dirname, StatusCallback *callback) {
+    int64_t fname_size;
+    if (read_size(socket, &fname_size) != EXIT_SUCCESS) {
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+#ifdef DEBUG_MODE
+    printf("name_len = %" PRIi64 "\n", fname_size);
+#endif
+    // limit file name length to MAX_FILE_NAME_LENGTH chars
+    if (fname_size <= 0 || fname_size > MAX_FILE_NAME_LENGTH) {
+        if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+
+    const size_t name_length = (size_t)fname_size;
+    char file_name[name_length + 1];
+    if (read_sock(socket, file_name, name_length) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fputs("Read file name failed\n", stderr);
+#endif
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    file_name[name_length] = 0;
+
+    return _validate_and_save(version, socket, dirname, file_name, name_length, callback);
 }
 
 static char *_check_and_rename(const char *filename, const char *dirname) {

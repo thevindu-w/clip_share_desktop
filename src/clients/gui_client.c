@@ -267,10 +267,10 @@ void start_web(void) {
     struct sockaddr_in bind_addr;
     memset((char *)&bind_addr, 0, sizeof(bind_addr));
     bind_addr.sin_family = AF_INET;
-    bind_addr.sin_port = htons(configuration.web_port);
+    bind_addr.sin_port = htons(configuration.ports.web);
     bind_addr.sin_addr.s_addr = configuration.bind_addr;
 
-    http_daemon = MHD_start_daemon(MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD, configuration.web_port, NULL, NULL,
+    http_daemon = MHD_start_daemon(MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD, configuration.ports.web, NULL, NULL,
                                    &answer_to_connection, NULL, MHD_OPTION_SOCK_ADDR, &bind_addr, MHD_OPTION_END);
     if (!http_daemon) return;
 

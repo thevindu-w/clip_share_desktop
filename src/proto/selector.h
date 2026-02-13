@@ -43,6 +43,6 @@ typedef union {
  * Accepts a socket, negotiates the protocol version, and passes the control
  * to the respective version handler.
  */
-extern int handle_proto(socket_t *socket, uint8_t method, MethodArgs *args, StatusCallback *callback);
+extern int handle_proto(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback);
 
 #endif  // PROTO_SELECTOR_H_

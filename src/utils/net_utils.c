@@ -233,7 +233,7 @@ static void _connect_server(socket_t *sock_p, uint32_t addr) {
     struct sockaddr_in s_addr_in;
     s_addr_in.sin_family = AF_INET;
     s_addr_in.sin_addr.s_addr = addr;
-    const uint16_t port = configuration.secure_mode_enabled ? configuration.app_port_secure : configuration.app_port;
+    const uint16_t port = configuration.secure_mode_enabled ? configuration.ports.tls : configuration.ports.plaintext;
     s_addr_in.sin_port = htons(port);
 
     int status = connect(sock, (struct sockaddr *)&s_addr_in, sizeof(s_addr_in));

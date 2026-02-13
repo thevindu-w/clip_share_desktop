@@ -29,10 +29,12 @@ typedef struct _data_buffer {
 } data_buffer;
 
 typedef struct _config {
-    uint16_t app_port;
-    uint16_t app_port_secure;
-    uint16_t udp_port;
-    uint16_t web_port;
+    struct {
+        uint16_t plaintext;
+        uint16_t tls;
+        uint16_t udp;
+        uint16_t web;
+    } ports;
 
     int8_t secure_mode_enabled;
     data_buffer client_cert;
