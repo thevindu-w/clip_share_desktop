@@ -12,5 +12,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Add a configuration option `auto_send_servers` to auto-send only to specified server addresses.
-- Validate text encoding of configuration files.
+- Add an option to verify the connection to the server.
+- Code quality improvements.
