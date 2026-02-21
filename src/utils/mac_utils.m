@@ -1,5 +1,5 @@
 /*
- * utils/mac_utils.h - utility functions for macOS
+ * utils/mac_utils.m - utility functions for macOS
  * Copyright (C) 2024-2025 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
