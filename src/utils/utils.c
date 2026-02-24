@@ -613,7 +613,7 @@ list2 *list_dir(const char *dirname) {
     return lst;
 }
 
-#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
+#if (PROTOCOL_MIN <= 4) && (2 <= PROTOCOL_MAX)
 
 #if defined(__linux__) || defined(__APPLE__)
 
@@ -886,7 +886,7 @@ void get_copied_dirs_files(dir_files *dfiles_p, int include_leaf_dirs) {
 
 #endif
 
-#endif  // (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
+#endif  // (PROTOCOL_MIN <= 4) && (2 <= PROTOCOL_MAX)
 
 #if defined(__linux__) || defined(__APPLE__)
 

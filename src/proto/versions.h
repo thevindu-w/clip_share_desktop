@@ -47,4 +47,12 @@ extern int version_2(socket_t *socket, uint8_t method, const MethodArgs *args, S
 extern int version_3(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback);
 #endif
 
+#if (PROTOCOL_MIN <= 4) && (4 <= PROTOCOL_MAX)
+/*
+ * Accepts a socket connection and method code after the protocol version 4 is selected after the negotiation phase.
+ * Negotiate the method code with the server and pass the control to the respective method handler.
+ */
+extern int version_4(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback);
+#endif
+
 #endif  // PROTO_VERSIONS_H_

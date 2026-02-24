@@ -27,14 +27,16 @@
 #define STATUS_NO_DATA 2
 
 // Version 1 methods
+#if PROTOCOL_MIN <= 3
 extern int get_text_v1(socket_t *socket, StatusCallback *callback);
 extern int send_text_v1(socket_t *socket, StatusCallback *callback);
+extern int get_image_v1(socket_t *socket, StatusCallback *callback);
+extern int info_v1(socket_t *socket, StatusCallback *callback);
 #if PROTOCOL_MIN <= 1
 extern int get_files_v1(socket_t *socket, StatusCallback *callback);
 extern int send_file_v1(socket_t *socket, int8_t is_auto_send, StatusCallback *callback);
 #endif
-extern int get_image_v1(socket_t *socket, StatusCallback *callback);
-extern int info_v1(socket_t *socket, StatusCallback *callback);
+#endif
 
 // Version 2 methods
 #if (PROTOCOL_MIN <= 2) && (2 <= PROTOCOL_MAX)
@@ -48,6 +50,18 @@ extern int get_files_v3(socket_t *socket, StatusCallback *callback);
 extern int send_files_v3(socket_t *socket, int8_t is_auto_send, StatusCallback *callback);
 extern int get_copied_image_v3(socket_t *socket, StatusCallback *callback);
 extern int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callback);
+#endif
+
+// Version 4 methods
+#if (PROTOCOL_MIN <= 4) && (4 <= PROTOCOL_MAX)
+extern int get_text_v4(socket_t *socket, StatusCallback *callback);
+extern int send_text_v4(socket_t *socket, StatusCallback *callback);
+extern int get_files_v4(socket_t *socket, StatusCallback *callback);
+extern int send_files_v4(socket_t *socket, int8_t is_auto_send, StatusCallback *callback);
+extern int get_image_v4(socket_t *socket, StatusCallback *callback);
+extern int get_copied_image_v4(socket_t *socket, StatusCallback *callback);
+extern int get_screenshot_v4(socket_t *socket, uint16_t display, StatusCallback *callback);
+extern int info_v4(socket_t *socket, StatusCallback *callback);
 #endif
 
 #endif  // PROTO_METHODS_H_

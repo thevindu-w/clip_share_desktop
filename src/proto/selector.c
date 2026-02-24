@@ -52,6 +52,11 @@ static inline int proto_handler(socket_t *socket, uint8_t version, uint8_t metho
             return version_3(socket, method, args, callback);
         }
 #endif
+#if (PROTOCOL_MIN <= 4) && (4 <= PROTOCOL_MAX)
+        case 4: {
+            return version_4(socket, method, args, callback);
+        }
+#endif
         default: {  // invalid or unknown version
             error("Invalid protocol version");
             if (callback) callback->function(RESP_PROTO_VERSION_MISMATCH, NULL, 0, callback->params);

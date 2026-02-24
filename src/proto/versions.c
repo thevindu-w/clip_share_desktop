@@ -220,3 +220,61 @@ int version_3(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
     }
 }
 #endif
+
+#if (PROTOCOL_MIN <= 4) && (4 <= PROTOCOL_MAX)
+
+int version_4(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCallback *callback) {
+    switch (method) {
+        case METHOD_GET_TEXT:
+        case METHOD_SEND_TEXT:
+        case METHOD_GET_FILE:
+        case METHOD_SEND_FILE:
+        case METHOD_GET_IMAGE:
+        case METHOD_GET_COPIED_IMAGE:
+        case METHOD_GET_SCREENSHOT:
+        case METHOD_INFO:
+            break;  // valid method
+
+        default: {  // unknown method
+#ifdef DEBUG_MODE
+            fprintf(stderr, "Unknown method for version 4\n");
+#endif
+            return EXIT_FAILURE;
+        }
+    }
+
+    if (method_request(socket, method, callback) != EXIT_SUCCESS) return EXIT_FAILURE;
+
+    switch (method) {
+        case METHOD_GET_TEXT: {
+            return get_text_v4(socket, callback);
+        }
+        case METHOD_SEND_TEXT: {
+            return send_text_v4(socket, callback);
+        }
+        case METHOD_GET_FILE: {
+            return get_files_v4(socket, callback);
+        }
+        case METHOD_SEND_FILE: {
+            return send_files_v4(socket, args->is_auto_send, callback);
+        }
+        case METHOD_GET_IMAGE: {
+            return get_image_v4(socket, callback);
+        }
+        case METHOD_GET_COPIED_IMAGE: {
+            return get_copied_image_v4(socket, callback);
+        }
+        case METHOD_GET_SCREENSHOT: {
+            uint16_t display = args->display;
+            return get_screenshot_v4(socket, display, callback);
+        }
+        case METHOD_INFO: {
+            return info_v4(socket, callback);
+        }
+        default: {  // unknown method
+            if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
+    }
+}
+#endif
