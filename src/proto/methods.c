@@ -94,7 +94,13 @@ static inline int _is_valid_fname(const char *fname, size_t name_length);
 static int _transfer_single_file(int version, socket_t *socket, const char *file_path, size_t path_len,
                                  int8_t is_auto_send, StatusCallback *callback);
 
-int send_text_v1(socket_t *socket, StatusCallback *callback) {
+#if PROTOCOL_MAX >= 4
+
+static inline int _read_ack(socket_t *socket);
+
+#endif
+
+static int _send_text_common(int version, socket_t *socket, StatusCallback *callback) {
     uint32_t length = 0;
     char *buf = NULL;
     if (get_clipboard_text(&buf, &length) != EXIT_SUCCESS || length <= 0 ||
@@ -104,7 +110,7 @@ int send_text_v1(socket_t *socket, StatusCallback *callback) {
 #endif
         if (buf) free(buf);
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
-        return EXIT_SUCCESS;
+        return EXIT_FAILURE;
     }
 #ifdef DEBUG_MODE
     printf("Len = %" PRIu32 "\n", length);
@@ -115,6 +121,7 @@ int send_text_v1(socket_t *socket, StatusCallback *callback) {
 #endif
     int64_t new_len = convert_eol(&buf, 1);
     if (new_len <= 0 || !buf) {
+        if (buf) free(buf);
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
@@ -123,9 +130,23 @@ int send_text_v1(socket_t *socket, StatusCallback *callback) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
+
+#if PROTOCOL_MAX >= 4
+    if (version >= 4) {
+        if (_read_ack(socket) != EXIT_SUCCESS && callback) {
+            callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        }
+        close_socket_no_wait(socket);
+    } else {
+        close_socket(socket);
+    }
+#else
+    (void)version;
+    close_socket(socket);
+#endif
+
     if (callback) callback->function(RESP_OK, buf, (size_t)new_len, callback->params);
     free(buf);
-    close_socket(socket);
     return EXIT_SUCCESS;
 }
 
@@ -173,6 +194,12 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
     free(data);
     return EXIT_SUCCESS;
 }
+
+#if PROTOCOL_MIN <= 3
+
+int send_text_v1(socket_t *socket, StatusCallback *callback) { return _send_text_common(1, socket, callback); }
+
+#endif
 
 static int _transfer_regular_file(socket_t *socket, const char *file_path, const char *filename, size_t fname_len,
                                   int8_t is_auto_send, StatusCallback *callback) {
@@ -745,4 +772,24 @@ int send_files_v3(socket_t *socket, int8_t is_auto_send, StatusCallback *callbac
 }
 
 int get_files_v3(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(3, socket, callback); }
+#endif
+
+#if (PROTOCOL_MIN <= 4) && (4 <= PROTOCOL_MAX)
+
+static inline int _read_ack(socket_t *socket) {
+    char status;
+    if (read_sock(socket, &status, 1) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fputs("Read status failed\n", stderr);
+#endif
+        return EXIT_FAILURE;
+    }
+    if (status != 1) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+int send_text_v4(socket_t *socket, StatusCallback *callback) { return _send_text_common(4, socket, callback); }
+
 #endif
