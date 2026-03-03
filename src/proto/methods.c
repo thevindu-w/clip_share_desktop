@@ -274,9 +274,10 @@ static int _transfer_single_file(int version, socket_t *socket, const char *file
             break;
         }
 #endif
-#if (PROTOCOL_MIN <= 3) && (2 <= PROTOCOL_MAX)
+#if (PROTOCOL_MIN <= 4) && (2 <= PROTOCOL_MAX)
         case 2:
-        case 3: {
+        case 3:
+        case 4: {
             tmp_fname = file_path + path_len;
             break;
         }
@@ -331,7 +332,6 @@ static int _send_files_common(int version, socket_t *socket, list2 *file_list, s
     printf("%" PRIu32 "file(s)\n", file_cnt);
 #endif
     if (version > 1 && (send_size(socket, (int64_t)file_cnt) != EXIT_SUCCESS)) {
-        free_list(file_list);
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
@@ -351,7 +351,19 @@ static int _send_files_common(int version, socket_t *socket, list2 *file_list, s
         }
     }
     if (callback) callback->function(RESP_OK, NULL, 0, callback->params);
+
+#if PROTOCOL_MAX >= 4
+    if (version >= 4) {
+        if (_read_ack(socket) != EXIT_SUCCESS && callback) {
+            callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        }
+        close_socket_no_wait(socket);
+    } else {
+        close_socket(socket);
+    }
+#else
     close_socket(socket);
+#endif
     return EXIT_SUCCESS;
 }
 
@@ -791,5 +803,15 @@ static inline int _read_ack(socket_t *socket) {
 }
 
 int send_text_v4(socket_t *socket, StatusCallback *callback) { return _send_text_common(4, socket, callback); }
+
+int send_files_v4(socket_t *socket, int8_t is_auto_send, StatusCallback *callback) {
+    dir_files copied_dir_files;
+    get_copied_dirs_files(&copied_dir_files, 1);
+    int ret = _send_files_common(4, socket, copied_dir_files.lst, copied_dir_files.path_len, is_auto_send, callback);
+    if (copied_dir_files.lst) {
+        free_list(copied_dir_files.lst);
+    }
+    return ret;
+}
 
 #endif
