@@ -21,18 +21,8 @@
 #include <string.h>
 #include <utils/config.h>
 #include <utils/net_utils.h>
+#include <utils/unistr_wrap.h>
 #include <utils/utils.h>
-
-#ifndef __GLIBC__
-#define __GLIBC__ 0
-#endif
-#ifndef __NO_INLINE__
-#define __NO_INLINE__
-#endif
-#ifndef _LIBUNISTRING_NO_CONST_GENERICS
-#define _LIBUNISTRING_NO_CONST_GENERICS
-#endif
-#include <unistr.h>
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <arpa/inet.h>
