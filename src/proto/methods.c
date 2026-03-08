@@ -98,6 +98,8 @@ static int _transfer_single_file(int version, socket_t *socket, const char *file
 
 static inline int _read_ack(socket_t *socket);
 
+static inline int _send_ack(socket_t *socket);
+
 #endif
 
 static int _send_text_common(int version, socket_t *socket, StatusCallback *callback) {
@@ -150,7 +152,7 @@ static int _send_text_common(int version, socket_t *socket, StatusCallback *call
     return EXIT_SUCCESS;
 }
 
-int get_text_v1(socket_t *socket, StatusCallback *callback) {
+static int _get_text_common(int version, socket_t *socket, StatusCallback *callback) {
     int64_t length;
     if (read_size(socket, &length) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
@@ -174,6 +176,11 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
+#if PROTOCOL_MAX >= 4
+    if (version < 4)
+#endif
+        close_socket_no_wait(socket);
+
     data[length] = 0;
     if (u8_check((uint8_t *)data, (size_t)length)) {
 #ifdef DEBUG_MODE
@@ -186,10 +193,19 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
 #ifdef DEBUG_MODE
     if (length < 1024) puts(data);
 #endif
+#if PROTOCOL_MAX >= 4
+    if (version >= 4) {
+        if (_send_ack(socket) != EXIT_SUCCESS && callback) {
+            callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        }
+        close_socket(socket);
+    }
+#else
+    (void)version;
+#endif
     if (callback) callback->function(RESP_OK, data, (size_t)length, callback->params);
     length = convert_eol(&data, 0);
     if (length <= 0 || !data) return EXIT_FAILURE;
-    close_socket_no_wait(socket);
     put_clipboard_text(data, (uint32_t)length);
     free(data);
     return EXIT_SUCCESS;
@@ -198,6 +214,8 @@ int get_text_v1(socket_t *socket, StatusCallback *callback) {
 #if PROTOCOL_MIN <= 3
 
 int send_text_v1(socket_t *socket, StatusCallback *callback) { return _send_text_common(1, socket, callback); }
+
+int get_text_v1(socket_t *socket, StatusCallback *callback) { return _get_text_common(1, socket, callback); }
 
 #endif
 
@@ -801,6 +819,19 @@ static inline int _read_ack(socket_t *socket) {
     }
     return EXIT_SUCCESS;
 }
+
+static inline int _send_ack(socket_t *socket) {
+    char status = 1;
+    if (write_sock(socket, &status, 1) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fputs("Send status failed\n", stderr);
+#endif
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+int get_text_v4(socket_t *socket, StatusCallback *callback) { return _get_text_common(4, socket, callback); }
 
 int send_text_v4(socket_t *socket, StatusCallback *callback) { return _send_text_common(4, socket, callback); }
 
