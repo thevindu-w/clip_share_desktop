@@ -389,8 +389,8 @@ static int _save_file_common(int version, socket_t *socket, const char *file_nam
         return EXIT_FAILURE;
     }
 
-#if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
-    if (file_size == -1 && version == 3) {
+#if (PROTOCOL_MIN <= 4) && (3 <= PROTOCOL_MAX)
+    if (file_size == -1 && version >= 3) {
         return mkdirs(file_name);
     }
 #else
@@ -719,7 +719,10 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
             return EXIT_FAILURE;
         }
     }
-    close_socket_no_wait(socket);
+#if PROTOCOL_MAX >= 4
+    if (version < 4)
+#endif
+        close_socket_no_wait(socket);
 
     list2 *files = list_dir(dirname);
     if (!files) return EXIT_FAILURE;
@@ -740,6 +743,19 @@ static int _get_files_dirs(int version, socket_t *socket, StatusCallback *callba
     }
     free_list(files);
     if (status == EXIT_SUCCESS && remove_directory(dirname)) status = EXIT_FAILURE;
+    if (status != EXIT_SUCCESS && callback) {
+        callback->function(RESP_LOCAL_ERROR, NULL, 0, callback->params);
+    }
+#if PROTOCOL_MAX >= 4
+    if (version >= 4 && status == EXIT_SUCCESS) {
+        if (_send_ack(socket) != EXIT_SUCCESS && callback) {
+            callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        }
+        close_socket(socket);
+    } else {
+        close_socket_no_wait(socket);
+    }
+#endif
     if (callback) callback->function(RESP_OK, NULL, 0, callback->params);
     if (configuration.cut_received_files && status == EXIT_SUCCESS &&
         set_clipboard_cut_files(dest_files) != EXIT_SUCCESS)
@@ -824,6 +840,8 @@ static inline int _send_ack(socket_t *socket) {
 int get_text_v4(socket_t *socket, StatusCallback *callback) { return _get_text_common(4, socket, callback); }
 
 int send_text_v4(socket_t *socket, StatusCallback *callback) { return _send_text_common(4, socket, callback); }
+
+int get_files_v4(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(4, socket, callback); }
 
 int send_files_v4(socket_t *socket, int8_t is_auto_send, StatusCallback *callback) {
     dir_files copied_dir_files;
