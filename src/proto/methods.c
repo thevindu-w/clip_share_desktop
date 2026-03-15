@@ -484,22 +484,35 @@ int send_file_v1(socket_t *socket, int8_t is_auto_send, StatusCallback *callback
 int get_files_v1(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(1, socket, callback); }
 #endif
 
-static inline int _save_image_common(socket_t *socket, StatusCallback *callback) {
+static inline int _save_image_common(int version, socket_t *socket, StatusCallback *callback) {
     struct timeval ts;
     gettimeofday(&ts, NULL);
     uint64_t millis = ((uint64_t)ts.tv_sec * 1000) + ((uint64_t)ts.tv_usec / 1000L);
     char file_name[40];
     if (snprintf_check(file_name, sizeof(file_name), "%" PRIx64 ".png", millis)) return EXIT_FAILURE;
-    int status = _save_file_common(1, socket, file_name, callback);
-    if (callback) {
-        if (status == EXIT_SUCCESS) {
-            callback->function(RESP_OK, file_name, strnlen(file_name, sizeof(file_name) - 1), callback->params);
-        } else {
-            callback->function(RESP_LOCAL_ERROR, NULL, 0, callback->params);
-        }
+    int status = _save_file_common(version, socket, file_name, callback);
+    if (status != EXIT_SUCCESS && callback) {
+        callback->function(RESP_LOCAL_ERROR, NULL, 0, callback->params);
     }
-
-    if (status != EXIT_SUCCESS || !configuration.cut_received_files) return status;
+#if PROTOCOL_MAX >= 4
+    if (version >= 4 && status == EXIT_SUCCESS) {
+        if (_send_ack(socket) != EXIT_SUCCESS && callback) {
+            callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        }
+        close_socket(socket);
+    } else {
+        close_socket_no_wait(socket);
+    }
+#else
+    (void)version;
+    close_socket_no_wait(socket);
+#endif
+    if (status != EXIT_SUCCESS || !configuration.cut_received_files) {
+        if (callback) {
+            callback->function(RESP_OK, file_name, strnlen(file_name, sizeof(file_name) - 1), callback->params);
+        }
+        return status;
+    }
     list2 *dest_files = init_list(1);
     if (!dest_files) return EXIT_FAILURE;
     char *abs_path = get_abs_path(file_name, 40);
@@ -508,12 +521,14 @@ static inline int _save_image_common(socket_t *socket, StatusCallback *callback)
         return EXIT_FAILURE;
     }
     append(dest_files, abs_path);
+
+    if (callback) callback->function(RESP_OK, file_name, strnlen(file_name, sizeof(file_name) - 1), callback->params);
     if (set_clipboard_cut_files(dest_files) != EXIT_SUCCESS) status = EXIT_FAILURE;
     free_list(dest_files);
     return status;
 }
 
-int get_image_v1(socket_t *socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
+int get_image_v1(socket_t *socket, StatusCallback *callback) { return _save_image_common(1, socket, callback); }
 
 int info_v1(socket_t *socket, StatusCallback *callback) {
     int64_t length;
@@ -777,7 +792,7 @@ int get_files_v2(socket_t *socket, StatusCallback *callback) { return _get_files
 #endif
 
 #if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
-int get_copied_image_v3(socket_t *socket, StatusCallback *callback) { return _save_image_common(socket, callback); }
+int get_copied_image_v3(socket_t *socket, StatusCallback *callback) { return _save_image_common(3, socket, callback); }
 
 int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callback) {
     if (send_size(socket, (int32_t)display) != EXIT_SUCCESS) {
@@ -796,7 +811,7 @@ int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callba
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
-    return _save_image_common(socket, callback);
+    return _save_image_common(3, socket, callback);
 }
 
 int send_files_v3(socket_t *socket, int8_t is_auto_send, StatusCallback *callback) {
@@ -852,5 +867,7 @@ int send_files_v4(socket_t *socket, int8_t is_auto_send, StatusCallback *callbac
     }
     return ret;
 }
+
+int get_image_v4(socket_t *socket, StatusCallback *callback) { return _save_image_common(4, socket, callback); }
 
 #endif
