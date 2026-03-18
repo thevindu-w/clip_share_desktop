@@ -870,4 +870,6 @@ int send_files_v4(socket_t *socket, int8_t is_auto_send, StatusCallback *callbac
 
 int get_image_v4(socket_t *socket, StatusCallback *callback) { return _save_image_common(4, socket, callback); }
 
+int get_copied_image_v4(socket_t *socket, StatusCallback *callback) { return _save_image_common(4, socket, callback); }
+
 #endif
