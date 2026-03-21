@@ -791,10 +791,8 @@ int send_files_v2(socket_t *socket, int8_t is_auto_send, StatusCallback *callbac
 int get_files_v2(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(2, socket, callback); }
 #endif
 
-#if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
-int get_copied_image_v3(socket_t *socket, StatusCallback *callback) { return _save_image_common(3, socket, callback); }
-
-int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callback) {
+#if (PROTOCOL_MIN <= 4) && (3 <= PROTOCOL_MAX)
+static inline int _get_screenshot_common(int version, socket_t *socket, uint16_t display, StatusCallback *callback) {
     if (send_size(socket, (int32_t)display) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
@@ -811,7 +809,15 @@ int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callba
         if (callback) callback->function(RESP_NO_DATA, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
-    return _save_image_common(3, socket, callback);
+    return _save_image_common(version, socket, callback);
+}
+#endif
+
+#if (PROTOCOL_MIN <= 3) && (3 <= PROTOCOL_MAX)
+int get_copied_image_v3(socket_t *socket, StatusCallback *callback) { return _save_image_common(3, socket, callback); }
+
+int get_screenshot_v3(socket_t *socket, uint16_t display, StatusCallback *callback) {
+    return _get_screenshot_common(3, socket, display, callback);
 }
 
 int send_files_v3(socket_t *socket, int8_t is_auto_send, StatusCallback *callback) {
@@ -871,5 +877,9 @@ int send_files_v4(socket_t *socket, int8_t is_auto_send, StatusCallback *callbac
 int get_image_v4(socket_t *socket, StatusCallback *callback) { return _save_image_common(4, socket, callback); }
 
 int get_copied_image_v4(socket_t *socket, StatusCallback *callback) { return _save_image_common(4, socket, callback); }
+
+int get_screenshot_v4(socket_t *socket, uint16_t display, StatusCallback *callback) {
+    return _get_screenshot_common(4, socket, display, callback);
+}
 
 #endif
