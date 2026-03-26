@@ -84,6 +84,8 @@ static inline int _is_valid_fname(const char *fname, size_t name_length);
 static int _transfer_single_file(int version, socket_t *socket, const char *file_path, size_t path_len,
                                  int8_t is_auto_send, StatusCallback *callback);
 
+static char *_get_info_common(socket_t *socket, size_t *length_p, StatusCallback *callback) __attribute__((__malloc__));
+
 #if PROTOCOL_MAX >= 4
 
 static inline int _read_ack(socket_t *socket);
@@ -530,11 +532,11 @@ static inline int _save_image_common(int version, socket_t *socket, StatusCallba
 
 int get_image_v1(socket_t *socket, StatusCallback *callback) { return _save_image_common(1, socket, callback); }
 
-int info_v1(socket_t *socket, StatusCallback *callback) {
+static char *_get_info_common(socket_t *socket, size_t *length_p, StatusCallback *callback) {
     int64_t length;
     if (read_size(socket, &length) != EXIT_SUCCESS) {
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
-        return EXIT_FAILURE;
+        return NULL;
     }
 #ifdef DEBUG_MODE
     printf("Len = %" PRIi64 "\n", length);
@@ -542,7 +544,7 @@ int info_v1(socket_t *socket, StatusCallback *callback) {
     // limit maximum length to max_text_length
     if (length <= 0 || length > configuration.max_text_length) {
         if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
-        return EXIT_FAILURE;
+        return NULL;
     }
 
     char *data = malloc((size_t)length + 1);
@@ -552,7 +554,7 @@ int info_v1(socket_t *socket, StatusCallback *callback) {
 #endif
         if (data) free(data);
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
-        return EXIT_FAILURE;
+        return NULL;
     }
     data[length] = 0;
     if (u8_check((uint8_t *)data, (size_t)length)) {
@@ -561,16 +563,28 @@ int info_v1(socket_t *socket, StatusCallback *callback) {
 #endif
         free(data);
         if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
-        return EXIT_FAILURE;
+        return NULL;
     }
 #ifdef DEBUG_MODE
     if (length < 1024) puts(data);
 #endif
-    if (strncmp(INFO_NAME, data, (size_t)length + 1)) {
+    *length_p = (size_t)length;
+    return data;
+}
+
+int info_v1(socket_t *socket, StatusCallback *callback) {
+    size_t length;
+    char *info = _get_info_common(socket, &length, callback);
+    close_socket_no_wait(socket);
+    if ((!info) || strncmp(INFO_NAME, info, length + 1)) {
+        if (info) {
+            free(info);
+        }
         if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
-    if (callback) callback->function(RESP_OK, data, (size_t)length, callback->params);
+    if (callback) callback->function(RESP_OK, info, length, callback->params);
+    free(info);
     return EXIT_SUCCESS;
 }
 
@@ -880,6 +894,31 @@ int get_copied_image_v4(socket_t *socket, StatusCallback *callback) { return _sa
 
 int get_screenshot_v4(socket_t *socket, uint16_t display, StatusCallback *callback) {
     return _get_screenshot_common(4, socket, display, callback);
+}
+
+int info_v4(socket_t *socket, StatusCallback *callback) {
+    size_t length;
+    char *info = _get_info_common(socket, &length, callback);
+    if (!info || length < sizeof(INFO_NAME) - 1) {
+        if (info) {
+            free(info);
+        }
+        if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    const char end = info[sizeof(INFO_NAME) - 1];
+    if (strncmp(INFO_NAME, info, sizeof(INFO_NAME) - 1) || (end && end != '\n')) {
+        free(info);
+        if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    if (callback) callback->function(RESP_OK, info, length, callback->params);
+    free(info);
+    if (_send_ack(socket) != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+    close_socket(socket);
+    return EXIT_SUCCESS;
 }
 
 #endif
