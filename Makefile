@@ -28,7 +28,7 @@ SRC_DIR=src
 BUILD_DIR=build
 
 MIN_PROTO=1
-MAX_PROTO=3
+MAX_PROTO=4
 
 CC=gcc
 CPP=cpp

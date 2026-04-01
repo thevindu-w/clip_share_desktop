@@ -1,4 +1,5 @@
-Client version 3 is supported
+Client version 4 is unknown
+Client accepted version 3
 Using protocol version 3
 Client requested method 3
 Sending 6 files
