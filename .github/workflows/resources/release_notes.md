@@ -1,4 +1,4 @@
-ClipShare Desktop Client version <VERSION> with support for protocol versions 1, 2, and 3.
+ClipShare Desktop Client version <VERSION> with support for protocol versions 1, 2, 3, and 4.
 
 **Notes:**
 - To use the ClipShare Client, you will need the server app running on another device. A ClipShare server program is available at [github.com/thevindu-w/clip_share_server/releases/latest](https://github.com/thevindu-w/clip_share_server/releases/latest). Refer to [github.com/thevindu-w/clip_share_server#allow-through-firewall](https://github.com/thevindu-w/clip_share_server#allow-through-firewall) for more details on using the server.
@@ -12,5 +12,4 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
 
 **Changes:**
-- Add an option to verify the connection to the server.
-- Code quality improvements.
+- Add protocol version 4.
