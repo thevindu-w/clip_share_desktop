@@ -1,0 +1,5 @@
+Client version 4 is supported
+Using protocol version 4
+Client requested method 1
+Sent text
+Received ack

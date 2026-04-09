@@ -88,6 +88,13 @@ def read_data(sock: socket.socket, size: int = None) -> bytes:
     assert len(data) == size
     return data
 
+def read_ack(sock: socket.socket) -> bool:
+    try:
+        ack = read_data(sock, 1)
+        return ack == b'\01'
+    except:
+        return False
+
 def send_file(sock: socket.socket, path: str) -> None:
     path = os.path.relpath(path, '.')
     print(f'Sending {path}')
@@ -100,7 +107,7 @@ def send_file(sock: socket.socket, path: str) -> None:
         send_data(sock, f.read())
     print('Sent file')
 
-def handle_get_text(sock: socket.socket) -> None:
+def handle_get_text(sock: socket.socket, version: int) -> None:
     if COPIED_TEXT == None:
         sock.sendall(STATUS_NO_DATA)
         print("No copied text")
@@ -109,6 +116,11 @@ def handle_get_text(sock: socket.socket) -> None:
     data = COPIED_TEXT.encode('utf-8')
     send_data(sock, data)
     print('Sent text')
+    if version < 4:
+        return
+    if read_ack(sock):
+        print('Received ack')
+
 
 def handle_send_text(sock: socket.socket) -> None:
     sock.sendall(STATUS_OK)
@@ -227,16 +239,16 @@ def handle_protocol(sock: socket.socket, version: int) -> None:
         sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
         return
 
-    if version == 1:
+    if version == 1 or version == 2:
         ALLOWED_METHODS = [1,2,3,4,5,125]
-    elif version == 2 or version == 3:
+    elif version == 3 or version == 4:
         ALLOWED_METHODS = [1,2,3,4,5,6,7,125]
     if method not in ALLOWED_METHODS:
         sock.sendall(STATUS_UNKNOWN_METHOD)
         return
 
     if method == 1:
-        handle_get_text(sock)
+        handle_get_text(sock, version)
     elif method == 2:
         handle_send_text(sock)
     elif method == 3:
