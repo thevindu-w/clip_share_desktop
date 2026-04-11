@@ -95,6 +95,13 @@ def read_ack(sock: socket.socket) -> bool:
     except:
         return False
 
+def send_ack(sock: socket.socket) -> bool:
+    try:
+        sock.sendall(b'\x01')
+        return True
+    except:
+        return False
+
 def send_file(sock: socket.socket, path: str) -> None:
     path = os.path.relpath(path, '.')
     print(f'Sending {path}')
@@ -122,11 +129,15 @@ def handle_get_text(sock: socket.socket, version: int) -> None:
         print('Received ack')
 
 
-def handle_send_text(sock: socket.socket) -> None:
+def handle_send_text(sock: socket.socket, version: int) -> None:
     sock.sendall(STATUS_OK)
     data = read_data(sock)
     text = data.decode('utf-8')
     print(f'Received text: {text}')
+    if version < 4:
+        return
+    if send_ack(sock):
+        print('Sent ack')
 
 def handle_get_image(sock: socket.socket) -> None:
     sock.sendall(STATUS_OK)
@@ -250,7 +261,7 @@ def handle_protocol(sock: socket.socket, version: int) -> None:
     if method == 1:
         handle_get_text(sock, version)
     elif method == 2:
-        handle_send_text(sock)
+        handle_send_text(sock, version)
     elif method == 3:
         handle_get_file(sock, version)
     elif method == 4:
