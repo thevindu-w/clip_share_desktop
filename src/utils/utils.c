@@ -34,6 +34,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <utils/clipboard_listener.h>
+#include <utils/linux_status_icon.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>
 #ifdef __linux__
@@ -208,6 +209,7 @@ void cleanup(void) {
     clear_ssl_ctx();
 #endif
 #ifdef __linux__
+    cleanup_status_icon();
     if (_XA_CLIPBOARD) freeAtomPtr(_XA_CLIPBOARD);
     if (_XA_UTF8_STRING) freeAtomPtr(_XA_UTF8_STRING);
 #elif defined(_WIN32)

@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <utils/clipboard_listener.h>
 #include <utils/kill_others.h>
+#include <utils/linux_status_icon.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>
 
@@ -63,7 +64,7 @@ char *error_log_file = NULL;
 char *cwd = NULL;
 size_t cwd_len = 0;
 
-#ifdef __APPLE__
+#if defined(__linux__) || defined(__APPLE__)
 const char *global_prog_name = NULL;
 #endif
 
@@ -436,7 +437,7 @@ int main(int argc, char **argv) {
     } else {
         prog_name++;  // don't want the '/' before the program name
     }
-#ifdef __APPLE__
+#if defined(__linux__) || defined(__APPLE__)
     global_prog_name = prog_name;
 #endif
 
@@ -525,6 +526,16 @@ int main(int argc, char **argv) {
         if ((configuration.auto_send_text || configuration.auto_send_files) && (fork() == 0)) {
             return start_clipboard_listener();
         }
+
+#ifdef __linux__
+        fflush(stdout);
+        fflush(stderr);
+        pid_t p_status = fork();
+        if (p_status == 0) {
+            show_status_icon();
+            exit(EXIT_SUCCESS);
+        }
+#endif
 
 #ifdef __APPLE__
         if (configuration.tray_icon) {
