@@ -3,7 +3,7 @@ ARG DISTRO='ubuntu'
 FROM ubuntu:noble AS ubuntu_builder
 
 # Install build dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev xxd
+RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd
 
 # Install test dependencies
 RUN apt-get install --no-install-recommends -y xclip python3-minimal coreutils diffutils findutils curl openssl sed
@@ -16,7 +16,7 @@ RUN dpkg --force-depends -i ./*.deb 2>/dev/null && apt-get clean -y
 FROM fedora:42 AS fedora_builder
 
 # Install build dependencies
-RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel xxd
+RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel gtk3-devel xxd
 
 # Install test dependencies
 RUN dnf install --setopt=install_weak_deps=False -y xorg-x11-server-Xvfb xclip python3 coreutils diffutils findutils curl openssl sed && dnf clean all
@@ -25,7 +25,7 @@ FROM archlinux:base AS arch_builder
 
 # Install build dependencies
 RUN pacman -Sy && \
-    pacman -S --needed --noconfirm gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl tinyxxd
+    pacman -S --needed --noconfirm gcc make pkgconf glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl gtk3 tinyxxd
 
 # Install test dependencies
 RUN pacman -S --needed --noconfirm coreutils diffutils findutils curl python xclip sed libpng
@@ -35,7 +35,7 @@ FROM debian:bullseye-slim AS debian_builder
 ARG NO_XVFB=''
 
 # Install build dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev xxd
+RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd
 
 # Install test dependencies
 RUN apt-get install --no-install-recommends -y xclip python3-minimal coreutils diffutils findutils curl openssl sed

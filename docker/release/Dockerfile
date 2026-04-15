@@ -5,24 +5,24 @@ FROM ubuntu:${VERSION} AS ubuntu_builder
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev xxd && \
+    apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd && \
     apt-get clean -y
 
 FROM fedora:42 AS fedora_builder
 
 # Install dependencies
-RUN dnf install --setopt=install_weak_deps=False -y coreutils gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel xxd
+RUN dnf install --setopt=install_weak_deps=False -y coreutils gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel gtk3-devel xxd
 
 FROM archlinux:base AS arch_builder
 
 # Install dependencies
 RUN pacman -Sy && \
-    pacman -S --needed --noconfirm coreutils gcc make glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl tinyxxd
+    pacman -S --needed --noconfirm coreutils gcc make pkgconf glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl gtk3 tinyxxd
 
 FROM debian:bullseye-slim AS debian_builder
 
 # Install dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev xxd && apt-get clean -y
+RUN apt-get update && apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd && apt-get clean -y
 
 # hadolint ignore=DL3006
 FROM ${DISTRO}_builder
