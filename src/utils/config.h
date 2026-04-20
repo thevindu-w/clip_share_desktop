@@ -58,9 +58,8 @@ typedef struct _config {
 
     uint32_t auto_send_max_files;
     int64_t auto_send_max_file_size;
-#if defined(_WIN32) || defined(__APPLE__)
+
     int8_t tray_icon;
-#endif
 } config;
 
 /*

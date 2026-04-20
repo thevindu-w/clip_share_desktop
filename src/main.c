@@ -198,9 +198,7 @@ static inline void _apply_default_conf(void) {
         free_list(configuration.auto_send_servers);
         configuration.auto_send_servers = NULL;
     }
-#if defined(_WIN32) || defined(__APPLE__)
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
-#endif
 }
 
 #ifdef _WIN32
@@ -528,12 +526,14 @@ int main(int argc, char **argv) {
         }
 
 #ifdef __linux__
-        fflush(stdout);
-        fflush(stderr);
-        pid_t p_status = fork();
-        if (p_status == 0) {
-            show_status_icon();
-            exit(EXIT_SUCCESS);
+        if (configuration.tray_icon) {
+            fflush(stdout);
+            fflush(stderr);
+            pid_t p_status = fork();
+            if (p_status == 0) {
+                show_status_icon();
+                exit(EXIT_SUCCESS);
+            }
         }
 #endif
 

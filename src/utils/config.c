@@ -353,10 +353,8 @@ static void parse_line(char *line, config *cfg) {
         if (addr_list == NULL) return;
         if (cfg->auto_send_servers) free_list(cfg->auto_send_servers);
         cfg->auto_send_servers = addr_list;
-#if defined(_WIN32) || defined(__APPLE__)
     } else if (!strcmp("tray_icon", key)) {
         set_is_true(value, &(cfg->tray_icon));
-#endif
 #ifdef DEBUG_MODE
     } else {
         printf("Unknown key \"%s\"\n", key);
@@ -387,9 +385,7 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->auto_send_servers = NULL;
     cfg->auto_send_max_files = 0;
     cfg->auto_send_max_file_size = 0;
-#if defined(_WIN32) || defined(__APPLE__)
     cfg->tray_icon = -1;
-#endif
     cfg->bind_addr = htonl(INADDR_LOOPBACK);
 
     if (!file_name) {
