@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd && \
     apt-get clean -y
 
-FROM fedora:42 AS fedora_builder
+FROM fedora:43 AS fedora_builder
 
 # Install dependencies
 RUN dnf install --setopt=install_weak_deps=False -y coreutils gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel gtk3-devel xxd
