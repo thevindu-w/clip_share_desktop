@@ -1,0 +1,17 @@
+Client version 4 is supported
+Using protocol version 4
+Client requested method 3
+Sending 6 files
+Sending test.txt
+Sent file
+Sending dir1/file.txt
+Sent file
+Sending dir2/file.txt
+Sent file
+Sending dir2/sub/test.txt
+Sent file
+Sending dir2/sub/empty2
+Sent dir
+Sending empty
+Sent dir
+Received ack

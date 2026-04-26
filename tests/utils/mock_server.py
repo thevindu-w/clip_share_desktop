@@ -161,14 +161,14 @@ def handle_get_file(sock: socket.socket, version: int) -> None:
         path = 'files_v1'
     elif version == 2:
         path = 'files_v2'
-    elif version == 3:
+    elif version == 3 or version == 4:
         path = 'files_v3'
     os.chdir(os.path.join(FILES_DIR, path))
     file_cnt = 0
     for _, dirs, files in os.walk('.'):
         files = list(filter(lambda f: f[0] != '.', files))
         file_cnt += len(files)
-        if version == 3 and len(files) == 0 and len(dirs) == 0:
+        if version >= 3 and len(files) == 0 and len(dirs) == 0:
             file_cnt += 1
     print(f'Sending {file_cnt} files')
     send_int(sock, file_cnt)
@@ -178,8 +178,12 @@ def handle_get_file(sock: socket.socket, version: int) -> None:
         dirs.sort()
         for f in files:
             send_file(sock, os.path.join(root, f))
-        if version == 3 and len(files) == 0 and len(dirs) == 0:
+        if version >= 3 and len(files) == 0 and len(dirs) == 0:
             send_file(sock, root)
+    if version < 4:
+        return
+    if read_ack(sock):
+        print('Received ack')
 
 def handle_send_file(sock: socket.socket, version: int) -> None:
     sock.sendall(STATUS_OK)
