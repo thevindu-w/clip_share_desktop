@@ -3,6 +3,8 @@ ARG VERSION="latest"
 
 FROM ubuntu:${VERSION} AS ubuntu_builder
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install dependencies
 RUN apt-get update && \
     apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd && \
@@ -20,6 +22,8 @@ RUN pacman -Sy && \
     pacman -S --needed --noconfirm coreutils gcc make pkgconf glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl gtk3 tinyxxd
 
 FROM debian:bullseye-slim AS debian_builder
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd && apt-get clean -y

@@ -2,6 +2,8 @@ ARG DISTRO='ubuntu'
 
 FROM ubuntu:noble AS ubuntu_builder
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install build dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd
 
@@ -33,6 +35,7 @@ RUN pacman -Sdd --needed --noconfirm pixman freetype2 graphite harfbuzz libfonte
 
 FROM debian:bullseye-slim AS debian_builder
 ARG NO_XVFB=''
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install build dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev xxd
