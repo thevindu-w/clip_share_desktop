@@ -9,7 +9,9 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - There are two versions for macOS included in assets in the `<FILE_MACOS>` archive. They are compiled for Intel-based Mac and Mac computers with Apple silicon. You can select the one that is compatible with your Mac computer.
   - For Mac computers with Apple silicon, use `clip-share-client-arm64`.
   - For Intel-based Mac, use `clip-share-client-x86_64`.
-- Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details. Installers do not need admin or superuser privileges to run.
+- Optionally, you may install `clip-share-client` to run on startup. Refer to [README.md#installation](https://github.com/thevindu-w/clip_share_desktop#installation) for more details.
+- Installers do **not** need admin or superuser privileges to run.
 
 **Changes:**
-- Add protocol version 4.
+- Add a new feature to show a status icon on Linux.
+- Enable the config option `tray_icon` on Linux to control the status icon.
