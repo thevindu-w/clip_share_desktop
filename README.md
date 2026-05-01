@@ -35,8 +35,9 @@ Download the server from <a href="https://github.com/thevindu-w/clip_share_serve
 </tr>
 <tr>
 <td align="center">
-<a href="https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" width="250"/></a><br>
-Download the Android client app from <a href="https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare">apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare</a><br>
+<a href="https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidLogo.png" alt="Get it on IzzyOnDroid" width="100"/></a><br>
+Download the Android client app
+from <a href="https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare">IzzyOnDroid</a>
 or from <a href="https://github.com/thevindu-w/clip_share_client/releases">GitHub Releases</a>.
 </td>
 <td align="center">
@@ -261,7 +262,6 @@ auto_send_servers=auto_send_servers.txt
 auto_send_max_files=32
 auto_send_max_file_size=64M
 
-# Windows and macOS only
 tray_icon=true
 ```
 </details>
@@ -294,7 +294,7 @@ Note that all the lines in the configuration file are optional. You may omit som
 | `auto_send_servers` | The text file containing a list of IPv4 addresses (in dot-decimal notation, one address per line) of servers to allow auto-sending. If this is not specified or there are no valid IPv4 addresses in the file, all addresses are allowed. | Absolute or relative path to the server addresses file | \<Unspecified\> |
 | `auto_send_max_files` | The maximum number of files to auto-send. The auto-send feature will not send files if the number of copied files exceeds this limit. | Any integer between 1 and 4294967295 inclusive | 32 |
 | `auto_send_max_file_size` | The maximum size of any single file in bytes, transferred with auto-send. | Any integer between 1 and 9223372036854775807 (nearly 8 EiB) inclusive. Suffixes K, M, G, and T (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, x10<sup>9</sup>, and x10<sup>12</sup>, respectively. | 67108864 (i.e. 64 MiB) |
-| `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. This option is available only on Windows and macOS. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
+| `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
 
 <br>
 <br>
