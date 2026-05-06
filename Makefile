@@ -57,7 +57,7 @@ NO_WEB?=0
 ifeq ($(detected_OS),Linux)
 	OBJS_C+= utils/linux_status_icon.o utils/listener_linux.o xclip/xclip.o xclip/xclib.o
 	OBJS_S+= res/linux/icon_blob.o
-	CFLAGS+= $(shell pkg-config --cflags gtk+-3.0) -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
+	CFLAGS+= $(shell pkg-config --cflags gtk+-3.0 ayatana-appindicator3-0.1) -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
 	CFLAGS_OPTIM=-Os
 	LDLIBS_NO_SSL=-lunistring -lX11 -lXmu -lXt -lXfixes -lpthread -ldl
 	LDLIBS_MHD=-lmicrohttpd
