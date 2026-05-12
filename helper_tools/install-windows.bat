@@ -31,7 +31,7 @@ clip-share-client.exe -s
 MKDIR "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\" >NUL 2>&1
 COPY clip-share-client.exe "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\clip-share-client.exe" >NUL 2>&1
 
-CD %USERPROFILE%
+CD /D %USERPROFILE%
 IF NOT EXIST clipshare-desktop.conf (
     MKDIR "%USERPROFILE%\Downloads" >NUL 2>&1
     ECHO working_dir=%USERPROFILE%\Downloads>clipshare-desktop.conf
