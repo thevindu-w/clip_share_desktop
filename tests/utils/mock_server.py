@@ -216,6 +216,10 @@ def handle_send_file(sock: socket.socket, version: int) -> None:
     for messages in received_list:
         for message in messages:
             print(message)
+    if version < 4:
+        return
+    if send_ack(sock):
+        print('Sent ack')
 
 def handle_get_copied_image(sock: socket.socket) -> None:
     if IMAGE != 'copied':
