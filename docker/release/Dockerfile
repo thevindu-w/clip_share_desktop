@@ -1,13 +1,14 @@
-ARG DISTRO
-ARG VERSION="latest"
+ARG DISTRO='ubuntu'
+ARG VERSION='latest'
 
 FROM ubuntu:${VERSION} AS ubuntu_builder
 
+ARG APPIMAGE='0'
 ENV DEBIAN_FRONTEND=noninteractive
-
 # Install dependencies
 RUN apt-get update && \
     apt-get install --no-install-recommends -y coreutils gcc make libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev xxd && \
+    if [ "$APPIMAGE" = '1' ]; then apt-get install --no-install-recommends -y ca-certificates wget file; fi && \
     apt-get clean -y
 
 FROM fedora:43 AS fedora_builder
@@ -31,6 +32,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y coreutils gcc m
 # hadolint ignore=DL3006
 FROM ${DISTRO}_builder
 
+RUN if [ "$APPIMAGE" = '1' ]; then wget https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage && mv appimagetool-x86_64.AppImage /usr/bin/appimagetool && chmod +x /usr/bin/appimagetool; fi
+
 RUN useradd -mU -s /bin/bash user
 USER user
 ENV HOME=/home/user
@@ -44,6 +47,10 @@ COPY --chown=user ./src src
 
 # Build
 RUN make clean && make
+
+COPY --chown=user ./docker/release/AppDir AppDir
+COPY --chmod=755 ./docker/release/build_appimage.sh ./
+RUN if [ "$APPIMAGE" = '1' ]; then ./build_appimage.sh; fi
 
 COPY --chmod=755 ./docker/release/copy_release.sh ./
 
