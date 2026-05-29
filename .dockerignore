@@ -7,3 +7,4 @@
 !/tests
 !/docker/*.sh
 !/docker/release/*.sh
+!/docker/release/AppDir
