@@ -10,6 +10,18 @@
 
 ClipShare is a lightweight and cross-platform tool for clipboard sharing. ClipShare enables copying text, files, and images on one device and pasting on another. ClipShare is simple and easy to use while being highly configurable. This is the desktop client of ClipShare that connects to a server running on the other machine to share copied text, files, and images.
 
+## 🚀 Quick-start
+
+1. Download and install the ClipShare server: [https://github.com/thevindu-w/clip_share_server/releases](https://github.com/thevindu-w/clip_share_server/releases/latest) (Other installation methods are available in the [Installation section of the server](https://github.com/thevindu-w/clip_share_server#installation).)
+1. Download and install the ClipShare client.
+    - Mobile client (Android): [https://github.com/thevindu-w/clip_share_client/releases](https://github.com/thevindu-w/clip_share_client/releases/latest) or [apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare](https://apt.izzysoft.de/fdroid/index/apk/com.tw.clipshare)
+    - Desktop client: [https://github.com/thevindu-w/clip_share_desktop/releases](https://github.com/thevindu-w/clip_share_desktop/releases/latest) (Other installation methods are available in the [Installation section](#installation).)
+1. Start sharing clipboard contents across devices.
+
+    Copy some text on one device and use the ClipShare client to share it from/to the device running the server.
+
+More customization options, other installation options, and detailed instructions on each step are described below in the [How to Use](#how-to-use) section.
+
 ## Download
 
 ### Server
