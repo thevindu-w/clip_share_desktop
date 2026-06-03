@@ -29,6 +29,12 @@
 #include <sys/socket.h>
 #endif
 
+#ifdef _WIN32
+typedef HANDLE thread_t;
+#elif defined(__linux__) || defined(__APPLE__)
+typedef pthread_t thread_t;
+#endif
+
 typedef struct {
     char *server;
     int type;
@@ -78,6 +84,52 @@ static inline int is_server_allowed(const char *addr) {
     return found;
 }
 
+static inline void send_in_threads(int type, list2 *servers) {
+    thread_t threads_buf[16];
+    thread_t *threads;
+    if (servers->len < 16) {
+        threads = threads_buf;
+    } else {
+        threads = malloc(sizeof(thread_t) * servers->len);
+        if (!threads) {
+            return;
+        }
+    }
+
+    for (size_t i = 0; i < servers->len; i++) {
+        send_arg_t *arg = malloc(sizeof(send_arg_t));
+        arg->server = servers->array[i];
+        arg->type = type;
+        thread_t thread;
+#ifdef _WIN32
+        thread = CreateThread(NULL, 0, send_to_server_wrapper, arg, 0, NULL);
+#elif defined(__linux__) || defined(__APPLE__)
+        thread = 0;
+        if (pthread_create(&thread, NULL, &send_to_server, arg)) {
+            thread = 0;
+        }
+#endif
+        if (!thread) {
+            free(arg);
+        }
+        threads[i] = thread;
+    }
+    for (size_t i = 0; i < servers->len; i++) {
+        if (!threads[i]) {
+            continue;
+        }
+#ifdef _WIN32
+        WaitForSingleObject(threads[i], INFINITE);
+#elif defined(__linux__) || defined(__APPLE__)
+        pthread_join(threads[i], NULL);
+#endif
+    }
+
+    if (threads != threads_buf) {
+        free(threads);
+    }
+}
+
 static void send_to_servers(int type) {
     switch (type) {
         case COPIED_TYPE_TEXT: {
@@ -124,39 +176,7 @@ static void send_to_servers(int type) {
         return;
     }
 
-#ifdef _WIN32
-    HANDLE threads[servers->len];
-#elif defined(__linux__) || defined(__APPLE__)
-    pthread_t threads[servers->len];
-#endif
-    for (size_t i = 0; i < servers->len; i++) {
-        send_arg_t *arg = malloc(sizeof(send_arg_t));
-        arg->server = servers->array[i];
-        arg->type = type;
-#ifdef _WIN32
-        HANDLE thread = CreateThread(NULL, 0, send_to_server_wrapper, arg, 0, NULL);
-        if (!thread) {
-            free(arg);
-        }
-        threads[i] = thread;
-#elif defined(__linux__) || defined(__APPLE__)
-        pthread_t tid = 0;
-        if (pthread_create(&tid, NULL, &send_to_server, arg)) {
-            free(arg);
-        }
-        threads[i] = tid;
-#endif
-    }
-    for (size_t i = 0; i < servers->len; i++) {
-        if (!threads[i]) {
-            continue;
-        }
-#ifdef _WIN32
-        WaitForSingleObject(threads[i], INFINITE);
-#elif defined(__linux__) || defined(__APPLE__)
-        pthread_join(threads[i], NULL);
-#endif
-    }
+    send_in_threads(type, servers);
     free_list(servers);
 }
 
