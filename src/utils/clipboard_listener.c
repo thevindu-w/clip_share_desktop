@@ -84,6 +84,38 @@ static inline int is_server_allowed(const char *addr) {
     return found;
 }
 
+static inline list2 *scan_servers(void) {
+    list2 *servers = udp_scan();
+    if (!servers) {
+#ifdef DEBUG_MODE
+        fprintf(stderr, "Scan failed\n");
+#endif
+        return NULL;
+    }
+    if (configuration.auto_send_servers && servers->len < 1024) {
+        for (uint32_t i = 0; i < servers->len; i++) {
+            char *addr = servers->array[i];
+            if (is_server_allowed(addr)) {
+                continue;
+            }
+            if (addr) {
+                free(addr);
+            }
+            servers->array[i] = servers->array[servers->len - 1];
+            servers->len--;
+            i--;
+        }
+    }
+    if (servers->len <= 0 || servers->len > 512) {
+#ifdef DEBUG_MODE
+        fprintf(stderr, "No servers or too many servers found\n");
+#endif
+        free_list(servers);
+        return NULL;
+    }
+    return servers;
+}
+
 static inline void send_in_threads(int type, list2 *servers) {
     thread_t threads_buf[16];
     thread_t *threads;
@@ -147,33 +179,13 @@ static void send_to_servers(int type) {
         default:
             return;
     }
-    list2 *servers = udp_scan();
+
+    list2 *servers = scan_servers();
     if (!servers) {
-#ifdef DEBUG_MODE
-        fprintf(stderr, "Scan failed\n");
-#endif
-        return;
-    }
-    if (configuration.auto_send_servers && servers->len < 1024) {
-        for (uint32_t i = 0; i < servers->len; i++) {
-            char *addr = servers->array[i];
-            if (is_server_allowed(addr)) {
-                continue;
-            }
-            if (addr) {
-                free(addr);
-            }
-            servers->array[i] = servers->array[servers->len - 1];
-            servers->len--;
-            i--;
+        servers = scan_servers();
+        if (!servers) {
+            return;
         }
-    }
-    if (servers->len <= 0 || servers->len > 512) {
-#ifdef DEBUG_MODE
-        fprintf(stderr, "No servers or too many servers found\n");
-#endif
-        free_list(servers);
-        return;
     }
 
     send_in_threads(type, servers);
