@@ -1,4 +1,6 @@
 #!/bin/bash
 
 proto=3
-. scripts/common/x.5.1_get_image.sh
+image=copied
+file=image.png
+. scripts/common/x.5_get_image.sh

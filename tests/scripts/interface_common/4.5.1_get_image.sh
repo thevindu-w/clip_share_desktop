@@ -1,6 +1,6 @@
 #!/bin/bash
 
-proto=3
-image=screenshot
-file=screen.png
+proto=4
+image=copied
+file=image.png
 . scripts/common/x.5_get_image.sh
