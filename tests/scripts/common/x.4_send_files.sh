@@ -1,5 +1,3 @@
-#!/bin/bash
-
 . init.sh
 
 mkdir files

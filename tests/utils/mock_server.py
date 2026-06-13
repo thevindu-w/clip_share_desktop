@@ -224,7 +224,7 @@ def handle_send_file(sock: socket.socket, version: int) -> None:
     if send_ack(sock):
         print('Sent ack')
 
-def handle_get_copied_image(sock: socket.socket) -> None:
+def handle_get_copied_image(sock: socket.socket, version: int) -> None:
     if IMAGE != 'copied':
         sock.sendall(STATUS_NO_DATA)
         print("No copied image")
@@ -235,6 +235,10 @@ def handle_get_copied_image(sock: socket.socket) -> None:
         data = img.read()
     send_data(sock, data)
     print('Sent copied image')
+    if version < 4:
+        return
+    if read_ack(sock):
+        print('Received ack')
 
 def handle_get_screenshot(sock: socket.socket) -> None:
     sock.sendall(STATUS_OK)
@@ -280,7 +284,7 @@ def handle_protocol(sock: socket.socket, version: int) -> None:
     elif method == 5:
         handle_get_image(sock, version)
     elif method == 6:
-        handle_get_copied_image(sock)
+        handle_get_copied_image(sock, version)
     elif method == 7:
         handle_get_screenshot(sock)
     elif method == 125:

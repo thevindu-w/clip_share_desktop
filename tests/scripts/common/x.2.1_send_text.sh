@@ -1,5 +1,3 @@
-#!/bin/bash
-
 . init.sh
 
 clear_clipboard

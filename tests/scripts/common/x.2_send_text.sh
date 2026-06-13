@@ -1,5 +1,3 @@
-#!/bin/bash
-
 . init.sh
 
 run_server --proto-max="$proto"

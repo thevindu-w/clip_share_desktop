@@ -1,4 +1,4 @@
 #!/bin/bash
 
-proto=3
+proto=4
 . scripts/common/x.6_get_copied_image.sh
