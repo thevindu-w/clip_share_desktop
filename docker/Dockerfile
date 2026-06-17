@@ -15,7 +15,7 @@ WORKDIR /debs
 RUN apt-get download xvfb libnettle8t64 libunwind8 libgl1 libpixman-1-0 libxfont2 libglvnd0 libglx0 libfontenc1 libfreetype6 libbrotli1 xkb-data libxkbfile1 x11-xkb-utils libpng16-16t64
 RUN dpkg --force-depends -i ./*.deb 2>/dev/null && apt-get clean -y
 
-FROM fedora:43 AS fedora_builder
+FROM fedora:44 AS fedora_builder
 
 # Install build dependencies
 RUN dnf install --setopt=install_weak_deps=False -y gcc make glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel gtk3-devel libayatana-appindicator-gtk3-devel xxd
