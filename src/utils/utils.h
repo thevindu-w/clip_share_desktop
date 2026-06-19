@@ -88,15 +88,13 @@ extern int8_t get_copied_type(void);
 
 /*
  * Get copied text from clipboard.
- * Places the text in a buffer and sets the bufptr to point the buffer.
- * bufptr must be a valid pointer to a char * variable.
+ * Places the text in a heap buffer and returns it.
  * Caller should free the buffer after using.
  * Places text length in the memory location pointed to by lenptr.
  * lenptr must be a valid pointer to a size_t variable.
- * On failure, buffer is set to NULL.
- * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
+ * returns the buffer on success and NULL on failure.
  */
-extern int get_clipboard_text(char **bufptr, uint32_t *lenptr);
+extern char *get_clipboard_text(uint32_t *lenptr) __attribute__((__malloc__));
 
 /*
  * Reads len bytes of text from the data buffer and copies it into the clipboard.
@@ -152,7 +150,7 @@ extern int64_t convert_eol(char **str_p, int force_lf);
  * (new-line character). The offset is set to the starting offset (in bytes) of the file list.
  * Returns the string of file list on success or NULL on error.
  */
-extern char *get_copied_files_as_str(int *offset);
+extern char *get_copied_files_as_str(int *offset) __attribute__((__malloc__));
 
 #elif defined(_WIN32)
 

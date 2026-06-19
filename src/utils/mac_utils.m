@@ -48,20 +48,18 @@ int8_t get_copied_type(void) {
     }
 }
 
-int get_clipboard_text(char **bufptr, uint32_t *lenptr) {
+char *get_clipboard_text(uint32_t *lenptr) {
     NSPasteboard *pasteBoard = [NSPasteboard generalPasteboard];
     NSString *copiedString = [pasteBoard stringForType:NSPasteboardTypeString];
     if (!copiedString) {
         *lenptr = 0;
-        if (*bufptr) free(*bufptr);
-        *bufptr = NULL;
-        return EXIT_FAILURE;
+        return NULL;
     }
     const char *cstring = [copiedString UTF8String];
-    *bufptr = strndup(cstring, configuration.max_text_length);
-    *lenptr = (uint32_t)strnlen(*bufptr, configuration.max_text_length + 1);
-    (*bufptr)[*lenptr] = 0;
-    return EXIT_SUCCESS;
+    char *buf = strndup(cstring, configuration.max_text_length);
+    *lenptr = (uint32_t)strnlen(buf, configuration.max_text_length + 1);
+    buf[*lenptr] = 0;
+    return buf;
 }
 
 int put_clipboard_text(char *data, uint32_t len) {

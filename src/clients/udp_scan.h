@@ -21,6 +21,6 @@
 
 #include <utils/list_utils.h>
 
-extern list2* udp_scan(void);
+extern list2 *udp_scan(void);
 
 #endif  // CLIENTS_UDP_SCAN_H_

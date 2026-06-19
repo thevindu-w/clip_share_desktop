@@ -1001,15 +1001,18 @@ int8_t get_copied_type(void) {
     return COPIED_TYPE_NONE;
 }
 
-int get_clipboard_text(char **buf_ptr, uint32_t *len_ptr) {
-    if (xclip_util(XCLIP_OUT, NULL, len_ptr, buf_ptr) != EXIT_SUCCESS || *len_ptr <= 0) {  // do not change the order
+char *get_clipboard_text(uint32_t *len_ptr) {
+    char *buf;
+    if (xclip_util(XCLIP_OUT, NULL, len_ptr, &buf) != EXIT_SUCCESS || *len_ptr <= 0) {  // do not change the order
 #ifdef DEBUG_MODE
         printf("xclip read text failed. len = %" PRIu32 "\n", *len_ptr);
 #endif
-        if (*buf_ptr) free(*buf_ptr);
-        return EXIT_FAILURE;
+        if (buf) {
+            free(buf);
+        }
+        return NULL;
     }
-    return EXIT_SUCCESS;
+    return buf;
 }
 
 int put_clipboard_text(char *data, uint32_t len) {
@@ -1168,7 +1171,9 @@ void set_pending_clipboard_item(void) {
     }
     pending_type = 0;
 }
+
 #elif defined(_WIN32)
+
 static int set_temp_file(void) {
     if (!temp_file) {
         const char *tmp_dir = getenv("TEMP");
@@ -1335,13 +1340,13 @@ int8_t get_copied_type(void) {
     return copied_type;
 }
 
-int get_clipboard_text(char **bufptr, uint32_t *lenptr) {
+char *get_clipboard_text(uint32_t *lenptr) {
     if (!OpenClipboardWrapper(NULL)) {
-        return EXIT_FAILURE;
+        return NULL;
     }
     if (!IsClipboardFormatAvailable(CF_UNICODETEXT)) {
         CloseClipboard();
-        return EXIT_FAILURE;
+        return NULL;
     }
     HANDLE h = GetClipboardData(CF_UNICODETEXT);
     char *data;
@@ -1357,12 +1362,11 @@ int get_clipboard_text(char **bufptr, uint32_t *lenptr) {
         fputs("clipboard data is null\n", stderr);
 #endif
         *lenptr = 0;
-        return EXIT_FAILURE;
+        return NULL;
     }
-    *bufptr = data;
     *lenptr = (uint32_t)len;
     data[*lenptr] = 0;
-    return EXIT_SUCCESS;
+    return data;
 }
 
 int put_clipboard_text(char *data, uint32_t len) {

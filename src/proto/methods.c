@@ -96,9 +96,8 @@ static inline int _send_ack(socket_t *socket);
 
 static int _send_text_common(int version, socket_t *socket, StatusCallback *callback) {
     uint32_t length = 0;
-    char *buf = NULL;
-    if (get_clipboard_text(&buf, &length) != EXIT_SUCCESS || length <= 0 ||
-        length > configuration.max_text_length) {  // do not change the order
+    char *buf = get_clipboard_text(&length);
+    if ((!buf) || length <= 0 || length > configuration.max_text_length) {  // do not change the order
 #ifdef DEBUG_MODE
         printf("clipboard read text failed. len = %" PRIu32 "\n", length);
 #endif
