@@ -13,5 +13,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Installers do **not** need admin or superuser privileges to run.
 
 **Changes:**
-- Use AppIndicator for the status icon on Linux.
-- Fix Windows installer not creating the configuration file on a different drive.
+- Improve network scanning in auto-send.
+- Code quality improvements.
