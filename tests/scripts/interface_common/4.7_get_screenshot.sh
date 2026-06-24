@@ -1,4 +1,4 @@
 #!/bin/bash
 
-proto=3
+proto=4
 . scripts/common/x.7_get_screenshot.sh

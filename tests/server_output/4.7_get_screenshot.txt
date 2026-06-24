@@ -1,0 +1,5 @@
+Client version 4 is supported
+Using protocol version 4
+Client requested method 7
+Sent screenshot of display 0
+Received ack

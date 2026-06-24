@@ -240,7 +240,7 @@ def handle_get_copied_image(sock: socket.socket, version: int) -> None:
     if read_ack(sock):
         print('Received ack')
 
-def handle_get_screenshot(sock: socket.socket) -> None:
+def handle_get_screenshot(sock: socket.socket, version: int) -> None:
     sock.sendall(STATUS_OK)
     disp = read_int(sock)
     if disp not in (0, 1):
@@ -253,6 +253,10 @@ def handle_get_screenshot(sock: socket.socket) -> None:
         data = img.read()
     send_data(sock, data)
     print(f'Sent screenshot of display {disp}')
+    if version < 4:
+        return
+    if read_ack(sock):
+        print('Received ack')
 
 def handle_info(sock: socket.socket) -> None:
     sock.sendall(STATUS_METHOD_NOT_IMPLEMENTED)
@@ -286,7 +290,7 @@ def handle_protocol(sock: socket.socket, version: int) -> None:
     elif method == 6:
         handle_get_copied_image(sock, version)
     elif method == 7:
-        handle_get_screenshot(sock)
+        handle_get_screenshot(sock, version)
     elif method == 125:
         handle_info(sock)
 
