@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <utils/kill_others.h>
 #include <utils/linux_status_icon.h>
+#include <utils/utils.h>
 
 extern const char icon_png[];
 extern const unsigned int icon_png_len;
@@ -63,6 +64,7 @@ static char icon_path[] = "/tmp/clipshare-client-iconXXXXXX.png";
 static int is_running;
 
 #define APP_NAME "ClipShare Client"
+#define XDG_OPEN_PATH "/usr/bin/xdg-open"
 
 static void on_quit(void *widget, gpointer data) {
     (void)widget;
@@ -75,15 +77,36 @@ static void on_quit(void *widget, gpointer data) {
     kill_other_processes(global_prog_name);
 }
 
+static void on_open_browser(void *widget, gpointer data) {
+    (void)widget;
+    (void)data;
+    if (fork() == 0) {
+        if (ptr_gtk_main_quit) {
+            ptr_gtk_main_quit();
+            is_running = 0;
+        }
+        char url[24];
+        snprintf(url, sizeof(url), "http://127.0.0.1:%hu", configuration.ports.web);
+        execl(XDG_OPEN_PATH, "xdg-open", url, NULL);
+        error_exit("Couldn't open default browser");
+    }
+}
+
 static inline GtkMenu *create_menu(void) {
     GtkWidget *menu = ptr_gtk_menu_new();
+
+    GtkWidget *browser_item = ptr_gtk_menu_item_new_with_label("Open in browser");
+    ptr_g_signal_connect_data(browser_item, "activate", G_CALLBACK(on_open_browser), NULL, NULL, 0);
+    ptr_gtk_menu_shell_append(
+        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+        browser_item);
+
     GtkWidget *quit_item = ptr_gtk_menu_item_new_with_label("Quit");
-
     ptr_g_signal_connect_data(quit_item, "activate", G_CALLBACK(on_quit), NULL, NULL, 0);
-
     ptr_gtk_menu_shell_append(
         (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
         quit_item);
+
     ptr_gtk_widget_show_all(menu);
     return (GtkMenu *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_get_type());
 }
