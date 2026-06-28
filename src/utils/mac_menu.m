@@ -19,11 +19,12 @@
 #ifdef __APPLE__
 
 #import <AppKit/AppKit.h>
+#import <globals.h>
 #import <utils/kill_others.h>
 #include <utils/mac_menu.h>
-#ifdef DEBUG_MODE
-#include <utils/utils.h>
-#endif
+#import <utils/utils.h>
+
+#define OPEN_PATH "/usr/bin/open"
 
 extern char icon_png[];
 extern unsigned int icon_png_len;
@@ -35,6 +36,15 @@ const char *global_prog_name;
 - (void)onQuitAction:(id)sender {
     kill_other_processes(global_prog_name);
     [NSApp terminate:nil];
+}
+
+- (void)onOpenBrowserAction:(id)sender {
+    if (fork() == 0) {
+        char url[24];
+        snprintf(url, sizeof(url), "http://127.0.0.1:%hu", configuration.ports.web);
+        execl(OPEN_PATH, "open", url, NULL);
+        error_exit("Couldn't open default browser");
+    }
 }
 
 @end
@@ -61,6 +71,18 @@ void show_menu_icon(void) {
 #endif
             return;
         }
+
+        NSMenuItem *browserMenuItem = [[NSMenuItem alloc] initWithTitle:@"Open in Browser"
+                                                                 action:@selector(onOpenBrowserAction:)
+                                                          keyEquivalent:@"b"];
+        if (!browserMenuItem) {
+#ifdef DEBUG_MODE
+            error("Menu item creation failed");
+#endif
+            return;
+        }
+        [menu addItem:browserMenuItem];
+
         NSMenuItem *quitMenuItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
                                                               action:@selector(onQuitAction:)
                                                        keyEquivalent:@"q"];
