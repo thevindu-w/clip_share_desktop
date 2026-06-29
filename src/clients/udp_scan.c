@@ -41,6 +41,7 @@
 
 #define MAX_THREADS 16
 #define ADDR_BUF_SZ 16
+#define MSG_BUF_SZ 16
 #define CAST_SOCKADDR_IN (struct sockaddr_in *)(void *)
 
 #ifdef _WIN32
@@ -96,17 +97,16 @@ static void *scan_fn(void *args) {
     socklen_t len = sizeof(server_addr);
     sendto(sock, "in", 2, MSG_CONFIRM, (const struct sockaddr *)&server_addr, len);
 
-    const int buf_sz = 16;
-    char buffer[buf_sz];
+    char buffer[MSG_BUF_SZ];
     for (int i = 0; i < 256; i++) {
-        int n = (int)recvfrom(sock, (char *)buffer, (size_t)buf_sz, 0, (struct sockaddr *)&server_addr, &len);
+        int n = (int)recvfrom(sock, (char *)buffer, MSG_BUF_SZ, 0, (struct sockaddr *)&server_addr, &len);
         if (n < 0) {
             n = 0;
-        } else if (n >= buf_sz) {
-            n = buf_sz - 1;
+        } else if (n >= MSG_BUF_SZ) {
+            n = MSG_BUF_SZ - 1;
         }
         buffer[n] = '\0';
-        if (strncmp(INFO_NAME, buffer, (size_t)buf_sz)) {
+        if (strncmp(INFO_NAME, buffer, MSG_BUF_SZ)) {
 #ifdef DEBUG_MODE
             puts("Incorrect scan response");
 #endif

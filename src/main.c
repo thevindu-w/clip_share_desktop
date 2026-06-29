@@ -350,9 +350,8 @@ static char *get_user_home(void) {
     if (!(home && *home)) {
         struct passwd pw;
         struct passwd *result = NULL;
-        const size_t buf_sz = 2048;
-        char buf[buf_sz];
-        if (getpwuid_r(getuid(), &pw, buf, buf_sz, &result) || result == NULL) return NULL;
+        char buf[2048];
+        if (getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result) || result == NULL) return NULL;
         home = result->pw_dir;
     }
     if (home) return strndup(home, 513);
