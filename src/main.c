@@ -204,6 +204,8 @@ static inline void _apply_default_conf(void) {
 #ifdef _WIN32
 
 #define TRAY_CB_MSG (WM_USER + 0x100)
+#define ID_QUIT 100
+#define ID_BROWSER 101
 
 static volatile HINSTANCE instance = NULL;
 static volatile HWND hWnd = NULL;
@@ -277,8 +279,30 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
     switch (msg) {
         case WM_QUERYENDSESSION:
         case WM_COMMAND: {
-            remove_tray_icon();
-            running = 0;
+            switch (LOWORD(wParam)) {
+                case ID_QUIT: {
+                    remove_tray_icon();
+                    running = 0;
+                    break;
+                }
+                case ID_BROWSER: {
+                    const char *path = getenv("WINDIR");
+                    if ((!path) || (!*path)) {
+                        path = "C:\\Windows";
+                    }
+                    char cmd[64];
+                    snprintf(cmd, sizeof(cmd), "%s\\explorer.exe http://127.0.0.1:%hu", path, configuration.ports.web);
+                    STARTUPINFO si = {0};
+                    si.cb = sizeof(si);
+                    PROCESS_INFORMATION pi = {0};
+                    CreateProcessA(NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+                    CloseHandle(pi.hProcess);
+                    CloseHandle(pi.hThread);
+                    break;
+                }
+                default:
+                    break;
+            }
             break;
         }
         case TRAY_CB_MSG: {
@@ -289,7 +313,8 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     POINT pt;
                     GetCursorPos(&pt);
                     HMENU hmenu = CreatePopupMenu();
-                    InsertMenu(hmenu, 0, MF_BYPOSITION | MF_STRING, 100, TEXT("Stop"));
+                    InsertMenu(hmenu, 0, MF_BYPOSITION | MF_STRING, ID_BROWSER, TEXT("Open in browser"));
+                    InsertMenu(hmenu, 1, MF_BYPOSITION | MF_STRING, ID_QUIT, TEXT("Quit"));
                     SetForegroundWindow(window);
                     TrackPopupMenu(hmenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, 0, window,
                                    NULL);
