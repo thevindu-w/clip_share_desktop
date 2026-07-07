@@ -72,16 +72,18 @@ void show_menu_icon(void) {
             return;
         }
 
-        NSMenuItem *browserMenuItem = [[NSMenuItem alloc] initWithTitle:@"Open in Browser"
-                                                                 action:@selector(onOpenBrowserAction:)
-                                                          keyEquivalent:@"b"];
-        if (!browserMenuItem) {
+        if (file_exists(OPEN_PATH)) {
+            NSMenuItem *browserMenuItem = [[NSMenuItem alloc] initWithTitle:@"Open in Browser"
+                                                                     action:@selector(onOpenBrowserAction:)
+                                                              keyEquivalent:@"b"];
+            if (!browserMenuItem) {
 #ifdef DEBUG_MODE
-            error("Menu item creation failed");
+                error("Menu item creation failed");
 #endif
-            return;
+                return;
+            }
+            [menu addItem:browserMenuItem];
         }
-        [menu addItem:browserMenuItem];
 
         NSMenuItem *quitMenuItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
                                                               action:@selector(onQuitAction:)

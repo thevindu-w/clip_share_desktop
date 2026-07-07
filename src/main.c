@@ -275,6 +275,14 @@ static inline void remove_tray_icon(void) {
     if (hWnd) DestroyWindow(hWnd);
 }
 
+static const char *get_windir(void) {
+    const char *windir = getenv("WINDIR");
+    if ((!windir) || (!*windir)) {
+        windir = "C:\\Windows";
+    }
+    return windir;
+}
+
 static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_QUERYENDSESSION:
@@ -286,10 +294,7 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     break;
                 }
                 case ID_BROWSER: {
-                    const char *path = getenv("WINDIR");
-                    if ((!path) || (!*path)) {
-                        path = "C:\\Windows";
-                    }
+                    const char *path = get_windir();
                     char cmd[64];
                     snprintf(cmd, sizeof(cmd), "%s\\explorer.exe http://127.0.0.1:%hu", path, configuration.ports.web);
                     STARTUPINFO si = {0};
@@ -313,7 +318,14 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     POINT pt;
                     GetCursorPos(&pt);
                     HMENU hmenu = CreatePopupMenu();
-                    InsertMenu(hmenu, 0, MF_BYPOSITION | MF_STRING, ID_BROWSER, TEXT("Open in browser"));
+
+                    const char *windir = get_windir();
+                    char path[64];
+                    snprintf(path, sizeof(path), "%s\\explorer.exe", windir);
+                    if (file_exists(path)) {
+                        InsertMenu(hmenu, 0, MF_BYPOSITION | MF_STRING, ID_BROWSER, TEXT("Open in browser"));
+                    }
+
                     InsertMenu(hmenu, 1, MF_BYPOSITION | MF_STRING, ID_QUIT, TEXT("Quit"));
                     SetForegroundWindow(window);
                     TrackPopupMenu(hmenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, 0, window,

@@ -95,11 +95,13 @@ static void on_open_browser(void *widget, gpointer data) {
 static inline GtkMenu *create_menu(void) {
     GtkWidget *menu = ptr_gtk_menu_new();
 
-    GtkWidget *browser_item = ptr_gtk_menu_item_new_with_label("Open in browser");
-    ptr_g_signal_connect_data(browser_item, "activate", G_CALLBACK(on_open_browser), NULL, NULL, 0);
-    ptr_gtk_menu_shell_append(
-        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
-        browser_item);
+    if (file_exists(XDG_OPEN_PATH)) {
+        GtkWidget *browser_item = ptr_gtk_menu_item_new_with_label("Open in browser");
+        ptr_g_signal_connect_data(browser_item, "activate", G_CALLBACK(on_open_browser), NULL, NULL, 0);
+        ptr_gtk_menu_shell_append(
+            (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+            browser_item);
+    }
 
     GtkWidget *quit_item = ptr_gtk_menu_item_new_with_label("Quit");
     ptr_g_signal_connect_data(quit_item, "activate", G_CALLBACK(on_quit), NULL, NULL, 0);
