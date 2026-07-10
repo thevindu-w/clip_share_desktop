@@ -72,6 +72,7 @@ void show_menu_icon(void) {
             return;
         }
 
+#ifndef NO_WEB
         if (file_exists(OPEN_PATH)) {
             NSMenuItem *browserMenuItem = [[NSMenuItem alloc] initWithTitle:@"Open in Browser"
                                                                      action:@selector(onOpenBrowserAction:)
@@ -84,6 +85,7 @@ void show_menu_icon(void) {
             }
             [menu addItem:browserMenuItem];
         }
+#endif
 
         NSMenuItem *quitMenuItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
                                                               action:@selector(onQuitAction:)

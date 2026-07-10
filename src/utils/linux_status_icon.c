@@ -77,6 +77,7 @@ static void on_quit(void *widget, gpointer data) {
     kill_other_processes(global_prog_name);
 }
 
+#ifndef NO_WEB
 static void on_open_browser(void *widget, gpointer data) {
     (void)widget;
     (void)data;
@@ -91,10 +92,12 @@ static void on_open_browser(void *widget, gpointer data) {
         error_exit("Couldn't open default browser");
     }
 }
+#endif
 
 static inline GtkMenu *create_menu(void) {
     GtkWidget *menu = ptr_gtk_menu_new();
 
+#ifndef NO_WEB
     if (file_exists(XDG_OPEN_PATH)) {
         GtkWidget *browser_item = ptr_gtk_menu_item_new_with_label("Open in browser");
         ptr_g_signal_connect_data(browser_item, "activate", G_CALLBACK(on_open_browser), NULL, NULL, 0);
@@ -102,6 +105,7 @@ static inline GtkMenu *create_menu(void) {
             (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
             browser_item);
     }
+#endif
 
     GtkWidget *quit_item = ptr_gtk_menu_item_new_with_label("Quit");
     ptr_g_signal_connect_data(quit_item, "activate", G_CALLBACK(on_quit), NULL, NULL, 0);
