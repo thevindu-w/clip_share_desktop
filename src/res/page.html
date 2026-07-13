@@ -233,7 +233,7 @@
             <button class="btn-get" onclick="onGetTxt()">GET TEXT</button>
             <div class="split-btn btn-get">
                 <button onclick="onGetImg()">GET IMAGE</button>
-                <button onclick="onGetImgOptions()">&#9650</button>
+                <button onclick="onGetImgOptions()">&#9650;</button>
             </div>
             <button class="btn-get" onclick="onGetFile()">GET FILE</button>
         </div>
@@ -293,7 +293,8 @@
             };
         };
 
-        function sendRequest(path, additionalParams = {}) {
+        function sendRequest(path, additionalParams) {
+            additionalParams = additionalParams || {};
             const server = serverInput.value;
             if (!/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/.test(server)) {
                 alert('Invalid server address');
@@ -301,8 +302,11 @@
             }
             const xhr = new XMLHttpRequest();
             const queryList = ['server=' + encodeURI(server)];
-            for (const [key, value] of Object.entries(additionalParams)) {
-                queryList.push(encodeURI(key) + '=' + encodeURI(value));
+            for (let key in additionalParams) {
+                if (additionalParams.hasOwnProperty(key)) {
+                    const value = additionalParams[key];
+                    queryList.push(encodeURI(key) + '=' + encodeURI(value));
+                }
             }
             xhr.open("POST", path + '?' + queryList.join('&'), true);
             xhr.send();
@@ -341,7 +345,7 @@
                 alert('Invalid display value');
                 return;
             }
-            const xhr = sendRequest('/get/screenshot', { display });
+            const xhr = sendRequest('/get/screenshot', { display: display });
             if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Saved image to ', { no_data: 'Invalid display!', general: 'Get image failed!' });
             overlay.click();
         }
