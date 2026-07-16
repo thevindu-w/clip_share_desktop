@@ -13,5 +13,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Installers do **not** need admin or superuser privileges to run.
 
 **Changes:**
-- Improve network scanning in auto-send.
-- Code quality improvements.
+- Add an menu option to open the web interface in the browser.
+- Fix browser compatibility issues.
