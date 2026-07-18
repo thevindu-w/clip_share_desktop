@@ -16,7 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifdef _WIN64
+#ifdef _WIN32
 
 #include <stdio.h>
 #include <stdlib.h>

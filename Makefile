@@ -47,12 +47,24 @@ LINK_FLAGS_BUILD=
 
 ifeq ($(OS),Windows_NT)
     detected_OS := Windows
+	ARCH?=x86_64
 else
     detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+	ARCH?=$(shell sh -c 'uname -m 2>/dev/null || echo Unknown')
+	ifeq ($(ARCH),aarch64)
+		ARCH:=arm64
+	endif
 endif
 
-ARCH?=x86_64
 NO_WEB?=0
+
+ifeq ($(ARCH),x86)
+	BUILD_DIR:=$(BUILD_DIR)_x86
+	CFLAGS+= -m32
+	LDLIBS+= -m32
+	PROGRAM_NAME:=$(PROGRAM_NAME)32
+	PROGRAM_NAME_NO_SSL:=$(PROGRAM_NAME_NO_SSL)32
+endif
 
 ifeq ($(detected_OS),Linux)
 	OBJS_C+= utils/linux_status_icon.o utils/listener_linux.o xclip/xclip.o xclip/xclib.o
