@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 #include <time.h>
 #include <utils/net_utils.h>
 #include <utils/unistr_wrap.h>
@@ -36,6 +35,7 @@
 #define MIN(x, y) (x < y ? x : y)
 
 const char bad_path[] = {PATH_SEP, '.', '.', PATH_SEP, '\0'};  // /../
+const char *base32_alpha = "0123456789abcdefghijklmnopqrstuv";
 
 /*
  * Send a data buffer to the peer.
@@ -485,12 +485,22 @@ int send_file_v1(socket_t *socket, int8_t is_auto_send, StatusCallback *callback
 int get_files_v1(socket_t *socket, StatusCallback *callback) { return _get_files_dirs(1, socket, callback); }
 #endif
 
+/*
+ * Sets the first 9 digits of the filename to base64 encoded timestamp in milliseconds since unix epoch
+ * filename buffer must be at least 10 characters long
+ */
+static inline void _set_filename(char *filename) {
+    uint64_t tm = get_time_millis();
+    int ind = 8;
+    while (tm) {
+        filename[ind--] = base32_alpha[tm & 31];
+        tm >>= 5;
+    }
+}
+
 static inline int _save_image_common(int version, socket_t *socket, StatusCallback *callback) {
-    struct timeval ts;
-    gettimeofday(&ts, NULL);
-    uint64_t millis = ((uint64_t)ts.tv_sec * 1000) + ((uint64_t)ts.tv_usec / 1000L);
-    char file_name[40];
-    if (snprintf_check(file_name, sizeof(file_name), "%" PRIx64 ".png", millis)) return EXIT_FAILURE;
+    char file_name[] = "000000000.png";  // array length is sufficient until year 3084
+    _set_filename(file_name);
     int status = _save_file_common(version, socket, file_name, callback);
     if (status != EXIT_SUCCESS && callback) {
         callback->function(RESP_LOCAL_ERROR, NULL, 0, callback->params);

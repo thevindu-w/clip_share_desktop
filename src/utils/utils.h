@@ -71,6 +71,8 @@ extern void error_exit(const char *msg) __attribute__((noreturn));
  */
 extern void cleanup(void);
 
+extern uint64_t get_time_millis(void);
+
 extern void create_temp_file(void);
 
 extern int check_and_delete_temp_file(void);

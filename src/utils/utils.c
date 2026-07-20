@@ -224,6 +224,23 @@ void cleanup(void) {
 #endif
 }
 
+uint64_t get_time_millis(void) {
+#if defined(__linux__) || defined(__APPLE__)
+    struct timespec spec;
+    clock_gettime(CLOCK_REALTIME, &spec);
+    return (uint64_t)((spec.tv_sec * 1000) + (spec.tv_nsec / 1000000));
+#elif defined(_WIN32)
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+
+    ULARGE_INTEGER uli;
+    uli.LowPart = ft.dwLowDateTime;
+    uli.HighPart = ft.dwHighDateTime;
+    uint64_t tm = uli.QuadPart - 116444736000000000ULL;
+    return tm / 10000U;
+#endif
+}
+
 int file_exists(const char *file_name) {
     if (file_name[0] == 0) return 0;  // empty path
     int f_ok;
@@ -967,7 +984,7 @@ int8_t get_copied_type(void) {
     const char *token;
     char found = 0;
     char *copy = targets;
-    const char *endptr = targets + targets_len;
+    const char *const endptr = targets + targets_len;
     while ((token = strsep(&copy, "\n"))) {
         if (!strncmp(token, "x-special/gnome-copied-files", 28)) {
             found = 1;
