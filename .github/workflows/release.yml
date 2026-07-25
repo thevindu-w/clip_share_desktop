@@ -392,7 +392,7 @@ jobs:
         curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz ||
         curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-latest.tar.gz
         if [ "$(sha256sum -b libmicrohttpd-latest.tar.gz | cut -d ' ' -f 1)" != \
-            'df324fcd0834175dab07483133902d9774a605bfa298025f69883288fd20a8c7' ]; then
+            'bb5cfcadfc52dbd5eb512d6e2995e0361351c33e97a87aba426d3a4a7ba6cf70' ]; then
           echo Libmicrohttpd hash mismatch
           exit 1
         fi
