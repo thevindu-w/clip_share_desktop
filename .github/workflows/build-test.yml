@@ -89,38 +89,73 @@ jobs:
     timeout-minutes: 20
     needs: Style-Check
 
+    strategy:
+      matrix:
+        target:
+        - arch: x86_64
+          env: clang-x86_64
+          sys: CLANG64
+        - arch: x86
+          env: i686
+          sys: MINGW32
+        event:
+        - ${{ inputs.trigger || github.event_name }}
+        exclude:
+        - {event: push, target: {arch: x86, env: i686, sys: MINGW32}}
+
     defaults:
       run:
         shell: msys2 {0}
 
     steps:
+    - name: Prepare packages list
+      id: prepare-msys2
+      shell: bash
+      run: |
+        install_list=" \
+          mingw-w64-${{matrix.target.env}}-libunistring \
+          make \
+          python \
+          diffutils \
+          findutils \
+          coreutils \
+          curl \
+          sed \
+          unzip \
+          vim"
+        if [ "${{ matrix.target.arch }}" = 'x86_64' ]; then
+          install_list="mingw-w64-${{matrix.target.env}}-clang \
+          ${install_list}"
+        else
+          install_list="mingw-w64-${{matrix.target.env}}-gcc \
+          mingw-w64-${{matrix.target.env}}-openssl \
+          ${install_list}"
+        fi
+        echo "install_list=$install_list" >> $GITHUB_OUTPUT
+
     - name: Setup MSYS2
       uses: msys2/setup-msys2@v2
       with:
-        msystem: CLANG64
+        msystem: ${{matrix.target.sys}}
         update: false
-        install: >-
-          mingw-w64-clang-x86_64-clang
-          mingw-w64-clang-x86_64-libunistring
-          make
-          python
-          diffutils
-          findutils
-          curl
-          sed
-          vim
-          unzip
+        install: ${{ steps.prepare-msys2.outputs.install_list }}
 
     - name: Set variables
       run: |
-        OPENSSL_PATH=/c/msys64/openssl-x86_64
-        echo OPENSSL_PATH="$OPENSSL_PATH" >> "$GITHUB_ENV"
-        LIBMICROHTTPD_PATH=/c/msys64/libmicrohttpd-x86_64
+        LIBMICROHTTPD_PATH="/c/msys64/libmicrohttpd-${{matrix.target.arch}}"
         echo LIBMICROHTTPD_PATH="$LIBMICROHTTPD_PATH" >> "$GITHUB_ENV"
-        echo CPATH="${OPENSSL_PATH}/include:${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
-        echo LIBRARY_PATH="${OPENSSL_PATH}/lib64:${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        if [ "${{ matrix.target.arch }}" = 'x86_64' ]; then
+          OPENSSL_PATH=/c/msys64/openssl-x86_64
+          echo OPENSSL_PATH="$OPENSSL_PATH" >> "$GITHUB_ENV"
+          echo CPATH="${OPENSSL_PATH}/include:${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+          echo LIBRARY_PATH="${OPENSSL_PATH}/lib64:${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        else
+          echo CPATH="${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+          echo LIBRARY_PATH="${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        fi
 
     - name: Setup OpenSSL
+      if: ${{ matrix.target.arch == 'x86_64' }}
       id: cache-openssl
       uses: actions/cache@v6
       with:
@@ -128,7 +163,7 @@ jobs:
         key: openssl-windows-x86_64
 
     - name: Build OpenSSL
-      if: ${{ steps.cache-openssl.outputs.cache-hit != 'true' }}
+      if: ${{ (matrix.target.arch == 'x86_64') && (steps.cache-openssl.outputs.cache-hit != 'true') }}
       run: |
         curl -OL https://github.com/openssl/openssl/releases/download/openssl-3.5.0/openssl-3.5.0.tar.gz
         if [ "$(sha256sum -b openssl-3.5.0.tar.gz | cut -d ' ' -f 1)" != \
@@ -147,6 +182,7 @@ jobs:
         rm -rf openssl-3.5.0*
 
     - name: Setup PatchPE
+      if: ${{ matrix.target.arch == 'x86_64' }}
       id: cache-patchpe
       uses: actions/cache@v6
       with:
@@ -154,7 +190,7 @@ jobs:
         key: patchpe-windows-x86_64
 
     - name: Download PatchPE
-      if: ${{ steps.cache-patchpe.outputs.cache-hit != 'true' }}
+      if: ${{ (matrix.target.arch == 'x86_64') && (steps.cache-patchpe.outputs.cache-hit != 'true') }}
       run: |
         curl -OL https://github.com/datadiode/PatchPE/releases/download/2.04/PatchPE.exe
         if [ "$(sha256sum -b PatchPE.exe | cut -d ' ' -f 1)" != \
@@ -168,8 +204,8 @@ jobs:
       id: cache-libmicrohttpd
       uses: actions/cache@v6
       with:
-        path: C:\msys64\libmicrohttpd-x86_64
-        key: libmicrohttpd-windows-x86_64
+        path: C:\msys64\libmicrohttpd-${{matrix.target.arch}}
+        key: libmicrohttpd-windows-${{matrix.target.arch}}
 
     - name: Download libmicrohttpd
       if: ${{ steps.cache-libmicrohttpd.outputs.cache-hit != 'true' }}
@@ -177,7 +213,11 @@ jobs:
         curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip ||
         curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-latest-w32-bin.zip
         unzip libmicrohttpd-latest-w32-bin.zip
-        mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/clang64 "$LIBMICROHTTPD_PATH"
+        if [ "${{matrix.target.arch}}" = 'x86_64' ]; then
+          mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/clang64 "$LIBMICROHTTPD_PATH"
+        else
+          mv libmicrohttpd-*-w32-bin/x86/MinGW/static/mingw32 "$LIBMICROHTTPD_PATH"
+        fi
         rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
 
     - name: Check out repository code
@@ -190,15 +230,15 @@ jobs:
         if [ -n "$OPENSSL_PATH" ] && [ -d "$OPENSSL_PATH" ]; then
           export PATH="${OPENSSL_PATH}/bin:${PATH}:/c/msys64"
         fi
-        make
-        make no_ssl
+        make ARCH=${{matrix.target.arch}}
+        make ARCH=${{matrix.target.arch}} no_ssl
 
     - name: Test
       run: |
         if [ -n "$OPENSSL_PATH" ] && [ -d "$OPENSSL_PATH" ]; then
           export PATH="${OPENSSL_PATH}/bin:${PATH}:/c/msys64"
         fi
-        make test
+        make ARCH=${{matrix.target.arch}} test
 
   Test-on-macOS:
     runs-on: ${{ matrix.os }}
