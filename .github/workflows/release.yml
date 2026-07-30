@@ -187,41 +187,72 @@ jobs:
     - Checks
     - Build-and-Test
 
+    strategy:
+      matrix:
+        target:
+        - arch: x86_64
+          env: clang-x86_64
+          sys: CLANG64
+        - arch: x86
+          env: i686
+          sys: MINGW32
+
     defaults:
       run:
         shell: msys2 {0}
 
     steps:
-    - uses: msys2/setup-msys2@v2
+    - name: Prepare packages list
+      id: prepare-msys2
+      shell: bash
+      run: |
+        install_list=" \
+          mingw-w64-${{matrix.target.env}}-libunistring \
+          make \
+          vim \
+          zip \
+          unzip"
+        if [ "${{ matrix.target.arch }}" = 'x86_64' ]; then
+          install_list="mingw-w64-${{matrix.target.env}}-clang \
+          ${install_list}"
+        else
+          install_list="mingw-w64-${{matrix.target.env}}-gcc \
+          mingw-w64-${{matrix.target.env}}-openssl \
+          ${install_list}"
+        fi
+        echo "install_list=$install_list" >> $GITHUB_OUTPUT
+
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
       with:
-        msystem: CLANG64
+        msystem: ${{matrix.target.sys}}
         update: false
-        install: >-
-          mingw-w64-clang-x86_64-clang
-          mingw-w64-clang-x86_64-libunistring
-          vim
-          make
-          zip
-          unzip
+        install: ${{ steps.prepare-msys2.outputs.install_list }}
 
     - name: Set variables
       run: |
-        OPENSSL_PATH=/c/msys64/openssl-x86_64
-        echo OPENSSL_PATH="$OPENSSL_PATH" >> "$GITHUB_ENV"
-        LIBMICROHTTPD_PATH=/c/msys64/libmicrohttpd-x86_64
+        LIBMICROHTTPD_PATH="/c/msys64/libmicrohttpd-${{matrix.target.arch}}"
         echo LIBMICROHTTPD_PATH="$LIBMICROHTTPD_PATH" >> "$GITHUB_ENV"
-        echo CPATH="${OPENSSL_PATH}/include:${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
-        echo LIBRARY_PATH="${OPENSSL_PATH}/lib64:${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        if [ "${{ matrix.target.arch }}" = 'x86_64' ]; then
+          OPENSSL_PATH=/c/msys64/openssl-x86_64
+          echo OPENSSL_PATH="$OPENSSL_PATH" >> "$GITHUB_ENV"
+          echo CPATH="${OPENSSL_PATH}/include:${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+          echo LIBRARY_PATH="${OPENSSL_PATH}/lib64:${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        else
+          echo CPATH="${LIBMICROHTTPD_PATH}/include" >> "$GITHUB_ENV"
+          echo LIBRARY_PATH="${LIBMICROHTTPD_PATH}/lib" >> "$GITHUB_ENV"
+        fi
         version="$(echo '${{github.ref_name}}' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
         echo VERSION="$version" >> $GITHUB_ENV
         echo FILE_NAME="clip-share-client.exe" >> $GITHUB_ENV
         echo FILE_NAME_NO_SSL="clip-share-client-no-ssl.exe" >> $GITHUB_ENV
-        suffix="${version}-windows-x86_64.zip"
+        suffix="${version}-windows-${{matrix.target.arch}}.zip"
         echo ARCHIVE_NAME="clip_share_client-${suffix}" >> $GITHUB_ENV
         echo ARCHIVE_NAME_NO_SSL="clip_share_client-no_ssl-${suffix}" >> $GITHUB_ENV
         echo INSTALLER_NAME="install-windows.bat" >> $GITHUB_ENV
 
     - name: Setup OpenSSL
+      if: ${{ matrix.target.arch == 'x86_64' }}
       id: cache-openssl
       uses: actions/cache@v6
       with:
@@ -229,7 +260,7 @@ jobs:
         key: openssl-windows-x86_64
 
     - name: Build OpenSSL
-      if: ${{ steps.cache-openssl.outputs.cache-hit != 'true' }}
+      if: ${{ (matrix.target.arch == 'x86_64') && (steps.cache-openssl.outputs.cache-hit != 'true') }}
       run: |
         curl -OL https://github.com/openssl/openssl/releases/download/openssl-3.5.0/openssl-3.5.0.tar.gz
         if [ "$(sha256sum -b openssl-3.5.0.tar.gz | cut -d ' ' -f 1)" != \
@@ -248,6 +279,7 @@ jobs:
         rm -rf openssl-3.5.0*
 
     - name: Setup PatchPE
+      if: ${{ matrix.target.arch == 'x86_64' }}
       id: cache-patchpe
       uses: actions/cache@v6
       with:
@@ -255,7 +287,7 @@ jobs:
         key: patchpe-windows-x86_64
 
     - name: Download PatchPE
-      if: ${{ steps.cache-patchpe.outputs.cache-hit != 'true' }}
+      if: ${{ (matrix.target.arch == 'x86_64') && (steps.cache-patchpe.outputs.cache-hit != 'true') }}
       run: |
         curl -OL https://github.com/datadiode/PatchPE/releases/download/2.04/PatchPE.exe
         if [ "$(sha256sum -b PatchPE.exe | cut -d ' ' -f 1)" != \
@@ -269,8 +301,8 @@ jobs:
       id: cache-libmicrohttpd
       uses: actions/cache@v6
       with:
-        path: C:\msys64\libmicrohttpd-x86_64
-        key: libmicrohttpd-windows-x86_64
+        path: C:\msys64\libmicrohttpd-${{matrix.target.arch}}
+        key: libmicrohttpd-windows-${{matrix.target.arch}}
 
     - name: Download libmicrohttpd
       if: ${{ steps.cache-libmicrohttpd.outputs.cache-hit != 'true' }}
@@ -283,7 +315,11 @@ jobs:
           exit 1
         fi
         unzip libmicrohttpd-latest-w32-bin.zip
-        mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/clang64 "$LIBMICROHTTPD_PATH"
+        if [ "${{matrix.target.arch}}" = 'x86_64' ]; then
+          mv libmicrohttpd-*-w32-bin/x86_64/MinGW/static/clang64 "$LIBMICROHTTPD_PATH"
+        else
+          mv libmicrohttpd-*-w32-bin/x86/MinGW/static/mingw32 "$LIBMICROHTTPD_PATH"
+        fi
         rm -rf libmicrohttpd-latest-w32-bin.zip libmicrohttpd-*-w32-bin
 
     - name: Check out repository code
@@ -294,7 +330,7 @@ jobs:
         if [ -n "$OPENSSL_PATH" ] && [ -d "$OPENSSL_PATH" ]; then
           export PATH="${PATH}:/c/msys64"
         fi
-        make
+        make ARCH=${{matrix.target.arch}}
         mkdir dist
         mv clip-share-client*.exe "dist/${{env.FILE_NAME}}"
         [ -f helper_tools/install-windows.bat ] && cp helper_tools/install-windows.bat dist/
@@ -307,7 +343,7 @@ jobs:
           export PATH="${PATH}:/c/msys64"
         fi
         make clean
-        make no_ssl
+        make ARCH=${{matrix.target.arch}} no_ssl
         mkdir dist_no_ssl
         mv clip-share-client-no-ssl*.exe "dist_no_ssl/${{env.FILE_NAME_NO_SSL}}"
         [ -f helper_tools/install-windows.bat ] && cp helper_tools/install-windows.bat dist_no_ssl/
@@ -504,6 +540,8 @@ jobs:
         echo TITLE="Version ${version}" >> $GITHUB_ENV
         echo FILE_LINUX_AMD64="clip_share_client-${version}-linux-x86_64.tar.gz" >> $GITHUB_ENV
         echo FILE_LINUX_ARM64="clip_share_client-${version}-linux-arm64.tar.gz" >> $GITHUB_ENV
+        echo FILE_WINDOWS32="clip_share_client-${version}-windows-x86.zip" >> $GITHUB_ENV
+        echo FILE_WINDOWS32_NO_SSL="clip_share_client-no_ssl-${version}-windows-x86.zip" >> $GITHUB_ENV
         echo FILE_WINDOWS64="clip_share_client-${version}-windows-x86_64.zip" >> $GITHUB_ENV
         echo FILE_WINDOWS64_NO_SSL="clip_share_client-no_ssl-${version}-windows-x86_64.zip" >> $GITHUB_ENV
         echo INSTALLER_WINDOWS="install-windows.bat" >> $GITHUB_ENV
@@ -533,7 +571,8 @@ jobs:
       run: |
         mkdir release
         mv "${{env.FILE_LINUX_AMD64}}" "${{env.FILE_LINUX_ARM64}}" "${{env.FILE_WINDOWS64}}" \
-        "${{env.FILE_WINDOWS64_NO_SSL}}" "${{env.FILE_MACOS}}" *.AppImage release/
+        "${{env.FILE_WINDOWS64_NO_SSL}}" "${{env.FILE_WINDOWS32_NO_SSL}}" "${{env.FILE_WINDOWS32}}" \
+        "${{env.FILE_MACOS}}" *.AppImage release/
         mv "${{env.INSTALLER_WINDOWS}}/${{env.INSTALLER_WINDOWS}}" release/
         mv .github/workflows/resources/clipshare-desktop.conf release/
         mv helper_tools/install-online-linux-mac.sh release/install-linux-mac.sh
