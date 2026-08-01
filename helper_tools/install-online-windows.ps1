@@ -10,7 +10,7 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
 $VERSION_DEFAULT =
 $VERSION = "$VERSION_DEFAULT"
 if (-Not "$VERSION") {
-    $VERSION = Read-Host 'Enter version (ex: 3.2.0)'
+    $VERSION = Read-Host 'Enter version (ex: 4.2.1)'
 }
 $VERSION = ([regex]'[0-9]+\.[0-9]+\.[0-9]+').Matches("$VERSION")[0]
 if (-Not "$VERSION") {
@@ -25,7 +25,13 @@ if ("$confirm" -ne "y") {
     exit 0
 }
 
-$filename="clip_share_client-$VERSION-windows-x86_64.zip"
+if ([System.Environment]::Is64BitOperatingSystem) {
+    $ARCH = 'x86_64'
+} else {
+    $ARCH = 'x86'
+}
+
+$filename="clip_share_client-$VERSION-windows-$ARCH.zip"
 $url="https://github.com/thevindu-w/clip_share_desktop/releases/download/v$VERSION/$filename"
 
 $suffix=0
