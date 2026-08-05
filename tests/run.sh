@@ -58,7 +58,7 @@ export TESTS_DIR="$(pwd)"
 export LOG_DIR="${TESTS_DIR}/server_output"
 export XDG_CONFIG_HOME="${TESTS_DIR}/tmp"
 
-# Get the absolute path of clip_share executable
+# Get the absolute path of clip-share-client executable
 program="$(realpath "../${program}")"
 
 shopt -s expand_aliases

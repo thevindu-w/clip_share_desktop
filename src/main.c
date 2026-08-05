@@ -1,5 +1,5 @@
 /*
- * main.c - main entrypoint of clip_share desktop client
+ * main.c - main entrypoint of clipshare desktop client
  * Copyright (C) 2024-2026 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify

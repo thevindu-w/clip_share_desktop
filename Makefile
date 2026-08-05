@@ -147,7 +147,7 @@ DEBUG_OBJS_M=$(OBJS_M:.o=_debug.o)
 DEBUG_OBJS_BIN=$(OBJS_BIN:.o=_debug.o)
 DEBUG_OBJS=$(DEBUG_OBJS_C) $(DEBUG_OBJS_S) $(DEBUG_OBJS_M) $(DEBUG_OBJS_BIN)
 
-# append '_no_ssl' to objects for clip-share-client-no-ssl executable to prevent overwriting objects for clip_share
+# append '_no_ssl' to objects for clip-share-client-no-ssl executable to prevent overwriting objects for clip-share-client
 NO_SSL_OBJS_C=$(OBJS_C:.o=_no_ssl.o)
 NO_SSL_OBJS_S=$(OBJS_S:.o=_no_ssl.o)
 NO_SSL_OBJS_M=$(OBJS_M:.o=_no_ssl.o)
