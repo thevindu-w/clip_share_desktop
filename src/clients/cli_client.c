@@ -35,6 +35,7 @@
 #define COMMAND_GET_IMAGE 5
 #define COMMAND_GET_COPIED_IMAGE 6
 #define COMMAND_GET_SCREENSHOT 7
+#define COMMAND_SEND_IMAGE 84
 #define COMMAND_INFO 125
 
 static void net_scan(void);
@@ -122,6 +123,21 @@ static inline void _get_screenshot(uint32_t server_addr, MethodArgs *args) {
     printf("Get screenshot %s\n", msg_suffix);
 }
 
+static inline void _send_image(uint32_t server_addr) {
+    const char *msg_suffix;
+    if (get_copied_type() == COPIED_TYPE_IMAGE) {
+        MethodArgs args = {0};
+        args.is_send_image = 1;
+        if (_invoke_method(server_addr, METHOD_SEND_FILE, &args) == EXIT_SUCCESS)
+            msg_suffix = "done";
+        else
+            msg_suffix = "failed!";
+    } else {
+        msg_suffix = "failed! - No image copied";
+    }
+    printf("Send image %s\n", msg_suffix);
+}
+
 static inline void _get_info(uint32_t server_addr) {
     const char *msg_suffix;
     if (_invoke_method(server_addr, METHOD_INFO, NULL) == EXIT_SUCCESS)
@@ -155,6 +171,8 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_
         *command_p = COMMAND_GET_COPIED_IMAGE;
     } else if (strncmp(cmd, "is", 3) == 0) {
         *command_p = COMMAND_GET_SCREENSHOT;
+    } else if (strncmp(cmd, "si", 3) == 0) {
+        *command_p = COMMAND_SEND_IMAGE;
     } else if (strncmp(cmd, "in", 3) == 0) {
         *command_p = COMMAND_INFO;
     } else {
@@ -222,6 +240,10 @@ void cli_client(int argc, char **argv, const char *prog_name) {
         }
         case COMMAND_GET_SCREENSHOT: {
             _get_screenshot(server_addr, &args);
+            break;
+        }
+        case COMMAND_SEND_IMAGE: {
+            _send_image(server_addr);
             break;
         }
         case COMMAND_INFO: {

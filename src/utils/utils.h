@@ -33,6 +33,7 @@
 #define COPIED_TYPE_NONE 0
 #define COPIED_TYPE_TEXT 1
 #define COPIED_TYPE_FILE 2
+#define COPIED_TYPE_IMAGE 3
 
 /*
  * List of files and the length of the path of their parent directory
@@ -103,6 +104,8 @@ extern char *get_clipboard_text(uint32_t *lenptr) __attribute__((__malloc__));
  * returns EXIT_SUCCESS on success and EXIT_FAILURE on failure.
  */
 extern int put_clipboard_text(char *data, uint32_t len);
+
+extern int get_image(char **buf_ptr, uint32_t *len_ptr);
 
 /*
  * Cut the files given by paths to clipboard. Another application may paste them.

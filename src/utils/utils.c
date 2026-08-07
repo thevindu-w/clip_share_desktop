@@ -999,6 +999,22 @@ int8_t get_copied_type(void) {
         return COPIED_TYPE_FILE;
     }
 
+    // search for image
+    copy = targets;
+    while ((token = strsep(&copy, "\n"))) {
+        if (!(strcmp(token, "image/png") && strcmp(token, "image/jpeg"))) {
+            found = 1;
+            break;
+        }
+        if (copy < endptr && copy > targets) {
+            *(copy - 1) = '\n';  // restore delemeter of targets
+        }
+    }
+    if (found) {
+        free(targets);
+        return COPIED_TYPE_IMAGE;
+    }
+
     // search for text
     copy = targets;
     while ((token = strsep(&copy, "\n"))) {
@@ -1040,6 +1056,21 @@ int put_clipboard_text(char *data, uint32_t len) {
     pending_len = len;
     pending_type = PENDING_TEXT;
     return EXIT_SUCCESS;
+}
+
+int get_image(char **buf_ptr, uint32_t *len_ptr) {
+    *buf_ptr = NULL;
+
+    if (xclip_util(XCLIP_OUT, "image/png", len_ptr, buf_ptr) == EXIT_SUCCESS &&
+        *len_ptr > 8) {  // do not change the order
+        return EXIT_SUCCESS;
+    }
+    if (*buf_ptr) {
+        free(*buf_ptr);
+    }
+    *buf_ptr = NULL;
+    *len_ptr = 0;
+    return EXIT_FAILURE;
 }
 
 char *get_copied_files_as_str(int *offset) {
@@ -1347,6 +1378,8 @@ int8_t get_copied_type(void) {
     }
     if (IsClipboardFormatAvailable(CF_HDROP)) {
         copied_type = COPIED_TYPE_FILE;
+    } else if (IsClipboardFormatAvailable(CF_BITMAP)) {
+        copied_type = COPIED_TYPE_IMAGE;
     } else if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
         copied_type = COPIED_TYPE_TEXT;
     }
@@ -1409,6 +1442,12 @@ int put_clipboard_text(char *data, uint32_t len) {
     HANDLE res = SetClipboardData(CF_UNICODETEXT, hMem);
     CloseClipboard();
     return (res == NULL ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
+int get_image(char **buf_ptr, uint32_t *len_ptr) {
+    // TODO(thevindu-w): Implement
+    *buf_ptr = NULL;
+    return EXIT_FAILURE;
 }
 
 int set_clipboard_cut_files(const list2 *paths) {

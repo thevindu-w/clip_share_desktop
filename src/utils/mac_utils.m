@@ -41,6 +41,9 @@ int8_t get_copied_type(void) {
         if ([types containsObject:NSPasteboardTypeFileURL]) {
             return COPIED_TYPE_FILE;
         }
+        if ([types containsObject:NSPasteboardTypeTIFF] || [types containsObject:NSPasteboardTypePNG]) {
+            return COPIED_TYPE_IMAGE;
+        }
         if ([types containsObject:NSPasteboardTypeString]) {
             return COPIED_TYPE_TEXT;
         }
@@ -130,6 +133,12 @@ int set_clipboard_cut_files(const list2 *paths) {
     [pasteboard clearContents];
     [pasteboard writeObjects:fileURLs];
     return EXIT_SUCCESS;
+}
+
+int get_image(char **buf_ptr, uint32_t *len_ptr) {
+    // TODO(thevindu-w): Implement
+    *buf_ptr = NULL;
+    return EXIT_FAILURE;
 }
 
 #endif

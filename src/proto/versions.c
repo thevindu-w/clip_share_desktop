@@ -256,6 +256,9 @@ int version_4(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
             return get_files_v4(socket, callback);
         }
         case METHOD_SEND_FILE: {
+            if (args && args->is_send_image) {
+                return send_image_v4(socket, callback);
+            }
             return send_files_v4(socket, args->is_auto_send, callback);
         }
         case METHOD_GET_IMAGE: {

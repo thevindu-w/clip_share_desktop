@@ -31,6 +31,7 @@
 
 #define FILE_BUF_SZ 65536L  // 64 KiB
 #define MAX_FILE_NAME_LENGTH 2048
+#define MAX_IMAGE_SIZE 1073741824UL  // 1 GiB
 
 #define MIN(x, y) (x < y ? x : y)
 
@@ -927,6 +928,44 @@ int info_v4(socket_t *socket, StatusCallback *callback) {
         return EXIT_FAILURE;
     }
     close_socket(socket);
+    return EXIT_SUCCESS;
+}
+
+int send_image_v4(socket_t *socket, StatusCallback *callback) {
+    uint32_t length = 0;
+    char *buf = NULL;
+    if (get_image(&buf, &length) != EXIT_SUCCESS || length == 0 ||
+        length > MAX_IMAGE_SIZE) {  // do not change the order
+#ifdef DEBUG_MODE
+        printf("get image failed. len = %" PRIu32 "\n", length);
+#endif
+        if (callback) callback->function(RESP_LOCAL_ERROR, NULL, 0, callback->params);
+        if (buf) {
+            free(buf);
+        }
+        close_socket_no_wait(socket);
+        return EXIT_FAILURE;
+    }
+    if (send_size(socket, 1) != EXIT_SUCCESS) {
+        free(buf);
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    if (_send_data(socket, 9, "image.png") != EXIT_SUCCESS) {  // TODO(thevindu-w): Set file name based on time
+        free(buf);
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    if (_send_data(socket, (int64_t)length, buf) != EXIT_SUCCESS) {
+        free(buf);
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    if (_read_ack(socket) != EXIT_SUCCESS && callback) {
+        callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+    }
+    free(buf);
+    close_socket_no_wait(socket);
     return EXIT_SUCCESS;
 }
 
