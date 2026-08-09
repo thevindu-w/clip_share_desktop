@@ -946,12 +946,16 @@ int send_image_v4(socket_t *socket, StatusCallback *callback) {
         close_socket_no_wait(socket);
         return EXIT_FAILURE;
     }
+
+    char filename[] = "000000000.png";  // array length is sufficient until year 3084
+    _set_filename(filename);
+
     if (send_size(socket, 1) != EXIT_SUCCESS) {
         free(buf);
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
     }
-    if (_send_data(socket, 9, "image.png") != EXIT_SUCCESS) {  // TODO(thevindu-w): Set file name based on time
+    if (_send_data(socket, sizeof(filename) - 1, filename) != EXIT_SUCCESS) {
         free(buf);
         if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
         return EXIT_FAILURE;
@@ -966,6 +970,7 @@ int send_image_v4(socket_t *socket, StatusCallback *callback) {
     }
     free(buf);
     close_socket_no_wait(socket);
+    if (callback) callback->function(RESP_OK, filename, sizeof(filename) - 1, callback->params);
     return EXIT_SUCCESS;
 }
 
