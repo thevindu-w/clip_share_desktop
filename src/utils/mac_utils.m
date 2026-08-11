@@ -135,10 +135,36 @@ int set_clipboard_cut_files(const list2 *paths) {
     return EXIT_SUCCESS;
 }
 
+static inline NSBitmapImageRep *get_copied_image(void) {
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    NSImage *img = [[NSImage alloc] initWithPasteboard:pasteboard];
+    if (!img) return NULL;
+    CGImageRef cgRef = [img CGImageForProposedRect:NULL context:NULL hints:NULL];
+    NSBitmapImageRep *imgRep = [[NSBitmapImageRep alloc] initWithCGImage:cgRef];
+    if (!imgRep) {
+        CGImageRelease(cgRef);
+        return NULL;
+    }
+    [imgRep setSize:[img size]];
+    CGImageRelease(cgRef);
+    return imgRep;
+}
+
 int get_image(char **buf_ptr, uint32_t *len_ptr) {
-    // TODO(thevindu-w): Implement
+    *len_ptr = 0;
     *buf_ptr = NULL;
-    return EXIT_FAILURE;
+    NSBitmapImageRep *bitmap = get_copied_image();
+    if (!bitmap) {
+        return EXIT_FAILURE;
+    }
+    NSData *data = [bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+    NSUInteger size = [data length];
+    char *buf = malloc((size_t)size);
+    if (!buf) return EXIT_FAILURE;
+    [data getBytes:buf length:size];
+    *buf_ptr = buf;
+    *len_ptr = (uint32_t)size;
+    return EXIT_SUCCESS;
 }
 
 #endif
