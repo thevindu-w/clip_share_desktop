@@ -76,13 +76,13 @@ ifeq ($(detected_OS),Linux)
 	LDLIBS_SSL=-lssl -lcrypto
 	LINK_FLAGS_BUILD=-no-pie -Wl,-s,--gc-sections
 else ifeq ($(detected_OS),Windows)
-	OBJS_C+= utils/listener_windows.o
+	OBJS_C+= utils/listener_windows.o utils/win_image.o
 	CFLAGS+= -Wformat-signedness
 	CFLAGS_OPTIM=-O3
 	OTHER_DEPENDENCIES+= res/win/app.coff
-	LDLIBS_NO_SSL=-l:libunistring.a -lws2_32 -lgdi32 -lIphlpapi
+	LDLIBS_NO_SSL=-l:libunistring.a -l:libpng16.a -l:libz.a -lws2_32 -lgdi32 -lIphlpapi
 	LDLIBS_MHD=-l:libmicrohttpd.a
-	LDLIBS_SSL=-l:libssl.a -l:libcrypto.a -l:libz.a -lcrypt32
+	LDLIBS_SSL=-l:libssl.a -l:libcrypto.a -lcrypt32
 	LINK_FLAGS_BUILD=
 	ifeq ($(ARCH),x86_64)
 		CC=clang

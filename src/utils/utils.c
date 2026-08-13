@@ -44,6 +44,7 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <shlobj.h>
+#include <utils/win_image.h>
 #include <windows.h>
 #ifdef _WIN64
 #include <utils/win_load_lib.h>
@@ -1445,8 +1446,9 @@ int put_clipboard_text(char *data, uint32_t len) {
 }
 
 int get_image(char **buf_ptr, uint32_t *len_ptr) {
-    // TODO(thevindu-w): Implement
     *buf_ptr = NULL;
+    getCopiedImage(buf_ptr, len_ptr);
+    if (*len_ptr > 8) return EXIT_SUCCESS;
     return EXIT_FAILURE;
 }
 
