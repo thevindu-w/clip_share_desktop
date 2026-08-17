@@ -100,7 +100,12 @@ static void handle_method(struct MHD_Connection *connection, const char *address
         }
 
         case METHOD_SEND_FILE: {
-            if (get_copied_type() != COPIED_TYPE_FILE) {
+            if (args && args->is_send_image) {
+                if (get_copied_type() != COPIED_TYPE_IMAGE) {
+                    callback_fn(RESP_NO_DATA, NULL, 0, &params);
+                    return;
+                }
+            } else if (get_copied_type() != COPIED_TYPE_FILE) {
                 callback_fn(RESP_NO_DATA, NULL, 0, &params);
                 return;
             }
@@ -236,6 +241,11 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             handled = 1;
         } else if (!strcmp(url, "/send/file")) {
             handle_method(connection, query.server, METHOD_SEND_FILE, NULL);
+            handled = 1;
+        } else if (!strcmp(url, "/send/image")) {
+            MethodArgs args = {0};
+            args.is_send_image = 1;
+            handle_method(connection, query.server, METHOD_SEND_FILE, &args);
             handled = 1;
         } else {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
