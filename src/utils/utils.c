@@ -86,7 +86,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "\nUsage: %s [OPTION]\n", prog_name);
     fprintf(stderr, "  or:  %s -c COMMAND <server-address-ipv4> [optional args]\n", prog_name);
     fprintf(stderr,
-            "Options available:\n"
+            "\nOptions available:\n"
             "\t-h : Display this help list\n"
             "\t-s : Stop running instances\n"
             "\t-v : Print version\n"
@@ -94,7 +94,7 @@ void print_usage(const char *prog_name) {
             "\t-D : No-Daemonize - Run the web client in the main process\n"
             "\t-c COMMAND [server-address-ipv4]: Run a CLI command. This needs a command\n");
     fprintf(stderr,
-            "Commands available:\n"
+            "\nCommands available:\n"
             "\tsc : Scan - server address is not needed\n"
             "\tg  : Get copied text\n"
             "\ts  : Send copied text\n"
@@ -102,7 +102,8 @@ void print_usage(const char *prog_name) {
             "\tfs : Send copied files\n"
             "\ti  : Get image\n"
             "\tic : Get copied image\n"
-            "\tis : Get screenshot - Display number can be used as an optional arg.\n");
+            "\tis : Get screenshot - Display number can be used as an optional arg\n"
+            "\tsi : Send copied image\n");
     fprintf(stderr,
             "\nExample: %s -c g 192.168.21.42\n"
             "\tThis command gets copied text from the device having IP address 192.168.21.42\n"
