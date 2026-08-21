@@ -282,15 +282,15 @@ jobs:
       run: |
         mkdir libmicrohttpd
         cd libmicrohttpd
-        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz ||
-        curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-latest.tar.gz
-        if [ "$(sha256sum -b libmicrohttpd-latest.tar.gz | cut -d ' ' -f 1)" != \
-            '6e9adc446b08083ec03d40317fb66ca6f2e03e4f6170aef33a6e59bb08db2012' ]; then
+        curl -OL https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-1.0.10.tar.gz ||
+        curl -OL https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-1.0.10.tar.gz
+        if [ "$(sha256sum -b libmicrohttpd-1.0.10.tar.gz | cut -d ' ' -f 1)" != \
+            '04bfe8ef75db7d629a33de767599765cecadc56274a39822d5d081030d577685' ]; then
           echo Libmicrohttpd hash mismatch
           exit 1
         fi
-        tar -xzf libmicrohttpd-latest.tar.gz
-        rm libmicrohttpd-latest.tar.gz
+        tar -xzf libmicrohttpd-1.0.10.tar.gz
+        rm libmicrohttpd-*.tar.gz
         cd libmicrohttpd*
         mkdir "$LIBMICROHTTPD_PATH"
         ./configure --without-gnutls --prefix="$LIBMICROHTTPD_PATH"
