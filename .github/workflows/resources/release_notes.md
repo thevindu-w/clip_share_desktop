@@ -14,6 +14,4 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Installers do **not** need admin or superuser privileges to run.
 
 **Changes:**
-- Add support for 32-bit Windows.
-- Create unified time-based filename across clients.
-- Fix potential buffer overflows.
+- Add an option to send a copied image.
