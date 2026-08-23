@@ -88,8 +88,8 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 - You can run the client from a terminal or by double-clicking on the program (if the file manager supports executing programs in that way).
 - When the client starts, it will not display any visible window or produce any output.
 - Once the client starts, open a web browser (ex: Google Chrome, Microsoft Edge, Firefox, or any modern web browser) and visit [http://localhost:8888/](http://localhost:8888/). This should open the ClipShare client web app. (The port 8888 can be changed in the configuration file)
-- Using the GUI client is similar to using the [mobile client](https://github.com/thevindu-w/clip_share_client#how-to-use) except the desktop client uses the `Send File` button to send both copied files and folders.
-- To use the desktop client to send copied text or files, copy the text or files you want to send (just like you would copy them to paste somewhere else). Then press the correct Send button on the web app (either `Send Text` or `Send File`). Then you can paste them on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server).
+- Using the GUI client is similar to using the [mobile client](https://github.com/thevindu-w/clip_share_client#how-to-use) except the desktop client uses the `Send File` button to send both copied files and folders, and the `Send Image` button sends the copied image.
+- To use the desktop client to send copied text, files, or images, copy what you want to send (just like you would copy them to paste somewhere else). Then press the correct Send button on the web app (either `Send Text`, `Send File`, or `Send Image`). Then you can paste them on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server).
 - To use the desktop client to receive copied text, an image, or files, copy the text or files on the machine that runs the [ClipShare server](https://github.com/thevindu-w/clip_share_server). Then press the correct Get button on the web app (either `Get Text`, `Get Image`, or `Get File`). Then you can paste them on the machine that runs the client.
 - If something goes wrong, it will create a `client_err.log` file. That file will contain what went wrong.
 
@@ -108,6 +108,7 @@ clip-share-client -c COMMAND <server-address-ipv4> [optional args]
 - `i `&nbsp;&nbsp;: Get image
 - `ic`&nbsp;&nbsp;: Get copied image
 - `is`&nbsp;&nbsp;: Get screenshot - Display number can be used as an optional arg.
+- `si`&nbsp;&nbsp;: Send copied image
 
 **Examples:**
 ```bash
