@@ -1,5 +1,5 @@
 /*
- * utils/clipboard_listener.h - header for clipboard listener
+ * utils/background_sync.h - header for background sync functions
  * Copyright (C) 2025 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef UTILS_CLIPBOARD_LISTENER_H_
-#define UTILS_CLIPBOARD_LISTENER_H_
+#ifndef UTILS_BACKGROUND_SYNC_H_
+#define UTILS_BACKGROUND_SYNC_H_
 
 typedef void (*ListenerCallback)(int);
+
+extern void send_to_servers(int type);
 
 extern int start_clipboard_listener(void);
 
@@ -27,4 +29,4 @@ extern int clipboard_listen(ListenerCallback callback);
 
 extern void cleanup_listener(void);
 
-#endif  // UTILS_CLIPBOARD_LISTENER_H_
+#endif  // UTILS_BACKGROUND_SYNC_H_

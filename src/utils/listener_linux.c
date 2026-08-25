@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <utils/clipboard_listener.h>
+#include <utils/background_sync.h>
 #include <utils/utils.h>
 #include <xclip/xclip.h>
 

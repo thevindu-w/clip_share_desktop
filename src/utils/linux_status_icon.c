@@ -24,6 +24,7 @@
 #include <libayatana-appindicator/app-indicator.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <utils/background_sync.h>
 #include <utils/kill_others.h>
 #include <utils/linux_status_icon.h>
 #include <utils/utils.h>
@@ -66,14 +67,18 @@ static int is_running;
 #define APP_NAME "ClipShare Client"
 #define XDG_OPEN_PATH "/usr/bin/xdg-open"
 
+static void _do_quit(void) {
+    if (is_running && ptr_gtk_main_quit) {
+        ptr_gtk_main_quit();
+        is_running = 0;
+    }
+}
+
 static void on_quit(void *widget, gpointer data) {
     (void)widget;
     (void)data;
 
-    if (ptr_gtk_main_quit) {
-        ptr_gtk_main_quit();
-        is_running = 0;
-    }
+    _do_quit();
     kill_other_processes(global_prog_name);
 }
 
@@ -82,10 +87,7 @@ static void on_open_browser(void *widget, gpointer data) {
     (void)widget;
     (void)data;
     if (fork() == 0) {
-        if (ptr_gtk_main_quit) {
-            ptr_gtk_main_quit();
-            is_running = 0;
-        }
+        _do_quit();
         char url[24];
         snprintf(url, sizeof(url), "http://127.0.0.1:%hu", configuration.ports.web);
         execl(XDG_OPEN_PATH, "xdg-open", url, NULL);
@@ -94,8 +96,24 @@ static void on_open_browser(void *widget, gpointer data) {
 }
 #endif
 
+static void on_send_text(void *widget, gpointer data) {
+    (void)widget;
+    (void)data;
+    if (fork() == 0) {
+        _do_quit();
+        send_to_servers(COPIED_TYPE_TEXT);
+        exit(0);
+    }
+}
+
 static inline GtkMenu *create_menu(void) {
     GtkWidget *menu = ptr_gtk_menu_new();
+
+    GtkWidget *send_text_item = ptr_gtk_menu_item_new_with_label("Send Text");
+    ptr_g_signal_connect_data(send_text_item, "activate", G_CALLBACK(on_send_text), NULL, NULL, 0);
+    ptr_gtk_menu_shell_append(
+        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+        send_text_item);
 
 #ifndef NO_WEB
     if (file_exists(XDG_OPEN_PATH)) {

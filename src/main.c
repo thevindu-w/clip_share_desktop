@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <utils/clipboard_listener.h>
+#include <utils/background_sync.h>
 #include <utils/kill_others.h>
 #include <utils/linux_status_icon.h>
 #include <utils/net_utils.h>

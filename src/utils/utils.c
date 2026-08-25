@@ -33,7 +33,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-#include <utils/clipboard_listener.h>
+#include <utils/background_sync.h>
 #include <utils/linux_status_icon.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>

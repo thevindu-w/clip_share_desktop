@@ -36,7 +36,7 @@ CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all
 CFLAGS_DEBUG=-g -DDEBUG_MODE
 VPATH=$(SRC_DIR)
 
-OBJS_C=main.o clients/cli_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o utils/clipboard_listener.o
+OBJS_C=main.o clients/cli_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o utils/background_sync.o
 OBJS_C_WEB=clients/gui_client.o
 OBJS_S=
 OBJS_M=

@@ -20,7 +20,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <stdlib.h>
-#import <utils/clipboard_listener.h>
+#import <utils/background_sync.h>
 #import <utils/utils.h>
 
 #if !__has_feature(objc_arc)

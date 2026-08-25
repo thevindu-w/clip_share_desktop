@@ -1,5 +1,5 @@
 /*
- * utils/clipboard_listener.h - implementation for clipboard listener
+ * utils/background_sync.h - implementation for background sync functions
  * Copyright (C) 2025-2026 H. Thevindu J. Wijesekera
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 #include <globals.h>
 #include <proto/selector.h>
 #include <string.h>
-#include <utils/clipboard_listener.h>
+#include <utils/background_sync.h>
 #include <utils/utils.h>
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -162,7 +162,20 @@ static inline void send_in_threads(int type, list2 *servers) {
     }
 }
 
-static void send_to_servers(int type) {
+void send_to_servers(int type) {
+    list2 *servers = scan_servers();
+    if (!servers) {
+        servers = scan_servers();
+        if (!servers) {
+            return;
+        }
+    }
+
+    send_in_threads(type, servers);
+    free_list(servers);
+}
+
+static void auto_send_to_servers(int type) {
     switch (type) {
         case COPIED_TYPE_TEXT: {
             if (!configuration.auto_send_text) {
@@ -180,16 +193,7 @@ static void send_to_servers(int type) {
             return;
     }
 
-    list2 *servers = scan_servers();
-    if (!servers) {
-        servers = scan_servers();
-        if (!servers) {
-            return;
-        }
-    }
-
-    send_in_threads(type, servers);
-    free_list(servers);
+    send_to_servers(type);
 }
 
-int start_clipboard_listener(void) { return clipboard_listen(&send_to_servers); }
+int start_clipboard_listener(void) { return clipboard_listen(&auto_send_to_servers); }
