@@ -38,12 +38,14 @@ typedef pthread_t thread_t;
 typedef struct {
     char *server;
     int type;
+    int8_t is_auto_send;
 } send_arg_t;
 
 static void *send_to_server(void *args) {
     send_arg_t *arg = (send_arg_t *)args;
     const char *server = arg->server;
     int type = arg->type;
+    int8_t is_auto_send = arg->is_auto_send;
     free(arg);
 
     uint32_t server_addr;
@@ -57,7 +59,7 @@ static void *send_to_server(void *args) {
     }
     uint8_t method = (type == COPIED_TYPE_FILE) ? METHOD_SEND_FILE : METHOD_SEND_TEXT;
     MethodArgs methodArgs = {0};
-    methodArgs.is_auto_send = 1;
+    methodArgs.is_auto_send = is_auto_send;
     handle_proto(&sock, method, &methodArgs, NULL);
     close_socket_no_wait(&sock);
     return NULL;
@@ -116,7 +118,7 @@ static inline list2 *scan_servers(void) {
     return servers;
 }
 
-static inline void send_in_threads(int type, list2 *servers) {
+static inline void send_in_threads(int type, list2 *servers, int8_t is_auto_send) {
     thread_t threads_buf[16];
     thread_t *threads;
     if (servers->len < 16) {
@@ -132,6 +134,7 @@ static inline void send_in_threads(int type, list2 *servers) {
         send_arg_t *arg = malloc(sizeof(send_arg_t));
         arg->server = servers->array[i];
         arg->type = type;
+        arg->is_auto_send = is_auto_send;
         thread_t thread;
 #ifdef _WIN32
         thread = CreateThread(NULL, 0, send_to_server_wrapper, arg, 0, NULL);
@@ -162,7 +165,7 @@ static inline void send_in_threads(int type, list2 *servers) {
     }
 }
 
-void send_to_servers(int type) {
+void send_to_servers(int type, int8_t is_auto_send) {
     list2 *servers = scan_servers();
     if (!servers) {
         servers = scan_servers();
@@ -171,7 +174,7 @@ void send_to_servers(int type) {
         }
     }
 
-    send_in_threads(type, servers);
+    send_in_threads(type, servers, is_auto_send);
     free_list(servers);
 }
 
@@ -193,7 +196,7 @@ static void auto_send_to_servers(int type) {
             return;
     }
 
-    send_to_servers(type);
+    send_to_servers(type, 1);
 }
 
 int start_clipboard_listener(void) { return clipboard_listen(&auto_send_to_servers); }

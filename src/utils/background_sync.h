@@ -21,7 +21,7 @@
 
 typedef void (*ListenerCallback)(int);
 
-extern void send_to_servers(int type);
+extern void send_to_servers(int type, int8_t is_auto_send);
 
 extern int start_clipboard_listener(void);
 
