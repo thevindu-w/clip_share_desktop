@@ -19,9 +19,11 @@
 #ifndef UTILS_BACKGROUND_SYNC_H_
 #define UTILS_BACKGROUND_SYNC_H_
 
-typedef void (*ListenerCallback)(int);
+#include <stdint.h>
 
-extern void send_to_servers(int type, int8_t is_auto_send);
+typedef void (*ListenerCallback)(int8_t);
+
+extern void send_to_servers(int8_t type, int8_t is_auto_send);
 
 extern int start_clipboard_listener(void);
 

@@ -59,7 +59,7 @@ int clipboard_listen(ListenerCallback callback) {
         if (check_and_delete_temp_file()) {  // send text only if it's not from clip-share
             continue;
         }
-        int copied_type = get_copied_type();
+        int8_t copied_type = get_copied_type();
         if (copied_type != COPIED_TYPE_NONE) {
             callback(copied_type);
         }

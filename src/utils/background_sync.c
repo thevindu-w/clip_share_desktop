@@ -37,14 +37,14 @@ typedef pthread_t thread_t;
 
 typedef struct {
     char *server;
-    int type;
+    int8_t type;
     int8_t is_auto_send;
 } send_arg_t;
 
 static void *send_to_server(void *args) {
     send_arg_t *arg = (send_arg_t *)args;
     const char *server = arg->server;
-    int type = arg->type;
+    int8_t type = arg->type;
     int8_t is_auto_send = arg->is_auto_send;
     free(arg);
 
@@ -118,7 +118,7 @@ static inline list2 *scan_servers(void) {
     return servers;
 }
 
-static inline void send_in_threads(int type, list2 *servers, int8_t is_auto_send) {
+static inline void send_in_threads(int8_t type, list2 *servers, int8_t is_auto_send) {
     thread_t threads_buf[16];
     thread_t *threads;
     if (servers->len < 16) {
@@ -165,7 +165,7 @@ static inline void send_in_threads(int type, list2 *servers, int8_t is_auto_send
     }
 }
 
-void send_to_servers(int type, int8_t is_auto_send) {
+void send_to_servers(int8_t type, int8_t is_auto_send) {
     list2 *servers = scan_servers();
     if (!servers) {
         servers = scan_servers();
@@ -178,7 +178,7 @@ void send_to_servers(int type, int8_t is_auto_send) {
     free_list(servers);
 }
 
-static void auto_send_to_servers(int type) {
+static void auto_send_to_servers(int8_t type) {
     switch (type) {
         case COPIED_TYPE_TEXT: {
             if (!configuration.auto_send_text) {
