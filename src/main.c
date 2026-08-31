@@ -203,15 +203,6 @@ static inline void _apply_default_conf(void) {
 
 #ifdef _WIN32
 
-#define TRAY_CB_MSG (WM_USER + 0x100)
-#define ID_QUIT 100
-#define ID_BROWSER 101
-
-static volatile HINSTANCE instance = NULL;
-static volatile HWND hWnd = NULL;
-static volatile GUID guid = {0};
-static volatile char running = 1;
-
 #ifndef NO_WEB
 static DWORD WINAPI webThreadFn(void *arg) {
     (void)arg;
@@ -225,6 +216,17 @@ static DWORD WINAPI listenerThreadFn(void *arg) {
     start_clipboard_listener();
     return EXIT_SUCCESS;
 }
+
+#ifndef NO_STATUS_ICON
+
+#define TRAY_CB_MSG (WM_USER + 0x100)
+#define ID_QUIT 100
+#define ID_BROWSER 101
+
+static volatile HINSTANCE instance = NULL;
+static volatile HWND hWnd = NULL;
+static volatile GUID guid = {0};
+static volatile char running = 1;
 
 static inline void setGUID(void) {
     char file_path[2048];
@@ -349,6 +351,7 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
     }
     return DefWindowProc(window, msg, wParam, lParam);
 }
+#endif
 
 static char *get_user_home(void) {
     DWORD pid = GetCurrentProcessId();
@@ -504,7 +507,9 @@ int main(int argc, char **argv) {
     _parse_args(argc, argv, &cmd_offset, &stop, &daemonize);
     if (stop) {
 #ifdef _WIN32
+#ifndef NO_STATUS_ICON
         remove_tray_icon();
+#endif
 #endif
         kill_other_processes(prog_name);
         puts("Client Stopped");
@@ -567,6 +572,7 @@ int main(int argc, char **argv) {
             return start_clipboard_listener();
         }
 
+#ifndef NO_STATUS_ICON
 #ifdef __linux__
         if (configuration.tray_icon) {
             fflush(stdout);
@@ -590,14 +596,17 @@ int main(int argc, char **argv) {
             }
         }
 #endif
+#endif
 
 #ifndef NO_WEB
         start_web();
 #endif
 #elif defined(_WIN32)
+#ifndef NO_STATUS_ICON
         // initialize instance and guid
         instance = GetModuleHandle(NULL);
         setGUID();
+#endif
 
 #ifndef NO_WEB
         HANDLE webThread = CreateThread(NULL, 0, webThreadFn, NULL, 0, NULL);
@@ -608,6 +617,7 @@ int main(int argc, char **argv) {
             listenerThread = CreateThread(NULL, 0, listenerThreadFn, NULL, 0, NULL);
         }
 
+#ifndef NO_STATUS_ICON
         if (configuration.tray_icon) {
             char CLASSNAME[] = "clipdesk";
             WNDCLASS wc = {.lpfnWndProc = (WNDPROC)WindowProc, .hInstance = instance, .lpszClassName = CLASSNAME};
@@ -625,13 +635,16 @@ int main(int argc, char **argv) {
             if (webThread != NULL) TerminateThread(webThread, 0);
 #endif
         }
+#endif
         if (listenerThread != NULL) WaitForSingleObject(listenerThread, INFINITE);
 #ifndef NO_WEB
         if (webThread != NULL) WaitForSingleObject(webThread, INFINITE);
 #endif
 
+#ifndef NO_STATUS_ICON
         remove_tray_icon();
         CloseHandle(instance);
+#endif
 #endif
     }
 

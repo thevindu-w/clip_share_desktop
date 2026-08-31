@@ -211,7 +211,9 @@ void cleanup(void) {
     clear_ssl_ctx();
 #endif
 #ifdef __linux__
+#ifndef NO_STATUS_ICON
     cleanup_status_icon();
+#endif
     if (_XA_CLIPBOARD) freeAtomPtr(_XA_CLIPBOARD);
     if (_XA_UTF8_STRING) freeAtomPtr(_XA_UTF8_STRING);
 #elif defined(_WIN32)

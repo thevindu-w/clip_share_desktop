@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef NO_STATUS_ICON
 #ifdef __APPLE__
 
 #import <AppKit/AppKit.h>
@@ -104,4 +105,5 @@ void show_menu_icon(void) {
     }
 }
 
+#endif
 #endif

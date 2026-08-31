@@ -57,6 +57,12 @@ else
 endif
 
 NO_WEB?=0
+NO_STATUS_ICON?=0
+CLI_ONLY?=0
+ifeq ($(CLI_ONLY),1)
+	override NO_WEB=1
+	override NO_STATUS_ICON=1
+endif
 
 ifeq ($(ARCH),x86)
 	BUILD_DIR:=$(BUILD_DIR)_x86
@@ -67,9 +73,13 @@ ifeq ($(ARCH),x86)
 endif
 
 ifeq ($(detected_OS),Linux)
-	OBJS_C+= utils/linux_status_icon.o utils/listener_linux.o xclip/xclip.o xclip/xclib.o
-	OBJS_S+= res/linux/icon_blob.o
-	CFLAGS+= $(shell pkg-config --cflags gtk+-3.0 ayatana-appindicator3-0.1) -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
+	OBJS_C+= utils/listener_linux.o xclip/xclip.o xclip/xclib.o
+	CFLAGS+= -ftree-vrp -Wformat-signedness -Wshift-overflow=2 -Wstringop-overflow=4 -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wtrampolines -Wjump-misses-init -Wlogical-op -Wvla-larger-than=65536
+	ifneq ($(NO_STATUS_ICON),1)
+		OBJS_C+= utils/linux_status_icon.o
+		OBJS_S+= res/linux/icon_blob.o
+		CFLAGS+= $(shell pkg-config --cflags gtk+-3.0 ayatana-appindicator3-0.1)
+	endif
 	CFLAGS_OPTIM=-Os
 	LDLIBS_NO_SSL=-lunistring -lX11 -lXmu -lXt -lXfixes -lpthread -ldl
 	LDLIBS_MHD=-lmicrohttpd
@@ -98,8 +108,11 @@ else ifeq ($(detected_OS),Windows)
 else ifeq ($(detected_OS),Darwin)
 export CPATH:=$(CPATH):$(shell brew --prefix)/include
 export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
-	OBJS_M= utils/listener_macos.o utils/mac_menu.o utils/mac_utils.o
-	OBJS_BIN+= res/mac/icon.o
+	OBJS_M=utils/listener_macos.o utils/mac_utils.o
+	ifneq ($(NO_STATUS_ICON),1)
+		OBJS_M+= utils/mac_menu.o
+		OBJS_BIN+= res/mac/icon.o
+	endif
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
 	CFLAGS+= -fobjc-arc
@@ -117,6 +130,9 @@ else
 	OBJS_C:=$(OBJS_C) $(OBJS_C_WEB)
 	OBJS_BIN:=res/page.o $(OBJS_BIN)
 	LDLIBS_NO_SSL:=$(LDLIBS_MHD) $(LDLIBS_NO_SSL)
+endif
+ifeq ($(NO_STATUS_ICON),1)
+	CFLAGS+= -DNO_STATUS_ICON=1
 endif
 LDLIBS=$(LDLIBS_SSL) $(LDLIBS_NO_SSL)
 CFLAGS+= -DINFO_NAME=\"clip_share\" -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
