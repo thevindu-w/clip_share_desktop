@@ -223,6 +223,7 @@ static DWORD WINAPI listenerThreadFn(void *arg) {
 #define ID_QUIT 100
 #define ID_BROWSER 101
 #define ID_SND_TXT 102
+#define ID_SND_FILE 103
 
 static volatile HINSTANCE instance = NULL;
 static volatile HWND hWnd = NULL;
@@ -321,6 +322,10 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     CreateThread(NULL, 0, sendToServersFn, (void *)COPIED_TYPE_TEXT, 0, NULL);
                     break;
                 }
+                case ID_SND_FILE: {
+                    CreateThread(NULL, 0, sendToServersFn, (void *)COPIED_TYPE_FILE, 0, NULL);
+                    break;
+                }
                 default:
                     break;
             }
@@ -337,6 +342,7 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     UINT pos = 0;
 
                     InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_TXT, TEXT("Send text"));
+                    InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_FILE, TEXT("Send files"));
 #ifndef NO_WEB
                     const char *windir = get_windir();
                     char path[64];
