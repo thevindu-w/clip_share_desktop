@@ -22,6 +22,7 @@
 #import <AppKit/NSPasteboard.h>
 #import <globals.h>
 #import <objc/Object.h>
+#import <os/lock.h>
 #import <stddef.h>
 #import <stdint.h>
 #import <string.h>
@@ -31,7 +32,9 @@
 #error This file must be compiled with ARC.
 #endif
 
-int8_t get_copied_type(void) {
+static os_unfair_lock _lock = OS_UNFAIR_LOCK_INIT;
+
+static int8_t _get_copied_type(void) {
     @autoreleasepool {
         NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
         NSArray *types = [pasteboard types];
@@ -51,9 +54,18 @@ int8_t get_copied_type(void) {
     }
 }
 
+int8_t get_copied_type(void) {
+    os_unfair_lock_lock(&_lock);
+    int8_t ret = _get_copied_type();
+    os_unfair_lock_unlock(&_lock);
+    return ret;
+}
+
 char *get_clipboard_text(uint32_t *lenptr) {
+    os_unfair_lock_lock(&_lock);
     NSPasteboard *pasteBoard = [NSPasteboard generalPasteboard];
     NSString *copiedString = [pasteBoard stringForType:NSPasteboardTypeString];
+    os_unfair_lock_unlock(&_lock);
     if (!copiedString) {
         *lenptr = 0;
         return NULL;
@@ -70,9 +82,11 @@ int put_clipboard_text(char *data, uint32_t len) {
     data[len] = 0;
     NSString *str_data = @(data);
     data[len] = c;
+    os_unfair_lock_lock(&_lock);
     NSPasteboard *pasteBoard = [NSPasteboard generalPasteboard];
     [pasteBoard clearContents];
     BOOL status = [pasteBoard setString:str_data forType:NSPasteboardTypeString];
+    os_unfair_lock_unlock(&_lock);
     if (status != YES) {
         return EXIT_FAILURE;
     }
@@ -81,11 +95,13 @@ int put_clipboard_text(char *data, uint32_t len) {
 
 char *get_copied_files_as_str(int *offset) {
     *offset = 0;
+    os_unfair_lock_lock(&_lock);
     NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
     NSArray *classes = [NSArray arrayWithObject:[NSURL class]];
     NSDictionary *options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
                                                         forKey:NSPasteboardURLReadingFileURLsOnlyKey];
     NSArray *fileURLs = [pasteboard readObjectsForClasses:classes options:options];
+    os_unfair_lock_unlock(&_lock);
     size_t tot_len = 0;
     for (NSURL *fileURL in fileURLs) {
         NSURL *pathURL = [fileURL filePathURL];
@@ -129,15 +145,19 @@ int set_clipboard_cut_files(const list2 *paths) {
     }
     NSMutableArray *fileURLs = [fileURLsMutable copy];
     create_temp_file();
+    os_unfair_lock_lock(&_lock);
     NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
     [pasteboard clearContents];
     [pasteboard writeObjects:fileURLs];
+    os_unfair_lock_unlock(&_lock);
     return EXIT_SUCCESS;
 }
 
 static inline NSBitmapImageRep *get_copied_image(void) {
+    os_unfair_lock_lock(&_lock);
     NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
     NSImage *img = [[NSImage alloc] initWithPasteboard:pasteboard];
+    os_unfair_lock_unlock(&_lock);
     if (!img) return NULL;
     CGImageRef cgRef = [img CGImageForProposedRect:NULL context:NULL hints:NULL];
     NSBitmapImageRep *imgRep = [[NSBitmapImageRep alloc] initWithCGImage:cgRef];

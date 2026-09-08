@@ -21,6 +21,8 @@
 
 #import <AppKit/AppKit.h>
 #import <globals.h>
+#import <pthread.h>
+#import <utils/background_sync.h>
 #import <utils/kill_others.h>
 #include <utils/mac_menu.h>
 #import <utils/utils.h>
@@ -31,6 +33,12 @@ extern char icon_png[];
 extern unsigned int icon_png_len;
 
 const char *global_prog_name;
+
+static void *sendTxtThread(void *args) {
+    (void)args;
+    send_to_servers(COPIED_TYPE_TEXT, 0);
+    return NULL;
+}
 
 @implementation NSApplication (KillInstances)  // NOLINT
 
@@ -46,6 +54,11 @@ const char *global_prog_name;
         execl(OPEN_PATH, "open", url, NULL);
         error_exit("Couldn't open default browser");
     }
+}
+
+- (void)onSndTxtAction:(id)sender {
+    pthread_t pid;
+    pthread_create(&pid, NULL, &sendTxtThread, NULL);
 }
 
 @end
@@ -72,6 +85,17 @@ void show_menu_icon(void) {
 #endif
             return;
         }
+
+        NSMenuItem *sndTxtMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Text"
+                                                                action:@selector(onSndTxtAction:)
+                                                         keyEquivalent:@"t"];
+        if (!sndTxtMenuItem) {
+#ifdef DEBUG_MODE
+            error("Menu item creation failed");
+#endif
+            return;
+        }
+        [menu addItem:sndTxtMenuItem];
 
 #ifndef NO_WEB
         if (file_exists(OPEN_PATH)) {
