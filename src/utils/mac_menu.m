@@ -34,9 +34,8 @@ extern unsigned int icon_png_len;
 
 const char *global_prog_name;
 
-static void *sendTxtThread(void *args) {
-    (void)args;
-    send_to_servers(COPIED_TYPE_TEXT, 0);
+static void *sendThread(void *arg) {
+    send_to_servers((int8_t)(size_t)arg, 0);
     return NULL;
 }
 
@@ -58,7 +57,12 @@ static void *sendTxtThread(void *args) {
 
 - (void)onSndTxtAction:(id)sender {
     pthread_t pid;
-    pthread_create(&pid, NULL, &sendTxtThread, NULL);
+    pthread_create(&pid, NULL, &sendThread, (void *)COPIED_TYPE_TEXT);
+}
+
+- (void)onSndFileAction:(id)sender {
+    pthread_t pid;
+    pthread_create(&pid, NULL, &sendThread, (void *)COPIED_TYPE_FILE);
 }
 
 @end
@@ -96,6 +100,17 @@ void show_menu_icon(void) {
             return;
         }
         [menu addItem:sndTxtMenuItem];
+
+        NSMenuItem *sndFileMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Files"
+                                                                 action:@selector(onSndFileAction:)
+                                                          keyEquivalent:@"f"];
+        if (!sndFileMenuItem) {
+#ifdef DEBUG_MODE
+            error("Menu item creation failed");
+#endif
+            return;
+        }
+        [menu addItem:sndFileMenuItem];
 
 #ifndef NO_WEB
         if (file_exists(OPEN_PATH)) {
