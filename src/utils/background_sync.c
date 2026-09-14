@@ -57,9 +57,10 @@ static void *send_to_server(void *args) {
     if (IS_NULL_SOCK(sock.type)) {
         return NULL;
     }
-    uint8_t method = (type == COPIED_TYPE_FILE) ? METHOD_SEND_FILE : METHOD_SEND_TEXT;
+    uint8_t method = (type == COPIED_TYPE_TEXT) ? METHOD_SEND_TEXT : METHOD_SEND_FILE;
     MethodArgs methodArgs = {0};
     methodArgs.is_auto_send = is_auto_send;
+    methodArgs.is_send_image = (type == COPIED_TYPE_IMAGE) ? 1 : 0;
     handle_proto(&sock, method, &methodArgs, NULL);
     close_socket_no_wait(&sock);
     return NULL;

@@ -117,6 +117,16 @@ static void on_send_files(void *widget, gpointer data) {
     }
 }
 
+static void on_send_image(void *widget, gpointer data) {
+    (void)widget;
+    (void)data;
+    if (fork() == 0) {
+        _do_quit();
+        send_to_servers(COPIED_TYPE_IMAGE, 0);
+        exit(0);
+    }
+}
+
 static inline GtkMenu *create_menu(void) {
     GtkWidget *menu = ptr_gtk_menu_new();
 
@@ -131,6 +141,12 @@ static inline GtkMenu *create_menu(void) {
     ptr_gtk_menu_shell_append(
         (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
         send_files_item);
+
+    GtkWidget *send_image_item = ptr_gtk_menu_item_new_with_label("Send Image");
+    ptr_g_signal_connect_data(send_image_item, "activate", G_CALLBACK(on_send_image), NULL, NULL, 0);
+    ptr_gtk_menu_shell_append(
+        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+        send_image_item);
 
 #ifndef NO_WEB
     if (file_exists(XDG_OPEN_PATH)) {
