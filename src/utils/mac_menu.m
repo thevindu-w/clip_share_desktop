@@ -65,6 +65,11 @@ static void *sendThread(void *arg) {
     pthread_create(&pid, NULL, &sendThread, (void *)COPIED_TYPE_FILE);
 }
 
+- (void)onSndImgAction:(id)sender {
+    pthread_t pid;
+    pthread_create(&pid, NULL, &sendThread, (void *)COPIED_TYPE_IMAGE);
+}
+
 @end
 
 void show_menu_icon(void) {
@@ -111,6 +116,17 @@ void show_menu_icon(void) {
             return;
         }
         [menu addItem:sndFileMenuItem];
+
+        NSMenuItem *sndImgMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Image"
+                                                                action:@selector(onSndImgAction:)
+                                                         keyEquivalent:@"i"];
+        if (!sndImgMenuItem) {
+#ifdef DEBUG_MODE
+            error("Menu item creation failed");
+#endif
+            return;
+        }
+        [menu addItem:sndImgMenuItem];
 
 #ifndef NO_WEB
         if (file_exists(OPEN_PATH)) {
