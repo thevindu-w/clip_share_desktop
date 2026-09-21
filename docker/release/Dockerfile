@@ -22,7 +22,7 @@ FROM archlinux:base AS arch_builder
 RUN pacman -Sy && \
     pacman -S --needed --noconfirm coreutils gcc make pkgconf glibc libx11 libxmu libxfixes libunistring libmicrohttpd openssl gtk3 libayatana-appindicator tinyxxd
 
-FROM debian:bullseye-slim AS debian_builder
+FROM debian:bookworm-slim AS debian_builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
