@@ -74,6 +74,13 @@ extern void cleanup(void);
 
 extern uint64_t get_time_millis(void);
 
+/*
+ * Returns the process owner's home directory (or user profile directory on Windows).
+ * Returns NULL on error.
+ * Caller needs to free the returned pointer.
+ */
+extern char *get_user_home(void);
+
 extern void create_temp_file(void);
 
 extern int check_and_delete_temp_file(void);
