@@ -37,9 +37,12 @@
 #include <utils/linux_status_icon.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>
+#if defined(__linux__) || defined(__APPLE__)
+#include <pwd.h>
+#include <sys/types.h>
+#endif
 #ifdef __linux__
 #include <X11/Xmu/Atoms.h>
-#include <pwd.h>
 #include <xclip/xclip.h>
 #endif
 #ifdef _WIN32
