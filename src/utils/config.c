@@ -30,7 +30,7 @@
 #include <winsock2.h>
 #endif
 
-#define LINE_MAX_LEN 2047
+#define LINE_MAX_LEN 2048
 
 /*
  * Trims all charactors in the range \\x01 to \\x20 inclusive from both ends of
