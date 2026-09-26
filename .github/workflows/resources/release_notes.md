@@ -14,4 +14,5 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Installers do **not** need admin or superuser privileges to run.
 
 **Changes:**
-- Add an option to send a copied image.
+- Add options to send copied items from the tray icon menu.
+- Support tilde expansion for paths in config.
