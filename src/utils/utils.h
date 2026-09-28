@@ -34,6 +34,7 @@
 #define COPIED_TYPE_TEXT 1
 #define COPIED_TYPE_FILE 2
 #define COPIED_TYPE_IMAGE 3
+#define COPIED_TYPE_AUTO 4
 
 /*
  * List of files and the length of the path of their parent directory

@@ -175,6 +175,14 @@ void send_to_servers(int8_t type, int8_t is_auto_send) {
         }
     }
 
+    if (type == COPIED_TYPE_AUTO) {
+        type = get_copied_type();
+    }
+    if (type == COPIED_TYPE_NONE) {
+        free_list(servers);
+        return;
+    }
+
     send_in_threads(type, servers, is_auto_send);
     free_list(servers);
 }
