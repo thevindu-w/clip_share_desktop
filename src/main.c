@@ -201,6 +201,7 @@ static inline void _apply_default_conf(void) {
         configuration.auto_send_servers = NULL;
     }
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
+    if (configuration.copied_type_auto < 0) configuration.copied_type_auto = 1;
 }
 
 #ifdef _WIN32

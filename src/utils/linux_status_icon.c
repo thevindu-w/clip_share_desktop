@@ -140,29 +140,31 @@ static void on_send_auto(void *widget, gpointer data) {
 static inline GtkMenu *create_menu(void) {
     GtkWidget *menu = ptr_gtk_menu_new();
 
-    GtkWidget *send_item = ptr_gtk_menu_item_new_with_label("Send");
-    ptr_g_signal_connect_data(send_item, "activate", G_CALLBACK(on_send_auto), NULL, NULL, 0);
-    ptr_gtk_menu_shell_append(
-        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
-        send_item);
+    if (configuration.copied_type_auto) {
+        GtkWidget *send_item = ptr_gtk_menu_item_new_with_label("Send");
+        ptr_g_signal_connect_data(send_item, "activate", G_CALLBACK(on_send_auto), NULL, NULL, 0);
+        ptr_gtk_menu_shell_append(
+            (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+            send_item);
+    } else {
+        GtkWidget *send_text_item = ptr_gtk_menu_item_new_with_label("Send Text");
+        ptr_g_signal_connect_data(send_text_item, "activate", G_CALLBACK(on_send_text), NULL, NULL, 0);
+        ptr_gtk_menu_shell_append(
+            (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+            send_text_item);
 
-    GtkWidget *send_text_item = ptr_gtk_menu_item_new_with_label("Send Text");
-    ptr_g_signal_connect_data(send_text_item, "activate", G_CALLBACK(on_send_text), NULL, NULL, 0);
-    ptr_gtk_menu_shell_append(
-        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
-        send_text_item);
+        GtkWidget *send_files_item = ptr_gtk_menu_item_new_with_label("Send Files");
+        ptr_g_signal_connect_data(send_files_item, "activate", G_CALLBACK(on_send_files), NULL, NULL, 0);
+        ptr_gtk_menu_shell_append(
+            (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+            send_files_item);
 
-    GtkWidget *send_files_item = ptr_gtk_menu_item_new_with_label("Send Files");
-    ptr_g_signal_connect_data(send_files_item, "activate", G_CALLBACK(on_send_files), NULL, NULL, 0);
-    ptr_gtk_menu_shell_append(
-        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
-        send_files_item);
-
-    GtkWidget *send_image_item = ptr_gtk_menu_item_new_with_label("Send Image");
-    ptr_g_signal_connect_data(send_image_item, "activate", G_CALLBACK(on_send_image), NULL, NULL, 0);
-    ptr_gtk_menu_shell_append(
-        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
-        send_image_item);
+        GtkWidget *send_image_item = ptr_gtk_menu_item_new_with_label("Send Image");
+        ptr_g_signal_connect_data(send_image_item, "activate", G_CALLBACK(on_send_image), NULL, NULL, 0);
+        ptr_gtk_menu_shell_append(
+            (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()),
+            send_image_item);
+    }
 
 #ifndef NO_WEB
     if (file_exists(XDG_OPEN_PATH)) {

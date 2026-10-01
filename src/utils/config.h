@@ -60,6 +60,7 @@ typedef struct _config {
     int64_t auto_send_max_file_size;
 
     int8_t tray_icon;
+    int8_t copied_type_auto;
 } config;
 
 /*
