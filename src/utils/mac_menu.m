@@ -55,6 +55,11 @@ static void *sendThread(void *arg) {
     }
 }
 
+- (void)onSndAutoAction:(id)sender {
+    pthread_t pid;
+    pthread_create(&pid, NULL, &sendThread, (void *)COPIED_TYPE_AUTO);
+}
+
 - (void)onSndTxtAction:(id)sender {
     pthread_t pid;
     pthread_create(&pid, NULL, &sendThread, (void *)COPIED_TYPE_TEXT);
@@ -95,38 +100,51 @@ void show_menu_icon(void) {
             return;
         }
 
-        NSMenuItem *sndTxtMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Text"
-                                                                action:@selector(onSndTxtAction:)
-                                                         keyEquivalent:@"t"];
-        if (!sndTxtMenuItem) {
+        if (configuration.copied_type_auto) {
+            NSMenuItem *sndAutoMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send"
+                                                                     action:@selector(onSndAutoAction:)
+                                                              keyEquivalent:@"s"];
+            if (!sndAutoMenuItem) {
 #ifdef DEBUG_MODE
-            error("Menu item creation failed");
+                error("Menu item creation failed");
 #endif
-            return;
-        }
-        [menu addItem:sndTxtMenuItem];
+                return;
+            }
+            [menu addItem:sndAutoMenuItem];
+        } else {
+            NSMenuItem *sndTxtMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Text"
+                                                                    action:@selector(onSndTxtAction:)
+                                                             keyEquivalent:@"t"];
+            if (!sndTxtMenuItem) {
+#ifdef DEBUG_MODE
+                error("Menu item creation failed");
+#endif
+                return;
+            }
+            [menu addItem:sndTxtMenuItem];
 
-        NSMenuItem *sndFileMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Files"
-                                                                 action:@selector(onSndFileAction:)
-                                                          keyEquivalent:@"f"];
-        if (!sndFileMenuItem) {
+            NSMenuItem *sndFileMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Files"
+                                                                     action:@selector(onSndFileAction:)
+                                                              keyEquivalent:@"f"];
+            if (!sndFileMenuItem) {
 #ifdef DEBUG_MODE
-            error("Menu item creation failed");
+                error("Menu item creation failed");
 #endif
-            return;
-        }
-        [menu addItem:sndFileMenuItem];
+                return;
+            }
+            [menu addItem:sndFileMenuItem];
 
-        NSMenuItem *sndImgMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Image"
-                                                                action:@selector(onSndImgAction:)
-                                                         keyEquivalent:@"i"];
-        if (!sndImgMenuItem) {
+            NSMenuItem *sndImgMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send Image"
+                                                                    action:@selector(onSndImgAction:)
+                                                             keyEquivalent:@"i"];
+            if (!sndImgMenuItem) {
 #ifdef DEBUG_MODE
-            error("Menu item creation failed");
+                error("Menu item creation failed");
 #endif
-            return;
+                return;
+            }
+            [menu addItem:sndImgMenuItem];
         }
-        [menu addItem:sndImgMenuItem];
 
 #ifndef NO_WEB
         if (file_exists(OPEN_PATH)) {
