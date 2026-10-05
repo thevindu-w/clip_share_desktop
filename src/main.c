@@ -228,6 +228,7 @@ static DWORD WINAPI listenerThreadFn(void *arg) {
 #define ID_SND_TXT 102
 #define ID_SND_FILE 103
 #define ID_SND_IMG 104
+#define ID_SND_AUTO 105
 
 static volatile HINSTANCE instance = NULL;
 static volatile HWND hWnd = NULL;
@@ -334,6 +335,10 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     CreateThread(NULL, 0, sendToServersFn, (void *)COPIED_TYPE_IMAGE, 0, NULL);
                     break;
                 }
+                case ID_SND_AUTO: {
+                    CreateThread(NULL, 0, sendToServersFn, (void *)COPIED_TYPE_AUTO, 0, NULL);
+                    break;
+                }
                 default:
                     break;
             }
@@ -349,9 +354,13 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     HMENU hmenu = CreatePopupMenu();
                     UINT pos = 0;
 
-                    InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_TXT, TEXT("Send text"));
-                    InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_FILE, TEXT("Send files"));
-                    InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_IMG, TEXT("Send image"));
+                    if (configuration.copied_type_auto) {
+                        InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_AUTO, TEXT("Send"));
+                    } else {
+                        InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_TXT, TEXT("Send text"));
+                        InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_FILE, TEXT("Send files"));
+                        InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_IMG, TEXT("Send image"));
+                    }
 #ifndef NO_WEB
                     const char *windir = get_windir();
                     char path[64];
