@@ -60,12 +60,6 @@ static int doIn(Window win, unsigned long len, const char *buf, xclip_options *o
     /* FIXME: Should not use CurrentTime, according to ICCCM section 2.1 */
     XSetSelectionOwner(options->dpy, options->sseln, win, CurrentTime);
 
-    /* Avoid making the current directory in use, in case it will need to be umounted */
-    if (chdir("/") == -1) {
-        free(sel_buf);
-        return EXIT_FAILURE;
-    }
-
     /* loop and wait for the expected number of
      * SelectionRequest events
      */
