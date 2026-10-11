@@ -38,7 +38,7 @@
 #define COMMAND_SEND_IMAGE 84
 #define COMMAND_INFO 125
 
-#define SERVER_ADDR_AUTO ((uint32_t)-1)
+#define SERVER_ADDR_AUTO ((uint32_t) - 1)
 
 static void net_scan(void);
 
