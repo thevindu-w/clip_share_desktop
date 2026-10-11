@@ -165,6 +165,11 @@ static list2 *filter_addresses(list2 *servers, list2 *addrs) {
     }
     free_list(addrs);
 
+    if (servers->len == 0) {
+        free_list(servers);
+        return NULL;
+    }
+
     // Remove duplicates
     qsort(servers->array, servers->len, sizeof(servers->array[0]), &addr_comp);
     for (unsigned int i = 1; i < servers->len; i++) {

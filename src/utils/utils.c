@@ -89,7 +89,7 @@ char *pending_data = NULL;
 
 void print_usage(const char *prog_name) {
     fprintf(stderr, "\nUsage: %s [OPTION]\n", prog_name);
-    fprintf(stderr, "  or:  %s -c COMMAND <server-address-ipv4> [optional args]\n", prog_name);
+    fprintf(stderr, "  or:  %s -c COMMAND [server-address-ipv4|auto] [optional args]\n", prog_name);
     fprintf(stderr,
             "\nOptions available:\n"
             "\t-h : Display this help list\n"

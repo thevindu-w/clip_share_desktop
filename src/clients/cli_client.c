@@ -38,6 +38,8 @@
 #define COMMAND_SEND_IMAGE 84
 #define COMMAND_INFO 125
 
+#define SERVER_ADDR_AUTO ((uint32_t)-1)
+
 static void net_scan(void);
 
 static int _invoke_method(uint32_t server_addr, unsigned char method, MethodArgs *args) {
@@ -185,7 +187,9 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_
         *command_p = 0;
         return;
     }
-    if (ipv4_aton(argv[1], server_addr_p) != EXIT_SUCCESS) {
+    if (!strcmp(argv[1], "auto")) {
+        *server_addr_p = SERVER_ADDR_AUTO;
+    } else if (ipv4_aton(argv[1], server_addr_p) != EXIT_SUCCESS) {
         fprintf(stderr, "Invalid server address %s\n\n", argv[1]);
         *command_p = 0;
         return;
@@ -205,9 +209,26 @@ static inline void _parse_args(int argc, char **argv, int8_t *command_p, uint32_
 
 void cli_client(int argc, char **argv, const char *prog_name) {
     int8_t command;
-    uint32_t server_addr;
+    uint32_t server_addr = 0;
     MethodArgs args = {0};
     _parse_args(argc, argv, &command, &server_addr, &args);
+
+    if (server_addr == SERVER_ADDR_AUTO) {
+        list2 *servers = udp_scan();
+        if (!servers) {
+            servers = udp_scan();
+            if (!servers) {
+                fprintf(stderr, "No servers found\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        if (ipv4_aton(servers->array[0], &server_addr) != EXIT_SUCCESS) {
+            free_list(servers);
+            fprintf(stderr, "Error occured\n");
+            exit(EXIT_FAILURE);
+        }
+        free_list(servers);
+    }
 
     switch (command) {
         case COMMAND_SCAN: {
@@ -265,13 +286,11 @@ void cli_client(int argc, char **argv, const char *prog_name) {
 
 static void net_scan(void) {
     list2 *servers = udp_scan();
-    if (!servers) {
-        fprintf(stderr, "Scan failed\n");
-        exit(EXIT_FAILURE);
-    }
-    if (servers->len == 0) {
+    if (!servers || servers->len == 0) {
         fprintf(stderr, "No servers found\n");
-        free_list(servers);
+        if (servers) {
+            free_list(servers);
+        }
         return;
     }
     for (size_t i = 0; i < servers->len; i++) {
