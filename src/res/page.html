@@ -90,7 +90,7 @@
             display: flex;
             justify-content: space-between;
             height: 64px;
-            margin-top: 6px;
+            margin: 6px 10px 0;
         }
 
         .btn-row button {
@@ -139,6 +139,14 @@
             padding-left: 1rem;
             padding-right: 1rem;
             font-size: 16pt;
+        }
+
+        #manual-type {
+            display: none;
+        }
+
+        #auto-type .btn-send {
+            flex: 1;
         }
 
         .bottom-row {
@@ -224,7 +232,10 @@
         <div id="output" class="output">
         </div>
 
-        <div class="btn-row">
+        <div id="auto-type" class="btn-row">
+            <button class="btn-send" onclick="onSendAuto()">SEND</button>
+        </div>
+        <div id="manual-type" class="btn-row">
             <button class="btn-send" onclick="onSendTxt()">SEND TEXT</button>
             <button class="btn-send" onclick="onSendImg()">SEND IMAGE</button>
             <button class="btn-send" onclick="onSendFile()">SEND FILE</button>
@@ -373,6 +384,11 @@
         function onSendImg() {
             const xhr = sendRequest('/send/image');
             if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent image: ', { no_data: 'No image copied!', general: 'Send image failed!' });
+        }
+
+        function onSendAuto() {
+            const xhr = sendRequest('/send/auto');
+            if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent: ', { no_data: 'Nothing is copied!', general: 'Send failed!' });
         }
 
         function onScan() {

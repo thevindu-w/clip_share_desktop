@@ -247,6 +247,35 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             args.is_send_image = 1;
             handle_method(connection, query.server, METHOD_SEND_FILE, &args);
             handled = 1;
+        } else if (!strcmp(url, "/send/auto")) {
+            int8_t type = get_copied_type();
+            MethodArgs args = {0};
+            uint8_t snd_method;
+            switch (type) {
+                case COPIED_TYPE_TEXT: {
+                    snd_method = METHOD_SEND_TEXT;
+                    break;
+                }
+                case COPIED_TYPE_FILE: {
+                    snd_method = METHOD_SEND_FILE;
+                    break;
+                }
+                case COPIED_TYPE_IMAGE: {
+                    snd_method = METHOD_SEND_FILE;
+                    args.is_send_image = 1;
+                    break;
+                }
+                default:
+                    snd_method = 0;
+                    break;
+            }
+            if (snd_method > 0) {
+                handle_method(connection, query.server, snd_method, &args);
+                handled = 1;
+            } else {
+                response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
+                res_status = MHD_HTTP_NOT_FOUND;
+            }
         } else {
             response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
             res_status = MHD_HTTP_NOT_FOUND;
