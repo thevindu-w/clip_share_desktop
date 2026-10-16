@@ -117,6 +117,7 @@ jobs:
           mingw-w64-${{matrix.target.env}}-libunistring \
           make \
           python \
+          perl \
           diffutils \
           findutils \
           coreutils \

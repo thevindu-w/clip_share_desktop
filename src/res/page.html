@@ -269,6 +269,8 @@
         const overlay = document.getElementById('overlay');
         const popup = document.getElementById('popup');
         const displayInput = document.getElementById('display');
+        const autoTypeRow = document.getElementById('auto-type');
+        const manualTypeRow = document.getElementById('manual-type');
 
         function getStateChangeFn(xhr, successMsgPrefix, failureMsg) {
             return function () {
@@ -421,6 +423,27 @@
         popup.onclick = function (e) {
             e.stopPropagation();
         }
+
+        function setSendType(isAuto) {
+            if (isAuto) {
+                autoTypeRow.style.display = 'flex';
+                manualTypeRow.style.display = 'none';
+            } else {
+                autoTypeRow.style.display = 'none';
+                manualTypeRow.style.display = 'flex';
+            }
+        }
+
+        function applySettings() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/settings', false);
+            xhr.send();
+            if (xhr.status != 200) return;
+            const settings = JSON.parse(xhr.response);
+            setSendType(settings.autoDetectSendType);
+        }
+
+        applySettings();
     </script>
 </body>
 

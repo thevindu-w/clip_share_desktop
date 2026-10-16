@@ -53,6 +53,7 @@ extern unsigned int page_html_len;
 
 static const char *CONTENT_TYPE_TEXT = "text/plain";
 static const char *CONTENT_TYPE_HTML = "text/html";
+static const char *CONTENT_TYPE_JSON = "application/json";
 
 typedef struct _get_query_params {
     char *server;
@@ -207,8 +208,19 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
 
     unsigned int res_status = MHD_HTTP_OK;
     if (!strcmp(method, MHD_HTTP_METHOD_GET)) {
-        response = MHD_create_response_from_buffer(page_html_len, (void *)page_html, MHD_RESPMEM_PERSISTENT);
-        MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_HTML);
+        if (!strcmp(url, "/settings")) {
+            char settings[64];
+            if (snprintf_check(settings, sizeof(settings), "{\"autoDetectSendType\":%hhi}",
+                               configuration.copied_type_auto)) {
+                snprintf(settings, sizeof(settings), "{}");
+            }
+            response = MHD_create_response_from_buffer(strnlen(settings, sizeof(settings) - 1), (void *)settings,
+                                                       MHD_RESPMEM_MUST_COPY);
+            MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_JSON);
+        } else {
+            response = MHD_create_response_from_buffer(page_html_len, (void *)page_html, MHD_RESPMEM_PERSISTENT);
+            MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_HTML);
+        }
     } else if (!strcmp(method, MHD_HTTP_METHOD_POST)) {
         get_query_params query = {.server = NULL, .display = 0};
         MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, extract_query_params, &query);
