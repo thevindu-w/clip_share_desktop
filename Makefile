@@ -113,9 +113,7 @@ export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
 		OBJS_M+= utils/mac_menu.o
 		OBJS_BIN+= res/mac/icon.o
 	endif
-	CFLAGS+= -fobjc-arc
-	CFLAGS_OPTIM=-O3
-	CFLAGS+= -fobjc-arc
+	CFLAGS+= -fobjc-arc -DOPENSSL_SUPPRESS_DEPRECATED
 	CFLAGS_OPTIM=-O3
 	LDLIBS_NO_SSL=-framework AppKit -lunistring -lobjc
 	LDLIBS_MHD=-lmicrohttpd
