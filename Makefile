@@ -32,8 +32,9 @@ MAX_PROTO=4
 
 CC=gcc
 CPP=cpp
-CFLAGS=-c -pipe -I$(SRC_DIR) --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
+CFLAGS=-c -pipe --std=gnu11 -fstack-protector -fstack-protector-all -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-nonliteral -Wformat-security -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default -Wstrict-overflow=4 -Wconversion -Wfloat-equal -Wshadow -Wpointer-arith -Wundef -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wredundant-decls -Wnested-externs -Woverlength-strings
 CFLAGS_DEBUG=-g -DDEBUG_MODE
+CPPFLAGS=-I$(SRC_DIR)
 VPATH=$(SRC_DIR)
 
 OBJS_C=main.o clients/cli_client.o clients/udp_scan.o proto/selector.o proto/versions.o proto/methods.o utils/utils.o utils/net_utils.o utils/list_utils.o utils/config.o utils/kill_others.o utils/background_sync.o
@@ -106,15 +107,13 @@ else ifeq ($(detected_OS),Windows)
 	PROGRAM_NAME:=$(PROGRAM_NAME).exe
 	PROGRAM_NAME_NO_SSL:=$(PROGRAM_NAME_NO_SSL).exe
 else ifeq ($(detected_OS),Darwin)
-export CPATH:=$(CPATH):$(shell brew --prefix)/include
-export LIBRARY_PATH:=$(LIBRARY_PATH):$(shell brew --prefix)/lib
+	CPPFLAGS+= -I$(shell brew --prefix openssl@3)/include -I$(shell brew --prefix)/include
+	LINK_FLAGS_BUILD+= -L$(shell brew --prefix openssl@3)/lib -L$(shell brew --prefix)/lib
 	OBJS_M=utils/listener_macos.o utils/mac_utils.o
 	ifneq ($(NO_STATUS_ICON),1)
 		OBJS_M+= utils/mac_menu.o
 		OBJS_BIN+= res/mac/icon.o
 	endif
-	CFLAGS+= -fobjc-arc
-	CFLAGS_OPTIM=-O3
 	CFLAGS+= -fobjc-arc
 	CFLAGS_OPTIM=-O3
 	LDLIBS_NO_SSL=-framework AppKit -lunistring -lobjc
@@ -137,6 +136,7 @@ endif
 LDLIBS=$(LDLIBS_SSL) $(LDLIBS_NO_SSL)
 CFLAGS+= -DINFO_NAME=\"clip_share\" -DPROTOCOL_MIN=$(MIN_PROTO) -DPROTOCOL_MAX=$(MAX_PROTO)
 CFLAGS_OPTIM+= -Werror
+CFLAGS:=$(CPPFLAGS) $(CFLAGS)
 
 VERSION_FILE=$(SRC_DIR)/res/version
 ifeq (4.2,$(firstword $(sort $(MAKE_VERSION) 4.2)))
