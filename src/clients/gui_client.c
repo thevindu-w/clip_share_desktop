@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <utils/net_utils.h>
 #include <utils/utils.h>
 
@@ -60,6 +61,11 @@ typedef struct _get_query_params {
     int32_t display;
 } get_query_params;
 
+typedef struct _req_headers {
+    char *host;
+    char *referer;
+} req_headers;
+
 #ifdef MHD_YES
 typedef int MHD_Result_t;
 #else
@@ -74,6 +80,11 @@ static void *set_clipboard_thread_fn(void *args) {
 }
 #endif
 
+static void block_iframes(struct MHD_Response *response) {
+    MHD_add_response_header(response, "X-Frame-Options", "DENY");
+    MHD_add_response_header(response, "Content-Security-Policy", "frame-ancestors 'none'");
+}
+
 static void callback_fn(unsigned int status, const char *msg, size_t len, status_callback_params *params) {
     if ((!params) || params->called) {
         return;
@@ -85,6 +96,7 @@ static void callback_fn(unsigned int status, const char *msg, size_t len, status
     struct MHD_Response *response = MHD_create_response_from_buffer(len, (void *)msg, MHD_RESPMEM_MUST_COPY);
 #pragma GCC diagnostic pop
     MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_TEXT);
+    block_iframes(response);
     MHD_queue_response(params->connection, status, response);
     MHD_destroy_response(response);
 }
@@ -194,6 +206,56 @@ static MHD_Result_t extract_query_params(void *cls, enum MHD_ValueKind kind, con
     return MHD_YES;
 }
 
+static MHD_Result_t check_headers(void *cls, enum MHD_ValueKind kind, const char *key, const char *value) {
+    (void)kind;
+    req_headers *headers = (req_headers *)cls;
+#ifdef DEBUG_MODE
+    printf("%s: %s\n", key, value);
+#endif
+    if (!key || !*key || (strnlen(key, 9) > 7)) {
+        return MHD_YES;
+    }
+    if (!strcasecmp(key, "Host")) {
+        if (headers->host) {
+            free(headers->host);
+            headers->host = NULL;
+            return MHD_NO;
+        }
+        if (strnlen(value, 512) < 511) {
+            headers->host = strdup(value);
+        }
+    } else if (!strcasecmp(key, "Referer")) {
+        if (headers->referer) {
+            free(headers->referer);
+            headers->referer = NULL;
+            return MHD_NO;
+        }
+        if (strnlen(value, 1024) < 1023) {
+            headers->referer = strdup(value);
+        }
+    }
+    return MHD_YES;
+}
+
+static int is_authorized(const req_headers *headers) {
+    if (!headers->host || !headers->referer || !*(headers->host) || !*(headers->referer)) {
+        return 0;
+    }
+    const char *host = headers->host;
+    const char *referer = headers->referer;
+    if (!strncmp(referer, "http://", 7)) {  // strip leading http://
+        referer += 7;
+    }
+    size_t len = strnlen(host, 512);
+    if (len >= 511) {
+        return 0;
+    }
+    if (strncmp(referer, host, len)) {  // host must be the prefix of referer
+        return 0;
+    }
+    return !referer[len] || referer[len] == '/';
+}
+
 static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url,
                                          const char *method, const char *version, const char *upload_data,
                                          size_t *upload_data_size, void **con_cls) {
@@ -204,11 +266,20 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
     (void)upload_data_size;
     (void)con_cls;
 
+    req_headers headers = {.host = NULL, .referer = NULL};
+    MHD_get_connection_values(connection, MHD_HEADER_KIND, check_headers, &headers);
+    int authorized = is_authorized(&headers);
+    if (headers.host) {
+        free(headers.host);
+    }
+    if (headers.referer) {
+        free(headers.referer);
+    }
     char empty_resp[] = "";
 
     unsigned int res_status = MHD_HTTP_OK;
     if (!strcmp(method, MHD_HTTP_METHOD_GET)) {
-        if (!strcmp(url, "/settings")) {
+        if (authorized && !strcmp(url, "/settings")) {
             char settings[64];
             if (snprintf_check(settings, sizeof(settings), "{\"autoDetectSendType\":%hhi}",
                                configuration.copied_type_auto)) {
@@ -221,7 +292,7 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
             response = MHD_create_response_from_buffer(page_html_len, (void *)page_html, MHD_RESPMEM_PERSISTENT);
             MHD_add_response_header(response, "Content-Type", CONTENT_TYPE_HTML);
         }
-    } else if (!strcmp(method, MHD_HTTP_METHOD_POST)) {
+    } else if (authorized && !strcmp(method, MHD_HTTP_METHOD_POST)) {
         get_query_params query = {.server = NULL, .display = 0};
         MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, extract_query_params, &query);
         char handled = 0;
@@ -302,8 +373,9 @@ static MHD_Result_t answer_to_connection(void *cls, struct MHD_Connection *conne
         if (handled) return MHD_YES;
     } else {
         response = MHD_create_response_from_buffer(0, (void *)empty_resp, MHD_RESPMEM_PERSISTENT);
-        res_status = MHD_HTTP_NOT_IMPLEMENTED;
+        res_status = authorized ? MHD_HTTP_NOT_IMPLEMENTED : MHD_HTTP_FORBIDDEN;
     }
+    block_iframes(response);
     MHD_Result_t ret = MHD_queue_response(connection, res_status, response);
     MHD_destroy_response(response);
 
