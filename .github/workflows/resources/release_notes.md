@@ -14,5 +14,7 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Installers do **not** need admin or superuser privileges to run.
 
 **Changes:**
-- Add options to send copied items from the tray icon menu.
-- Support tilde expansion for paths in config.
+- Auto-detect copied type (text, files, image) to send.
+- Add a new config option to switch between auto-detection and manual selection.
+- Add a feature to automatically find the address of the server in CLI.
+- Bug fixes and minor improvements.
