@@ -32,7 +32,8 @@ More customization options, other installation options, and detailed instruction
 </tr>
 <tr>
 <td align="center">
-<a href="https://github.com/thevindu-w/clip_share_server/releases"><img src="https://raw.githubusercontent.com/thevindu-w/clip_share_client/master/fastlane/metadata/android/en-US/images/icon.png" alt="Get it on GitHub" width="100"/></a><br>
+<a href="https://github.com/thevindu-w/clip_share_server/releases"><img src="https://raw.githubusercontent.com/thevindu-w/clip_share_client/master/fastlane/metadata/android/en-US/images/icon.png" alt="Get it on GitHub" width="100" align="middle"/></a>&emsp;
+<a href="https://github.com/thevindu-w/clip_share_server/releases"><img src="https://docs.appimage.org/_images/download-appimage-banner.svg" alt="Get it on GitHub" width="150" align="middle"/></a><br>
 Download the server from <a href="https://github.com/thevindu-w/clip_share_server/releases">Releases</a>.
 </td>
 </tr>
@@ -97,7 +98,7 @@ The GUI client provides a web interface similar to the mobile client app. The cl
 
 The CLI client enables using this desktop client with a command. To use the client in this CLI mode, you need to run the client program with the following command line arguments.
 ```bash
-clip-share-client -c COMMAND <server-address-ipv4> [optional args]
+clip-share-client -c COMMAND [server-address-ipv4|auto] [optional args]
 ```
 **Commands available:**
 - `sc`&nbsp;&nbsp;: Scan - server address is not needed
@@ -114,6 +115,10 @@ clip-share-client -c COMMAND <server-address-ipv4> [optional args]
 ```bash
 # Get copied text from the device having IP address 192.168.21.42
 clip-share-client -c g 192.168.21.42
+```
+```bash
+# Send copied text to a device on the network. Device address is automatically discovered with a scan
+clip-share-client -c s auto
 ```
 ```bash
 # Get a screenshot of screen number 1 from the device having IP address 192.168.21.42
@@ -276,6 +281,7 @@ auto_send_max_files=32
 auto_send_max_file_size=64M
 
 tray_icon=true
+copied_type_auto_detect=true
 ```
 </details>
 
@@ -307,7 +313,8 @@ Note that all the lines in the configuration file are optional. You may omit som
 | `auto_send_servers` | The text file containing a list of IPv4 addresses (in dot-decimal notation, one address per line) of servers to allow auto-sending. If this is not specified or there are no valid IPv4 addresses in the file, all addresses are allowed. | Absolute or relative path to the server addresses file | \<Unspecified\> |
 | `auto_send_max_files` | The maximum number of files to auto-send. The auto-send feature will not send files if the number of copied files exceeds this limit. | Any integer between 1 and 4294967295 inclusive | 32 |
 | `auto_send_max_file_size` | The maximum size of any single file in bytes, transferred with auto-send. | Any integer between 1 and 9223372036854775807 (nearly 8 EiB) inclusive. Suffixes K, M, G, and T (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, x10<sup>9</sup>, and x10<sup>12</sup>, respectively. | 67108864 (i.e. 64 MiB) |
-| `tray_icon` | Whether the application should display a system tray icon when running in GUI mode. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
+| `tray_icon` | Whether the application should display a system tray/menu icon when running in GUI mode. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
+| `copied_type_auto_detect` | Whether to automatically select the copied data type (text, files, or image). The values `true` or `1` will auto-detect the type, while `false` or `0` will provide manual selection. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
 
 <br>
 <br>
