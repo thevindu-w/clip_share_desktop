@@ -219,6 +219,19 @@
         #popup div.buttons button.screenshot {
             background-color: #087;
         }
+
+        #popup div.list-item {
+            margin: 5px 0;
+            width: 100%;
+            min-width: 20em;
+        }
+
+        #popup div.list-item label {
+            padding: 10px;
+            width: 100%;
+            display: inline-block;
+            background-color: lightgray;
+        }
     </style>
 </head>
 
@@ -253,13 +266,20 @@
     </div>
     <div id="overlay">
         <div id="popup">
-            <div class="display">
-                <label for="server">Display</label>
-                <input type="number" id="display" placeholder="1" min="0" max="65535">
+            <div id="display-select" hidden>
+                <div class="display">
+                    <label for="server">Display</label>
+                    <input type="number" id="display" placeholder="1" min="0" max="65535">
+                </div>
+                <div class="buttons">
+                    <button class="copied-img" onclick="onGetCopiedImg()">Copied Image</button>
+                    <button class="screenshot" onclick="onGetScreenshot()">Screenshot</button>
+                </div>
             </div>
-            <div class="buttons">
-                <button class="copied-img" onclick="onGetCopiedImg()">Copied Image</button>
-                <button class="screenshot" onclick="onGetScreenshot()">Screenshot</button>
+            <div id="addr-list">
+                <div class="list-item" hidden>
+                    <label onclick="onSelectServer(this)"></label>
+                </div>
             </div>
         </div>
     </div>
@@ -270,6 +290,8 @@
         const overlay = document.getElementById('overlay');
         const popup = document.getElementById('popup');
         const displayInput = document.getElementById('display');
+        const displaySelect = document.getElementById('display-select');
+        const addrList = document.getElementById('addr-list');
         const autoTypeRow = document.getElementById('auto-type');
         const manualTypeRow = document.getElementById('manual-type');
 
@@ -365,8 +387,16 @@
             overlay.click();
         }
 
-        function onGetImgOptions() {
+        function showPopup(child) {
+            for (let node of popup.children) {
+                node.style.display = 'none';
+            }
+            child.style.display = 'block';
             overlay.style.display = 'flex';
+        }
+
+        function onGetImgOptions() {
+            showPopup(displaySelect);
         }
 
         function onGetFile() {
@@ -394,6 +424,11 @@
             if (xhr) xhr.onreadystatechange = getStateChangeFn(xhr, 'Sent: ', { no_data: 'Nothing is copied!', general: 'Send failed!' });
         }
 
+        function onSelectServer(elem) {
+            serverInput.value = elem.innerText;
+            overlay.click();
+        }
+
         function onScan() {
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/scan", true);
@@ -408,7 +443,21 @@
                         let data = xhr.responseText;
                         if (!data) data = '';
                         if (!data) alert('No servers found');
-                        serverInput.value = data.split(',')[0];
+                        let servers = data.split(',');
+                        if (servers.length > 1) {
+                            while (addrList.childElementCount > 1) {
+                                addrList.removeChild(addrList.lastElementChild);
+                            }
+                            for (let server of servers) {
+                                let elem = addrList.firstElementChild.cloneNode(true);
+                                elem.firstElementChild.innerText = server;
+                                elem.style.display = 'block';
+                                addrList.appendChild(elem);
+                            }
+                            showPopup(addrList);
+                        } else {
+                            serverInput.value = servers[0];
+                        }
                     }
                 } catch (error) {
                     alert("Scan failed");
