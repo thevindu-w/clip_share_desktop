@@ -37,6 +37,9 @@ typedef union {
     uint16_t display;
     int8_t is_auto_send;
     int8_t is_send_image;
+#if (PROTOCOL_MIN <= 4) && (4 <= PROTOCOL_MAX)
+    char **data_p;
+#endif
 } MethodArgs;
 
 /*

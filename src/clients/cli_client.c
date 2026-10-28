@@ -144,11 +144,18 @@ static inline void _send_image(uint32_t server_addr) {
 
 static inline void _get_info(uint32_t server_addr) {
     const char *msg_suffix;
-    if (_invoke_method(server_addr, METHOD_INFO, NULL) == EXIT_SUCCESS)
+    MethodArgs args = {0};
+    char *info = NULL;
+    args.data_p = &info;
+    if (_invoke_method(server_addr, METHOD_INFO, &args) == EXIT_SUCCESS)
         msg_suffix = "done";
     else
         msg_suffix = "failed!";
     printf("Info check %s\n", msg_suffix);
+    if (info) {
+        puts(info);
+        free(info);
+    }
 }
 
 /*

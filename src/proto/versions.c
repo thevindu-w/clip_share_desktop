@@ -272,7 +272,10 @@ int version_4(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
             return get_screenshot_v4(socket, display, callback);
         }
         case METHOD_INFO: {
-            return info_v4(socket, callback);
+            if (args) {
+                return info_v4(socket, callback, args->data_p);
+            }
+            return info_v4(socket, callback, NULL);
         }
         default: {  // unknown method
             if (callback) callback->function(RESP_PROTO_METHOD_ERROR, NULL, 0, callback->params);

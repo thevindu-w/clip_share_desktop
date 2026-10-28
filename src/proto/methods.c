@@ -906,7 +906,7 @@ int get_screenshot_v4(socket_t *socket, uint16_t display, StatusCallback *callba
     return _get_screenshot_common(4, socket, display, callback);
 }
 
-int info_v4(socket_t *socket, StatusCallback *callback) {
+int info_v4(socket_t *socket, StatusCallback *callback, char **info_p) {
     size_t length;
     char *info = _get_info_common(socket, &length, callback);
     if (!info || length < sizeof(INFO_NAME) - 1) {
@@ -923,11 +923,16 @@ int info_v4(socket_t *socket, StatusCallback *callback) {
         return EXIT_FAILURE;
     }
     if (callback) callback->function(RESP_OK, info, length, callback->params);
-    free(info);
     if (_send_ack(socket) != EXIT_SUCCESS) {
+        free(info);
         return EXIT_FAILURE;
     }
     close_socket(socket);
+    if (info_p) {
+        *info_p = info;
+    } else {
+        free(info);
+    }
     return EXIT_SUCCESS;
 }
 
