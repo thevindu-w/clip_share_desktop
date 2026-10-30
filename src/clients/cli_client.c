@@ -293,8 +293,65 @@ void cli_client(int argc, char **argv, const char *prog_name) {
 #endif
 }
 
+static void get_server_names(list2 *servers) {
+    if (!servers) {
+        return;
+    }
+    for (unsigned int i = 0; i < servers->len; i++) {
+        char *server = servers->array[i];
+        socket_t sock;
+        uint32_t server_addr;
+        if (ipv4_aton(server, &server_addr) != EXIT_SUCCESS) {
+            continue;
+        }
+        connect_server(&sock, server_addr);
+        if (IS_NULL_SOCK(sock.type)) {
+            continue;
+        }
+        char *data = NULL;
+        MethodArgs args = {0};
+        args.data_p = &data;
+        int ret = handle_proto(&sock, METHOD_INFO, &args, NULL);
+        close_socket_no_wait(&sock);
+        if (ret != EXIT_SUCCESS) {
+            if (data) {
+                free(data);
+            }
+            continue;
+        }
+        char *line = strstr(data, "\nserver_name=");
+        if (!line) {
+            if (data) {
+                free(data);
+            }
+            continue;
+        }
+        line += 13;
+        char *eol = strchr(line, '\n');
+        if (eol) {
+            *eol = '\0';
+        }
+        size_t len = strnlen(line, 512);
+        memmove(data, line, len);
+        data[len] = 0;
+        size_t addr_len = strnlen(server, 128);
+        size_t tot_len = addr_len + len + 2;
+        char *out = realloc(server, tot_len);
+        if (!out) {
+            if (data) {
+                free(data);
+            }
+            continue;
+        }
+        snprintf(out + addr_len, tot_len, " %s", data);
+        free(data);
+        servers->array[i] = out;
+    }
+}
+
 static void net_scan(void) {
     list2 *servers = udp_scan();
+    get_server_names(servers);
     if (!servers || servers->len == 0) {
         fprintf(stderr, "No servers found\n");
         if (servers) {
