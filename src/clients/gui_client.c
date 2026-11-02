@@ -18,6 +18,7 @@
 
 #ifndef NO_WEB
 
+#include <clients/common.h>
 #include <clients/gui_client.h>
 #include <clients/status_cb.h>
 #include <clients/udp_scan.h>
@@ -153,6 +154,7 @@ static void handle_scan(struct MHD_Connection *connection) {
         callback_fn(RESP_OK, "", 0, &params);
         return;
     }
+    get_server_names(server_list, '\n');
     size_t tot_len = 0;
     for (uint32_t i = 0; i < server_list->len; i++) {
         const char *addr = server_list->array[i];

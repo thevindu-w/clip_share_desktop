@@ -221,6 +221,7 @@
         }
 
         #popup div.list-item {
+            flex-direction: row;
             margin: 5px 0;
             width: 100%;
             min-width: 20em;
@@ -228,9 +229,13 @@
 
         #popup div.list-item label {
             padding: 10px;
-            width: 100%;
+            flex: auto;
             display: inline-block;
             background-color: lightgray;
+        }
+
+        #popup div.list-item label.name-lbl {
+            text-align: right;
         }
     </style>
 </head>
@@ -277,8 +282,9 @@
                 </div>
             </div>
             <div id="addr-list">
-                <div class="list-item" hidden>
-                    <label onclick="onSelectServer(this)"></label>
+                <div class="list-item" onclick="onSelectServer(this)" hidden>
+                    <label class="addr-lbl"></label>
+                    <label class="name-lbl"></label>
                 </div>
             </div>
         </div>
@@ -425,7 +431,7 @@
         }
 
         function onSelectServer(elem) {
-            serverInput.value = elem.innerText;
+            serverInput.value = elem.firstElementChild.innerText;
             overlay.click();
         }
 
@@ -450,13 +456,20 @@
                             }
                             for (let server of servers) {
                                 let elem = addrList.firstElementChild.cloneNode(true);
-                                elem.firstElementChild.innerText = server;
-                                elem.style.display = 'block';
+                                let addrName = server.split('\n');
+                                elem.firstElementChild.innerText = addrName[0];
+                                if (addrName.length == 2) {
+                                    elem.lastElementChild.innerText = addrName[1];
+                                } else {
+                                    elem.lastElementChild.style.display = 'none';
+                                    elem.firstElementChild.style.flex = 1;
+                                }
+                                elem.style.display = 'flex';
                                 addrList.appendChild(elem);
                             }
                             showPopup(addrList);
                         } else {
-                            serverInput.value = servers[0];
+                            serverInput.value = servers[0].split('\n')[0];
                         }
                     }
                 } catch (error) {
