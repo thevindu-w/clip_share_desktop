@@ -18,63 +18,125 @@
 
 #include <clients/common.h>
 #include <proto/selector.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <utils/list_utils.h>
 #include <utils/net_utils.h>
+#if defined(__linux__) || defined(__APPLE__)
+#include <pthread.h>
+#elif defined(_WIN32)
+#include <processthreadsapi.h>
+#include <synchapi.h>
+#endif
+
+#define MAX_THREADS 128
+
+#ifdef _WIN32
+typedef HANDLE thread_t;
+#elif defined(__linux__) || defined(__APPLE__)
+typedef pthread_t thread_t;
+#endif
+
+typedef struct {
+    char *server;
+    char sep;
+    char *out;
+} arg_t;
+
+static void *get_name(void *args) {
+    arg_t *arg = (arg_t *)args;
+    char *server = arg->server;
+    socket_t sock;
+    uint32_t server_addr;
+    if (ipv4_aton(server, &server_addr) != EXIT_SUCCESS) {
+        return NULL;
+    }
+    connect_server(&sock, server_addr);
+    if (IS_NULL_SOCK(sock.type)) {
+        return NULL;
+    }
+    char *data = NULL;
+    MethodArgs method_args = {0};
+    method_args.data_p = &data;
+    int ret = handle_proto(&sock, METHOD_INFO, &method_args, NULL);
+    close_socket_no_wait(&sock);
+    if (ret != EXIT_SUCCESS) {
+        if (data) {
+            free(data);
+        }
+        return NULL;
+    }
+    char *line = strstr(data, "\nserver_name=");
+    if (!line) {
+        if (data) {
+            free(data);
+        }
+        return NULL;
+    }
+    line += 13;
+    char *eol = strchr(line, '\n');
+    if (eol) {
+        *eol = '\0';
+    }
+    size_t len = strnlen(line, 512);
+    memmove(data, line, len);
+    data[len] = 0;
+    size_t addr_len = strnlen(server, 128);
+    size_t tot_len = addr_len + len + 2;
+    char *out = malloc(tot_len);
+    if (!out) {
+        if (data) {
+            free(data);
+        }
+        return NULL;
+    }
+    snprintf(out, tot_len, "%s%c%s", server, arg->sep, data);
+    free(data);
+    arg->out = out;
+    return NULL;
+}
+
+#ifdef _WIN32
+
+static DWORD WINAPI get_name_wrapper(void *arg) {
+    get_name(arg);
+    return EXIT_SUCCESS;
+}
+
+#endif
 
 void get_server_names(list2 *servers, char sep) {
     if (!servers) {
         return;
     }
-    for (unsigned int i = 0; i < servers->len; i++) {
+    arg_t args[MAX_THREADS];
+    thread_t threads[MAX_THREADS];
+    for (unsigned int i = 0; i < servers->len && i < MAX_THREADS; i++) {
         char *server = servers->array[i];
-        socket_t sock;
-        uint32_t server_addr;
-        if (ipv4_aton(server, &server_addr) != EXIT_SUCCESS) {
-            continue;
+        arg_t arg = {.server = server, .sep = sep, .out = NULL};
+        args[i] = arg;
+        thread_t thread;
+#ifdef _WIN32
+        thread = CreateThread(NULL, 0, get_name_wrapper, &(args[i]), 0, NULL);
+#elif defined(__linux__) || defined(__APPLE__)
+        thread = 0;
+        if (pthread_create(&thread, NULL, &get_name, &(args[i]))) {
+            thread = 0;
         }
-        connect_server(&sock, server_addr);
-        if (IS_NULL_SOCK(sock.type)) {
-            continue;
+#endif
+        threads[i] = thread;
+    }
+    for (unsigned int i = 0; i < servers->len && i < MAX_THREADS; i++) {
+#ifdef _WIN32
+        WaitForSingleObject(threads[i], INFINITE);
+#elif defined(__linux__) || defined(__APPLE__)
+        pthread_join(threads[i], NULL);
+#endif
+        char *out = args[i].out;
+        if (out) {
+            free(servers->array[i]);
+            servers->array[i] = (char *)out;
         }
-        char *data = NULL;
-        MethodArgs args = {0};
-        args.data_p = &data;
-        int ret = handle_proto(&sock, METHOD_INFO, &args, NULL);
-        close_socket_no_wait(&sock);
-        if (ret != EXIT_SUCCESS) {
-            if (data) {
-                free(data);
-            }
-            continue;
-        }
-        char *line = strstr(data, "\nserver_name=");
-        if (!line) {
-            if (data) {
-                free(data);
-            }
-            continue;
-        }
-        line += 13;
-        char *eol = strchr(line, '\n');
-        if (eol) {
-            *eol = '\0';
-        }
-        size_t len = strnlen(line, 512);
-        memmove(data, line, len);
-        data[len] = 0;
-        size_t addr_len = strnlen(server, 128);
-        size_t tot_len = addr_len + len + 2;
-        char *out = realloc(server, tot_len);
-        if (!out) {
-            if (data) {
-                free(data);
-            }
-            continue;
-        }
-        snprintf(out + addr_len, tot_len, "%c%s", sep, data);
-        free(data);
-        servers->array[i] = out;
     }
 }
