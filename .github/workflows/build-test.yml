@@ -253,7 +253,7 @@ jobs:
         - macos-latest
         - macos-26-intel
         exclude:
-        - os: ${{ (github.event_name == 'push') && (inputs.trigger != 'workflow_call') && 'macos-26-intel' }}
+        - os: ${{ (github.event_name == 'push') && 'macos-26-intel' }}
 
     steps:
     - name: Install build dependencies
