@@ -184,6 +184,7 @@ copy_files() {
         while [ "$cnt" -lt "${#files[@]}" ]; do
             osascript "${TESTS_DIR}/utils/setcopiedfiles.applescript" "${absFiles[@]}" >/dev/null
             cnt="$(osascript "${TESTS_DIR}/utils/getcopiedfiles.applescript" | wc -l)"
+            sleep 0.5
         done
     else
         echo "Copy files is not available for OS: $DETECTED_OS"
