@@ -88,6 +88,15 @@ static inline int is_server_allowed(const char *addr) {
 }
 
 static inline list2 *scan_servers(void) {
+    if (configuration.available_servers && configuration.available_servers->len > 0) {
+        list2 *servers = init_list(configuration.available_servers->len);
+        for (uint32_t i = 0; i < configuration.available_servers->len; i++) {
+            if (strnlen(configuration.available_servers->array[i], 129) < 128) {
+                append(servers, strdup(configuration.available_servers->array[i]));
+            }
+        }
+        return servers;
+    }
     list2 *servers = udp_scan();
     if (!servers) {
 #ifdef DEBUG_MODE

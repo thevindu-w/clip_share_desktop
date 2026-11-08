@@ -10,12 +10,11 @@
 src/res/**/*_.*
 *.log
 /*.conf
+/config/
 TODO
 dist/
 /build*/
 .vscode/
 .trash/
 cert_keys/
-/trusted_servers.txt
-/auto_send*.txt
 .DS_Store

@@ -61,6 +61,7 @@ typedef struct _config {
 
     int8_t tray_icon;
     int8_t copied_type_auto;
+    list2 *available_servers;
 } config;
 
 /*

@@ -391,6 +391,11 @@ static void parse_line(char *line, config *cfg) {
         set_is_true(value, &(cfg->tray_icon));
     } else if (!strcmp("copied_type_auto_detect", key)) {
         set_is_true(value, &(cfg->copied_type_auto));
+    } else if (!strcmp("available_servers", key)) {
+        list2 *addr_list = get_server_addresses(value);
+        if (addr_list == NULL) return;
+        if (cfg->available_servers) free_list(cfg->available_servers);
+        cfg->available_servers = addr_list;
 #ifdef DEBUG_MODE
     } else {
         printf("Unknown key \"%s\"\n", key);
@@ -423,6 +428,7 @@ void parse_conf(config *cfg, const char *file_name) {
     cfg->auto_send_max_file_size = 0;
     cfg->tray_icon = -1;
     cfg->copied_type_auto = -1;
+    cfg->available_servers = NULL;
     cfg->bind_addr = htonl(INADDR_LOOPBACK);
 
     if (!file_name) {
@@ -481,6 +487,10 @@ void clear_config(config *cfg) {
     if (cfg->auto_send_servers) {
         free_list(cfg->auto_send_servers);
         cfg->auto_send_servers = NULL;
+    }
+    if (cfg->available_servers) {
+        free_list(cfg->available_servers);
+        cfg->available_servers = NULL;
     }
     if (cfg->working_dir) {
         free(cfg->working_dir);

@@ -200,6 +200,10 @@ static inline void _apply_default_conf(void) {
         free_list(configuration.auto_send_servers);
         configuration.auto_send_servers = NULL;
     }
+    if (configuration.available_servers && configuration.available_servers->len == 0) {
+        free_list(configuration.available_servers);
+        configuration.available_servers = NULL;
+    }
     if (configuration.tray_icon < 0) configuration.tray_icon = 1;
     if (configuration.copied_type_auto < 0) configuration.copied_type_auto = 1;
 }
