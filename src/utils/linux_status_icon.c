@@ -137,8 +137,23 @@ static void on_send_auto(void *widget, gpointer data) {
     }
 }
 
+static void on_get_data(void *widget, gpointer data) {
+    (void)widget;
+    (void)data;
+    if (fork() == 0) {
+        _do_quit();
+        get_from_server();
+        exit(0);
+    }
+}
+
 static inline GtkMenu *create_menu(void) {
     GtkWidget *menu = ptr_gtk_menu_new();
+
+    GtkWidget *get_item = ptr_gtk_menu_item_new_with_label("Get");
+    ptr_g_signal_connect_data(get_item, "activate", G_CALLBACK(on_get_data), NULL, NULL, 0);
+    ptr_gtk_menu_shell_append(
+        (GtkMenuShell *)ptr_g_type_check_instance_cast((GTypeInstance *)menu, ptr_gtk_menu_shell_get_type()), get_item);
 
     if (configuration.copied_type_auto) {
         GtkWidget *send_item = ptr_gtk_menu_item_new_with_label("Send");

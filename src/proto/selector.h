@@ -31,6 +31,7 @@
 #define METHOD_GET_IMAGE 5
 #define METHOD_GET_COPIED_IMAGE 6
 #define METHOD_GET_SCREENSHOT 7
+#define METHOD_GET_ANY 124
 #define METHOD_INFO 125
 
 typedef union {

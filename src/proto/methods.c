@@ -906,6 +906,29 @@ int get_screenshot_v4(socket_t *socket, uint16_t display, StatusCallback *callba
     return _get_screenshot_common(4, socket, display, callback);
 }
 
+int get_any_v4(socket_t *socket, StatusCallback *callback) {
+    char type;
+    if (read_sock(socket, &type, 1) != EXIT_SUCCESS) {
+#ifdef DEBUG_MODE
+        fputs("Read type failed\n", stderr);
+#endif
+        if (callback) callback->function(RESP_COMMUNICATION_FAILURE, NULL, 0, callback->params);
+        return EXIT_FAILURE;
+    }
+    switch (type) {
+        case 1:
+            return _get_text_common(4, socket, callback);
+        case 2:
+            return _get_files_dirs(4, socket, callback);
+        case 3:
+            return _save_image_common(4, socket, callback);
+        default: {
+            if (callback) callback->function(RESP_DATA_ERROR, NULL, 0, callback->params);
+            return EXIT_FAILURE;
+        }
+    }
+}
+
 int info_v4(socket_t *socket, StatusCallback *callback, char **info_p) {
     size_t length;
     char *info = _get_info_common(socket, &length, callback);

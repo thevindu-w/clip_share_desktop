@@ -196,6 +196,44 @@ void send_to_servers(int8_t type, int8_t is_auto_send) {
     free_list(servers);
 }
 
+void get_from_server(void) {
+    list2 *servers = scan_servers();
+    if (!servers) {
+        servers = scan_servers();
+        if (!servers) {
+            return;
+        }
+    }
+    if (servers->len == 0) {
+        free_list(servers);
+        return;
+    }
+
+    char server[64];
+    strncpy(server, servers->array[0], sizeof(server));
+    server[sizeof(server) - 1] = '\0';
+    free_list(servers);
+
+    uint32_t server_addr;
+    if (ipv4_aton(server, &server_addr) != EXIT_SUCCESS) {
+        return;
+    }
+
+    socket_t sock;
+    connect_server(&sock, server_addr);
+    if (IS_NULL_SOCK(sock.type)) {
+        return;
+    }
+    MethodArgs methodArgs = {0};
+    handle_proto(&sock, METHOD_GET_ANY, &methodArgs, NULL);
+    close_socket(&sock);
+#ifdef __linux__
+    if (pending_data) {
+        set_pending_clipboard_item();
+    }
+#endif
+}
+
 static void auto_send_to_servers(int8_t type) {
     switch (type) {
         case COPIED_TYPE_TEXT: {

@@ -25,6 +25,8 @@ typedef void (*ListenerCallback)(int8_t);
 
 extern void send_to_servers(int8_t type, int8_t is_auto_send);
 
+extern void get_from_server(void);
+
 extern int start_clipboard_listener(void);
 
 extern int clipboard_listen(ListenerCallback callback);

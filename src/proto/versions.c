@@ -232,6 +232,7 @@ int version_4(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
         case METHOD_GET_IMAGE:
         case METHOD_GET_COPIED_IMAGE:
         case METHOD_GET_SCREENSHOT:
+        case METHOD_GET_ANY:
         case METHOD_INFO:
             break;  // valid method
 
@@ -270,6 +271,9 @@ int version_4(socket_t *socket, uint8_t method, const MethodArgs *args, StatusCa
         case METHOD_GET_SCREENSHOT: {
             uint16_t display = args->display;
             return get_screenshot_v4(socket, display, callback);
+        }
+        case METHOD_GET_ANY: {
+            return get_any_v4(socket, callback);
         }
         case METHOD_INFO: {
             if (args) {
