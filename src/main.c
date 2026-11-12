@@ -233,6 +233,7 @@ static DWORD WINAPI listenerThreadFn(void *arg) {
 #define ID_SND_FILE 103
 #define ID_SND_IMG 104
 #define ID_SND_AUTO 105
+#define ID_GET_DATA 106
 
 static volatile HINSTANCE instance = NULL;
 static volatile HWND hWnd = NULL;
@@ -303,6 +304,12 @@ static DWORD WINAPI sendToServersFn(void *arg) {
     return EXIT_SUCCESS;
 }
 
+static DWORD WINAPI getFromServerFn(void *arg) {
+    (void)arg;
+    get_from_server();
+    return EXIT_SUCCESS;
+}
+
 static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_QUERYENDSESSION:
@@ -327,6 +334,10 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     break;
                 }
 #endif
+                case ID_GET_DATA: {
+                    CreateThread(NULL, 0, getFromServerFn, NULL, 0, NULL);
+                    break;
+                }
                 case ID_SND_TXT: {
                     CreateThread(NULL, 0, sendToServersFn, (void *)COPIED_TYPE_TEXT, 0, NULL);
                     break;
@@ -358,6 +369,7 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
                     HMENU hmenu = CreatePopupMenu();
                     UINT pos = 0;
 
+                    InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_GET_DATA, TEXT("Get"));
                     if (configuration.copied_type_auto) {
                         InsertMenu(hmenu, pos++, MF_BYPOSITION | MF_STRING, ID_SND_AUTO, TEXT("Send"));
                     } else {
