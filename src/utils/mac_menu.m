@@ -34,6 +34,12 @@ extern unsigned int icon_png_len;
 
 const char *global_prog_name;
 
+static void *getThread(void *arg) {
+    (void)arg;
+    get_from_server();
+    return NULL;
+}
+
 static void *sendThread(void *arg) {
     send_to_servers((int8_t)(size_t)arg, 0);
     return NULL;
@@ -58,6 +64,11 @@ static void *sendThread(void *arg) {
 - (void)onSndAutoAction:(id)sender {
     pthread_t pid;
     pthread_create(&pid, NULL, &sendThread, (void *)COPIED_TYPE_AUTO);
+}
+
+- (void)onGetDataAction:(id)sender {
+    pthread_t pid;
+    pthread_create(&pid, NULL, &getThread, NULL);
 }
 
 - (void)onSndTxtAction:(id)sender {
@@ -99,6 +110,17 @@ void show_menu_icon(void) {
 #endif
             return;
         }
+
+        NSMenuItem *getDataMenuItem = [[NSMenuItem alloc] initWithTitle:@"Get"
+                                                                 action:@selector(onGetDataAction:)
+                                                          keyEquivalent:@"g"];
+        if (!getDataMenuItem) {
+#ifdef DEBUG_MODE
+            error("Menu item creation failed");
+#endif
+            return;
+        }
+        [menu addItem:getDataMenuItem];
 
         if (configuration.copied_type_auto) {
             NSMenuItem *sndAutoMenuItem = [[NSMenuItem alloc] initWithTitle:@"Send"
