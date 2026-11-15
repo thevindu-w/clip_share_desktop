@@ -22,6 +22,7 @@
 #import <AppKit/AppKit.h>
 #import <globals.h>
 #import <pthread.h>
+#include <stdio.h>
 #import <utils/background_sync.h>
 #import <utils/kill_others.h>
 #include <utils/mac_menu.h>

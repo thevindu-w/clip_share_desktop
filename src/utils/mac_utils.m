@@ -27,6 +27,9 @@
 #import <stdint.h>
 #import <string.h>
 #import <utils/utils.h>
+#ifdef DEBUG_MODE
+#include <stdio.h>
+#endif
 
 #if !__has_feature(objc_arc)
 #error This file must be compiled with ARC.

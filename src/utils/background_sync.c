@@ -28,6 +28,9 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #endif
+#ifdef DEBUG_MODE
+#include <stdio.h>
+#endif
 
 #ifdef _WIN32
 typedef HANDLE thread_t;
