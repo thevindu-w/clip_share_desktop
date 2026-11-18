@@ -1257,26 +1257,27 @@ void set_pending_clipboard_item(void) {
             break;
         }
         default: {
-            free(pending_data);
+            if (pending_data) {
+                free(pending_data);
+            }
             pending_data = NULL;
             return;
         }
     }
+    char *data = pending_data;
+    pending_data = NULL;
+    pending_type = 0;
     create_temp_file();
-    if (xclip_util(XCLIP_IN, atom_name, &pending_len, &pending_data) != EXIT_SUCCESS) {
-        if (pending_data) {
-            free(pending_data);
-            pending_data = NULL;
+    if (xclip_util(XCLIP_IN, atom_name, &pending_len, &data) != EXIT_SUCCESS) {
+        if (data) {
+            free(data);
         }
-        pending_type = 0;
         error("Failed to write to clipboard");
         return;
     }
-    if (pending_data) {
-        free(pending_data);
-        pending_data = NULL;
+    if (data) {
+        free(data);
     }
-    pending_type = 0;
 }
 
 #elif defined(_WIN32)
