@@ -14,6 +14,7 @@ ClipShare Desktop Client version <VERSION> with support for protocol versions 1,
 - Installers do **not** need admin or superuser privileges to run.
 
 **Changes:**
-- Show all scan results in the web UI.
-- Show server names with scan results when available.
-- Show additional information in CLI mode Info method when available.
+- Add a new option to the tray menu to get data.
+- Add a new configuration option to specify servers to
+	- Auto-send
+	- Get and send from tray menu
