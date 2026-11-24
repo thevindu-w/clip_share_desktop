@@ -315,6 +315,7 @@ Note that all the lines in the configuration file are optional. You may omit som
 | `auto_send_max_file_size` | The maximum size of any single file in bytes, transferred with auto-send. | Any integer between 1 and 9223372036854775807 (nearly 8 EiB) inclusive. Suffixes K, M, G, and T (case insensitive) denote x10<sup>3</sup>, x10<sup>6</sup>, x10<sup>9</sup>, and x10<sup>12</sup>, respectively. | 67108864 (i.e. 64 MiB) |
 | `tray_icon` | Whether the application should display a system tray/menu icon when running in GUI mode. The values `true` or `1` will display the icon, while `false` or `0` will prevent displaying the icon. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
 | `copied_type_auto_detect` | Whether to automatically select the copied data type (text, files, or image). The values `true` or `1` will auto-detect the type, while `false` or `0` will provide manual selection. | `true`, `false`, `1`, `0` (Case insensitive) | `true` |
+| `available_servers` | The text file containing a list of IPv4 addresses (in dot-decimal notation, one address per line) of servers available on the network. These servers will be used for auto-sending and sending from the tray menu options. If this is not specified or there are no valid IPv4 addresses in the file, available servers will be discovered with a scan operation. | Absolute or relative path to the server addresses file | \<Unspecified\> |
 
 <br>
 <br>
@@ -386,23 +387,26 @@ If you changed the configuration file, you must restart the server to apply the 
 * libx11
 * libxmu
 * libunistring
-* libmicrohttpd
+* libssl (optional - see below)
+* libmicrohttpd (optional - see below)
+* libgtk-3 (optional - see below)
+* libayatana-appindicator (optional - see below)
 
   They can be installed with the following command:
 
 * On Debian-based or Ubuntu-based distros,
   ```bash
-  sudo apt-get install libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev
+  sudo apt-get install libc6-dev libx11-dev libxmu-dev libxfixes-dev libunistring-dev libmicrohttpd-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev
   ```
 
 * On Redhat-based or Fedora-based distros,
   ```bash
-  sudo yum install glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel
+  sudo yum install glibc-devel libX11-devel libXmu-devel libXfixes-devel libunistring-devel libmicrohttpd-devel openssl-devel gtk3-devel libayatana-appindicator-gtk3-devel
   ```
 
 * On Arch-based distros,
   ```bash
-  sudo pacman -S libx11 libxmu libxfixes libunistring libmicrohttpd openssl
+  sudo pacman -S libx11 libxmu libxfixes libunistring libmicrohttpd openssl gtk3 libayatana-appindicator
   ```
 
   glibc should already be available on Arch distros. But you may need to upgrade it with the following command. (You need to do this only if the build fails)
@@ -410,6 +414,11 @@ If you changed the configuration file, you must restart the server to apply the 
   ```bash
   sudo pacman -S glibc
   ```
+
+**Notes:** Some libraries can be omitted with the following build args and targets,
+- `make no_ssl`: Does not require libssl.
+- `make NO_WEB=1`: Does not require libmicrohttpd.
+- `make NO_STATUS_ICON=1`: Does not require libgtk-3 and libayatana-appindicator.
 
 </details>
 
@@ -419,12 +428,15 @@ If you changed the configuration file, you must restart the server to apply the 
   The following development libraries are required.
 
 * [libmicrohttpd](https://ftpmirror.gnu.org/libmicrohttpd/)
-* [libunistring](https://packages.msys2.org/package/mingw-w64-clang-x86_64-libunistring?repo=clang64)
+* [libunistring](https://packages.msys2.org/packages/mingw-w64-clang-x86_64-libunistring?repo=clang64)
 * [libssl](https://github.com/openssl/openssl/releases/) (provided by OpenSSL)
+* [libpng16](https://packages.msys2.org/packages/mingw-w64-clang-x86_64-libpng?repo=clang64)
+* [libz](https://packages.msys2.org/packages/mingw-w64-clang-x86_64-zlib?repo=clang64)
 
 In an [MSYS2](https://www.msys2.org/) environment, these libraries can be installed using pacman with the following command:
 ```bash
-pacman -S mingw-w64-clang-x86_64-libunistring
+pacman -S mingw-w64-clang-x86_64-libpng mingw-w64-clang-x86_64-libunistring
+pacman -S mingw-w64-clang-x86_64-openssl # See the note below
 ```
 
 **Note:** However, to avoid DLL loading issues, it is recommended to compile openssl from its source with the following configuration and use that instead of the `mingw-w64-clang-x86_64-openssl` packaged version.
@@ -452,10 +464,11 @@ The following development libraries are required.
 
 * [libmicrohttpd](https://ftpmirror.gnu.org/libmicrohttpd/)
 * [libunistring](https://formulae.brew.sh/formula/libunistring)
+* [openssl](https://formulae.brew.sh/formula/openssl@3)
 
 These libraries can be installed using [Homebrew](https://brew.sh) with the following command:
 ```bash
-brew install libunistring
+brew install libunistring openssl@3
 ```
 
 However, installing libmicrohttpd from GNU source is recommended. You can download the library source from [ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz](https://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-latest.tar.gz) and compile it with the following commands.
